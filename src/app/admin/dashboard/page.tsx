@@ -266,6 +266,14 @@ export default function DashboardPage() {
       let participations = 0;
 
       resultsData.forEach(result => {
+        // Grade points mapping
+        const getGradePoints = (grade: string) => {
+          const gradePoints: { [key: string]: number } = {
+            'A': 5, 'B': 3, 'C': 1
+          };
+          return gradePoints[grade] || 0;
+        };
+
         // Individual results
         [result.firstPlace, result.secondPlace, result.thirdPlace].forEach((place, placeIndex) => {
           (place || []).forEach(winner => {
@@ -273,7 +281,9 @@ export default function DashboardPage() {
             if (candidate) {
               participations += 1;
               wins += 1;
-              points += [result.firstPoints, result.secondPoints, result.thirdPoints][placeIndex];
+              const positionPoints = [result.firstPoints, result.secondPoints, result.thirdPoints][placeIndex];
+              const gradePoints = getGradePoints(winner.grade || '');
+              points += positionPoints + gradePoints;
             }
           });
         });
@@ -284,7 +294,9 @@ export default function DashboardPage() {
             if (teamResult.teamCode === team.code) {
               participations += 1;
               wins += 1;
-              points += [result.firstPoints, result.secondPoints, result.thirdPoints][placeIndex];
+              const positionPoints = [result.firstPoints, result.secondPoints, result.thirdPoints][placeIndex];
+              const gradePoints = getGradePoints(teamResult.grade || '');
+              points += positionPoints + gradePoints;
             }
           });
         });

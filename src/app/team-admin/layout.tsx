@@ -107,27 +107,23 @@ export default function TeamAdminLayout({
 
   return (
     <ProtectedRoute requireTeamCaptain={true}>
-      <div className="flex min-h-screen bg-gray-50 font-poppins"
-           style={{
-             backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.02) 1px, transparent 1px),
-                              linear-gradient(90deg, rgba(0, 0, 0, 0.02) 1px, transparent 1px)`,
-             backgroundSize: '40px 40px'
-           }}>
-        <TeamSidebar 
-          selectedTeam={selectedTeam} 
-          teamData={selectedTeamData}
-          onSwitchTeam={() => {
-            setSelectedTeam('');
-            localStorage.removeItem('selectedTeam');
-          }}
-        />
-        <div className="w-full bg-transparent">
-          <TeamHeader teamData={selectedTeamData} />
-          <main className="isolate mx-auto w-full max-w-screen-2xl overflow-hidden p-4 md:p-6 2xl:p-10">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 min-h-[calc(100vh-200px)]">
-              {children}
-            </div>
-          </main>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 font-poppins">
+        <div className="flex min-h-screen">
+          <TeamSidebar 
+            selectedTeam={selectedTeam} 
+            teamData={selectedTeamData}
+            onSwitchTeam={() => {}}
+          />
+          <div className="flex-1 flex flex-col min-w-0 lg:ml-0">
+            <TeamHeader teamData={selectedTeamData} />
+            <main className="flex-1 p-4 md:p-6 lg:p-8 pb-20 lg:pb-8">
+              <div className="max-w-7xl mx-auto">
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 md:p-6 lg:p-8 min-h-[calc(100vh-200px)]">
+                  {children}
+                </div>
+              </div>
+            </main>
+          </div>
         </div>
       </div>
     </ProtectedRoute>

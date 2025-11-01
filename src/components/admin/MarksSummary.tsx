@@ -64,6 +64,16 @@ export default function MarksSummary({ results }: MarksSummaryProps) {
     }
   };
 
+  // Grade points mapping
+  const getGradePoints = (grade: string) => {
+    const gradePoints: { [key: string]: number } = {
+      'A': 5,
+      'B': 3,
+      'C': 1
+    };
+    return gradePoints[grade] || 0;
+  };
+
   const calculateTeamMarks = () => {
     const teamMarksMap: { [teamCode: string]: TeamMarks } = {};
 
@@ -94,15 +104,17 @@ export default function MarksSummary({ results }: MarksSummaryProps) {
         result.firstPlace.forEach(winner => {
           const candidate = candidates.find(c => c.chestNumber === winner.chestNumber);
           if (candidate && teamMarksMap[candidate.team]) {
-            const points = result.firstPoints;
-            teamMarksMap[candidate.team][programmeType] += points;
-            teamMarksMap[candidate.team].total += points;
+            // Add position points + grade points
+            const gradePoints = getGradePoints(winner.grade || '');
+            const totalPoints = result.firstPoints + gradePoints;
+            teamMarksMap[candidate.team][programmeType] += totalPoints;
+            teamMarksMap[candidate.team].total += totalPoints;
             teamMarksMap[candidate.team].participantCount += 1;
             teamMarksMap[candidate.team].programmes.push({
               name: programmeName,
               category: programmeCategory,
               section: programmeSection,
-              points,
+              points: totalPoints,
               type: programmeType
             });
           }
@@ -113,15 +125,17 @@ export default function MarksSummary({ results }: MarksSummaryProps) {
         result.secondPlace.forEach(winner => {
           const candidate = candidates.find(c => c.chestNumber === winner.chestNumber);
           if (candidate && teamMarksMap[candidate.team]) {
-            const points = result.secondPoints;
-            teamMarksMap[candidate.team][programmeType] += points;
-            teamMarksMap[candidate.team].total += points;
+            // Add position points + grade points
+            const gradePoints = getGradePoints(winner.grade || '');
+            const totalPoints = result.secondPoints + gradePoints;
+            teamMarksMap[candidate.team][programmeType] += totalPoints;
+            teamMarksMap[candidate.team].total += totalPoints;
             teamMarksMap[candidate.team].participantCount += 1;
             teamMarksMap[candidate.team].programmes.push({
               name: programmeName,
               category: programmeCategory,
               section: programmeSection,
-              points,
+              points: totalPoints,
               type: programmeType
             });
           }
@@ -132,15 +146,17 @@ export default function MarksSummary({ results }: MarksSummaryProps) {
         result.thirdPlace.forEach(winner => {
           const candidate = candidates.find(c => c.chestNumber === winner.chestNumber);
           if (candidate && teamMarksMap[candidate.team]) {
-            const points = result.thirdPoints;
-            teamMarksMap[candidate.team][programmeType] += points;
-            teamMarksMap[candidate.team].total += points;
+            // Add position points + grade points
+            const gradePoints = getGradePoints(winner.grade || '');
+            const totalPoints = result.thirdPoints + gradePoints;
+            teamMarksMap[candidate.team][programmeType] += totalPoints;
+            teamMarksMap[candidate.team].total += totalPoints;
             teamMarksMap[candidate.team].participantCount += 1;
             teamMarksMap[candidate.team].programmes.push({
               name: programmeName,
               category: programmeCategory,
               section: programmeSection,
-              points,
+              points: totalPoints,
               type: programmeType
             });
           }
@@ -169,15 +185,17 @@ export default function MarksSummary({ results }: MarksSummaryProps) {
       if (result.firstPlaceTeams) {
         result.firstPlaceTeams.forEach(winner => {
           if (teamMarksMap[winner.teamCode]) {
-            const points = result.firstPoints;
-            teamMarksMap[winner.teamCode].general += points;
-            teamMarksMap[winner.teamCode].total += points;
+            // Add position points + grade points
+            const gradePoints = getGradePoints(winner.grade || '');
+            const totalPoints = result.firstPoints + gradePoints;
+            teamMarksMap[winner.teamCode].general += totalPoints;
+            teamMarksMap[winner.teamCode].total += totalPoints;
             teamMarksMap[winner.teamCode].participantCount += 1;
             teamMarksMap[winner.teamCode].programmes.push({
               name: programmeName,
               category: programmeCategory,
               section: programmeSection,
-              points,
+              points: totalPoints,
               type: 'general'
             });
           }
@@ -187,15 +205,17 @@ export default function MarksSummary({ results }: MarksSummaryProps) {
       if (result.secondPlaceTeams) {
         result.secondPlaceTeams.forEach(winner => {
           if (teamMarksMap[winner.teamCode]) {
-            const points = result.secondPoints;
-            teamMarksMap[winner.teamCode].general += points;
-            teamMarksMap[winner.teamCode].total += points;
+            // Add position points + grade points
+            const gradePoints = getGradePoints(winner.grade || '');
+            const totalPoints = result.secondPoints + gradePoints;
+            teamMarksMap[winner.teamCode].general += totalPoints;
+            teamMarksMap[winner.teamCode].total += totalPoints;
             teamMarksMap[winner.teamCode].participantCount += 1;
             teamMarksMap[winner.teamCode].programmes.push({
               name: programmeName,
               category: programmeCategory,
               section: programmeSection,
-              points,
+              points: totalPoints,
               type: 'general'
             });
           }
@@ -205,15 +225,17 @@ export default function MarksSummary({ results }: MarksSummaryProps) {
       if (result.thirdPlaceTeams) {
         result.thirdPlaceTeams.forEach(winner => {
           if (teamMarksMap[winner.teamCode]) {
-            const points = result.thirdPoints;
-            teamMarksMap[winner.teamCode].general += points;
-            teamMarksMap[winner.teamCode].total += points;
+            // Add position points + grade points
+            const gradePoints = getGradePoints(winner.grade || '');
+            const totalPoints = result.thirdPoints + gradePoints;
+            teamMarksMap[winner.teamCode].general += totalPoints;
+            teamMarksMap[winner.teamCode].total += totalPoints;
             teamMarksMap[winner.teamCode].participantCount += 1;
             teamMarksMap[winner.teamCode].programmes.push({
               name: programmeName,
               category: programmeCategory,
               section: programmeSection,
-              points,
+              points: totalPoints,
               type: 'general'
             });
           }
