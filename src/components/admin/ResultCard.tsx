@@ -91,21 +91,120 @@ export default function ResultCard({
         return Object.values(teamCounts).reduce((sum, count) => sum + count, 0);
     };
 
+    // Grade points mapping
+    const getGradePoints = (grade: string) => {
+        const gradePoints: { [key: string]: number } = {
+            'A': 5,
+            'B': 3,
+            'C': 1
+        };
+        return gradePoints[grade] || 0;
+    };
+
     const getTotalPoints = () => {
         let total = 0;
-        if (result.firstPlace) total += result.firstPlace.length * result.firstPoints;
-        if (result.secondPlace) total += result.secondPlace.length * result.secondPoints;
-        if (result.thirdPlace) total += result.thirdPlace.length * result.thirdPoints;
+        
+        // Individual/Group results with grades
+        if (result.firstPlace) {
+            result.firstPlace.forEach(winner => {
+                const gradePoints = getGradePoints(winner.grade || '');
+                total += result.firstPoints + gradePoints;
+            });
+        }
+        if (result.secondPlace) {
+            result.secondPlace.forEach(winner => {
+                const gradePoints = getGradePoints(winner.grade || '');
+                total += result.secondPoints + gradePoints;
+            });
+        }
+        if (result.thirdPlace) {
+            result.thirdPlace.forEach(winner => {
+                const gradePoints = getGradePoints(winner.grade || '');
+                total += result.thirdPoints + gradePoints;
+            });
+        }
         if (result.participationGrades) {
             total += result.participationGrades.reduce((sum, pg) => sum + pg.points, 0);
         }
-        if (result.firstPlaceTeams) total += result.firstPlaceTeams.length * result.firstPoints;
-        if (result.secondPlaceTeams) total += result.secondPlaceTeams.length * result.secondPoints;
-        if (result.thirdPlaceTeams) total += result.thirdPlaceTeams.length * result.thirdPoints;
+        
+        // Team results with grades
+        if (result.firstPlaceTeams) {
+            result.firstPlaceTeams.forEach(winner => {
+                const gradePoints = getGradePoints(winner.grade || '');
+                total += result.firstPoints + gradePoints;
+            });
+        }
+        if (result.secondPlaceTeams) {
+            result.secondPlaceTeams.forEach(winner => {
+                const gradePoints = getGradePoints(winner.grade || '');
+                total += result.secondPoints + gradePoints;
+            });
+        }
+        if (result.thirdPlaceTeams) {
+            result.thirdPlaceTeams.forEach(winner => {
+                const gradePoints = getGradePoints(winner.grade || '');
+                total += result.thirdPoints + gradePoints;
+            });
+        }
         if (result.participationTeamGrades) {
             total += result.participationTeamGrades.reduce((sum, pg) => sum + pg.points, 0);
         }
+        
         return total;
+    };
+
+    const getMarkBreakdown = () => {
+        let positionPoints = 0;
+        let gradePoints = 0;
+        let participationPoints = 0;
+
+        // Individual/Group results
+        if (result.firstPlace) {
+            result.firstPlace.forEach(winner => {
+                positionPoints += result.firstPoints;
+                gradePoints += getGradePoints(winner.grade || '');
+            });
+        }
+        if (result.secondPlace) {
+            result.secondPlace.forEach(winner => {
+                positionPoints += result.secondPoints;
+                gradePoints += getGradePoints(winner.grade || '');
+            });
+        }
+        if (result.thirdPlace) {
+            result.thirdPlace.forEach(winner => {
+                positionPoints += result.thirdPoints;
+                gradePoints += getGradePoints(winner.grade || '');
+            });
+        }
+        if (result.participationGrades) {
+            participationPoints += result.participationGrades.reduce((sum, pg) => sum + pg.points, 0);
+        }
+
+        // Team results
+        if (result.firstPlaceTeams) {
+            result.firstPlaceTeams.forEach(winner => {
+                positionPoints += result.firstPoints;
+                gradePoints += getGradePoints(winner.grade || '');
+            });
+        }
+        if (result.secondPlaceTeams) {
+            result.secondPlaceTeams.forEach(winner => {
+                positionPoints += result.secondPoints;
+                gradePoints += getGradePoints(winner.grade || '');
+            });
+        }
+        if (result.thirdPlaceTeams) {
+            result.thirdPlaceTeams.forEach(winner => {
+                positionPoints += result.thirdPoints;
+                gradePoints += getGradePoints(winner.grade || '');
+            });
+        }
+        if (result.participationTeamGrades) {
+            participationPoints += result.participationTeamGrades.reduce((sum, pg) => sum + pg.points, 0);
+        }
+
+        return { positionPoints, gradePoints, participationPoints };
     };
 
     return (
@@ -141,6 +240,40 @@ export default function ResultCard({
                     <div className="text-xl font-bold text-blue-900">{getTotalPoints()}</div>
                 </div>
             </div>
+
+            {/* Mark Breakdown */}
+            {(() => {
+                const breakdown = getMarkBreakdown();
+                const hasGrades = breakdown.gradePoints > 0;
+                const hasParticipation = breakdown.participationPoints > 0;
+                
+                if (hasGrades || hasParticipation) {
+                    return (
+                        <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-3 mb-4">
+                            <div className="text-xs text-gray-600 mb-2">Mark Breakdown:</div>
+                            <div className="flex flex-wrap gap-2 text-xs">
+                                <span className="bg-green-100 text-green-800 px-2 py-1 rounded">
+                                    Position: {breakdown.positionPoints}
+                                </span>
+                                {hasGrades && (
+                                    <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded">
+                                        Grade: +{breakdown.gradePoints}
+                                    </span>
+                                )}
+                                {hasParticipation && (
+                                    <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                        Participation: {breakdown.participationPoints}
+                                    </span>
+                                )}
+                                <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded font-bold">
+                                    Total: {getTotalPoints()}
+                                </span>
+                            </div>
+                        </div>
+                    );
+                }
+                return null;
+            })()}
 
             {/* Notes */}
             {result.notes && (

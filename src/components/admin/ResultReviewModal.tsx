@@ -59,20 +59,65 @@ export default function ResultReviewModal({
     }
   };
 
+  // Grade points mapping
+  const getGradePoints = (grade: string) => {
+    const gradePoints: { [key: string]: number } = {
+      'A': 5,
+      'B': 3,
+      'C': 1
+    };
+    return gradePoints[grade] || 0;
+  };
+
   const getTotalPoints = () => {
     let total = 0;
-    if (result.firstPlace) total += result.firstPlace.length * result.firstPoints;
-    if (result.secondPlace) total += result.secondPlace.length * result.secondPoints;
-    if (result.thirdPlace) total += result.thirdPlace.length * result.thirdPoints;
+    
+    // Individual/Group results with grades
+    if (result.firstPlace) {
+      result.firstPlace.forEach(winner => {
+        const gradePoints = getGradePoints(winner.grade || '');
+        total += result.firstPoints + gradePoints;
+      });
+    }
+    if (result.secondPlace) {
+      result.secondPlace.forEach(winner => {
+        const gradePoints = getGradePoints(winner.grade || '');
+        total += result.secondPoints + gradePoints;
+      });
+    }
+    if (result.thirdPlace) {
+      result.thirdPlace.forEach(winner => {
+        const gradePoints = getGradePoints(winner.grade || '');
+        total += result.thirdPoints + gradePoints;
+      });
+    }
     if (result.participationGrades) {
       total += result.participationGrades.reduce((sum, pg) => sum + pg.points, 0);
     }
-    if (result.firstPlaceTeams) total += result.firstPlaceTeams.length * result.firstPoints;
-    if (result.secondPlaceTeams) total += result.secondPlaceTeams.length * result.secondPoints;
-    if (result.thirdPlaceTeams) total += result.thirdPlaceTeams.length * result.thirdPoints;
+    
+    // Team results with grades
+    if (result.firstPlaceTeams) {
+      result.firstPlaceTeams.forEach(winner => {
+        const gradePoints = getGradePoints(winner.grade || '');
+        total += result.firstPoints + gradePoints;
+      });
+    }
+    if (result.secondPlaceTeams) {
+      result.secondPlaceTeams.forEach(winner => {
+        const gradePoints = getGradePoints(winner.grade || '');
+        total += result.secondPoints + gradePoints;
+      });
+    }
+    if (result.thirdPlaceTeams) {
+      result.thirdPlaceTeams.forEach(winner => {
+        const gradePoints = getGradePoints(winner.grade || '');
+        total += result.thirdPoints + gradePoints;
+      });
+    }
     if (result.participationTeamGrades) {
       total += result.participationTeamGrades.reduce((sum, pg) => sum + pg.points, 0);
     }
+    
     return total;
   };
 
@@ -192,8 +237,23 @@ export default function ResultReviewModal({
                                   </div>
                                 )}
                                 <div className="text-right">
-                                  <div className="font-bold text-yellow-600">{result.firstPoints} pts</div>
-                                  <div className="text-xs text-gray-500">{team?.name}</div>
+                                  <div className="flex flex-col items-end space-y-1">
+                                    <div className="flex items-center space-x-2">
+                                      <span className="text-sm text-gray-600">{result.firstPoints}</span>
+                                      {winner.grade && (
+                                        <>
+                                          <span className="text-xs text-gray-400">+</span>
+                                          <span className="bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded text-xs font-bold">
+                                            {winner.grade}({getGradePoints(winner.grade)})
+                                          </span>
+                                        </>
+                                      )}
+                                      <span className="font-bold text-yellow-600">
+                                        = {result.firstPoints + getGradePoints(winner.grade || '')} pts
+                                      </span>
+                                    </div>
+                                    <div className="text-xs text-gray-500">{team?.name}</div>
+                                  </div>
                                 </div>
                               </div>
                             </div>
@@ -238,8 +298,23 @@ export default function ResultReviewModal({
                                   </div>
                                 )}
                                 <div className="text-right">
-                                  <div className="font-bold text-gray-600">{result.secondPoints} pts</div>
-                                  <div className="text-xs text-gray-500">{team?.name}</div>
+                                  <div className="flex flex-col items-end space-y-1">
+                                    <div className="flex items-center space-x-2">
+                                      <span className="text-sm text-gray-600">{result.secondPoints}</span>
+                                      {winner.grade && (
+                                        <>
+                                          <span className="text-xs text-gray-400">+</span>
+                                          <span className="bg-gray-100 text-gray-800 px-1.5 py-0.5 rounded text-xs font-bold">
+                                            {winner.grade}({getGradePoints(winner.grade)})
+                                          </span>
+                                        </>
+                                      )}
+                                      <span className="font-bold text-gray-600">
+                                        = {result.secondPoints + getGradePoints(winner.grade || '')} pts
+                                      </span>
+                                    </div>
+                                    <div className="text-xs text-gray-500">{team?.name}</div>
+                                  </div>
                                 </div>
                               </div>
                             </div>
@@ -284,8 +359,23 @@ export default function ResultReviewModal({
                                   </div>
                                 )}
                                 <div className="text-right">
-                                  <div className="font-bold text-orange-600">{result.thirdPoints} pts</div>
-                                  <div className="text-xs text-gray-500">{team?.name}</div>
+                                  <div className="flex flex-col items-end space-y-1">
+                                    <div className="flex items-center space-x-2">
+                                      <span className="text-sm text-gray-600">{result.thirdPoints}</span>
+                                      {winner.grade && (
+                                        <>
+                                          <span className="text-xs text-gray-400">+</span>
+                                          <span className="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded text-xs font-bold">
+                                            {winner.grade}({getGradePoints(winner.grade)})
+                                          </span>
+                                        </>
+                                      )}
+                                      <span className="font-bold text-orange-600">
+                                        = {result.thirdPoints + getGradePoints(winner.grade || '')} pts
+                                      </span>
+                                    </div>
+                                    <div className="text-xs text-gray-500">{team?.name}</div>
+                                  </div>
                                 </div>
                               </div>
                             </div>
@@ -385,8 +475,23 @@ export default function ResultReviewModal({
                                 </div>
                               </div>
                               <div className="text-right">
-                                <div className="font-bold text-yellow-600">{result.firstPoints} pts</div>
-                                <div className="text-xs text-gray-500">Winner</div>
+                                <div className="flex flex-col items-end space-y-1">
+                                  <div className="flex items-center space-x-2">
+                                    <span className="text-sm text-gray-600">{result.firstPoints}</span>
+                                    {winner.grade && (
+                                      <>
+                                        <span className="text-xs text-gray-400">+</span>
+                                        <span className="bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded text-xs font-bold">
+                                          {winner.grade}({getGradePoints(winner.grade)})
+                                        </span>
+                                      </>
+                                    )}
+                                    <span className="font-bold text-yellow-600">
+                                      = {result.firstPoints + getGradePoints(winner.grade || '')} pts
+                                    </span>
+                                  </div>
+                                  <div className="text-xs text-gray-500">Winner</div>
+                                </div>
                               </div>
                             </div>
                           );
@@ -426,8 +531,23 @@ export default function ResultReviewModal({
                                 </div>
                               </div>
                               <div className="text-right">
-                                <div className="font-bold text-gray-600">{result.secondPoints} pts</div>
-                                <div className="text-xs text-gray-500">Runner-up</div>
+                                <div className="flex flex-col items-end space-y-1">
+                                  <div className="flex items-center space-x-2">
+                                    <span className="text-sm text-gray-600">{result.secondPoints}</span>
+                                    {winner.grade && (
+                                      <>
+                                        <span className="text-xs text-gray-400">+</span>
+                                        <span className="bg-gray-100 text-gray-800 px-1.5 py-0.5 rounded text-xs font-bold">
+                                          {winner.grade}({getGradePoints(winner.grade)})
+                                        </span>
+                                      </>
+                                    )}
+                                    <span className="font-bold text-gray-600">
+                                      = {result.secondPoints + getGradePoints(winner.grade || '')} pts
+                                    </span>
+                                  </div>
+                                  <div className="text-xs text-gray-500">Runner-up</div>
+                                </div>
                               </div>
                             </div>
                           );
@@ -467,8 +587,23 @@ export default function ResultReviewModal({
                                 </div>
                               </div>
                               <div className="text-right">
-                                <div className="font-bold text-orange-600">{result.thirdPoints} pts</div>
-                                <div className="text-xs text-gray-500">Third Place</div>
+                                <div className="flex flex-col items-end space-y-1">
+                                  <div className="flex items-center space-x-2">
+                                    <span className="text-sm text-gray-600">{result.thirdPoints}</span>
+                                    {winner.grade && (
+                                      <>
+                                        <span className="text-xs text-gray-400">+</span>
+                                        <span className="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded text-xs font-bold">
+                                          {winner.grade}({getGradePoints(winner.grade)})
+                                        </span>
+                                      </>
+                                    )}
+                                    <span className="font-bold text-orange-600">
+                                      = {result.thirdPoints + getGradePoints(winner.grade || '')} pts
+                                    </span>
+                                  </div>
+                                  <div className="text-xs text-gray-500">Third Place</div>
+                                </div>
                               </div>
                             </div>
                           );

@@ -1570,16 +1570,57 @@ export default function ResultsPage() {
                   <div className="text-3xl font-bold text-blue-900">
                     {results.filter(r => r.status === 'checked').reduce((total, result) => {
                       let resultTotal = 0;
-                      if (result.firstPlace) resultTotal += result.firstPlace.length * result.firstPoints;
-                      if (result.secondPlace) resultTotal += result.secondPlace.length * result.secondPoints;
-                      if (result.thirdPlace) resultTotal += result.thirdPlace.length * result.thirdPoints;
-                      if (result.firstPlaceTeams) resultTotal += result.firstPlaceTeams.length * result.firstPoints;
-                      if (result.secondPlaceTeams) resultTotal += result.secondPlaceTeams.length * result.secondPoints;
-                      if (result.thirdPlaceTeams) resultTotal += result.thirdPlaceTeams.length * result.thirdPoints;
+                      // Individual/Group results with grades
+                      if (result.firstPlace) {
+                        result.firstPlace.forEach(winner => {
+                          const gradePoints = getGradePoints(winner.grade || '');
+                          resultTotal += result.firstPoints + gradePoints;
+                        });
+                      }
+                      if (result.secondPlace) {
+                        result.secondPlace.forEach(winner => {
+                          const gradePoints = getGradePoints(winner.grade || '');
+                          resultTotal += result.secondPoints + gradePoints;
+                        });
+                      }
+                      if (result.thirdPlace) {
+                        result.thirdPlace.forEach(winner => {
+                          const gradePoints = getGradePoints(winner.grade || '');
+                          resultTotal += result.thirdPoints + gradePoints;
+                        });
+                      }
+                      
+                      // Team results with grades
+                      if (result.firstPlaceTeams) {
+                        result.firstPlaceTeams.forEach(winner => {
+                          const gradePoints = getGradePoints(winner.grade || '');
+                          resultTotal += result.firstPoints + gradePoints;
+                        });
+                      }
+                      if (result.secondPlaceTeams) {
+                        result.secondPlaceTeams.forEach(winner => {
+                          const gradePoints = getGradePoints(winner.grade || '');
+                          resultTotal += result.secondPoints + gradePoints;
+                        });
+                      }
+                      if (result.thirdPlaceTeams) {
+                        result.thirdPlaceTeams.forEach(winner => {
+                          const gradePoints = getGradePoints(winner.grade || '');
+                          resultTotal += result.thirdPoints + gradePoints;
+                        });
+                      }
+                      
+                      // Participation grades (backward compatibility)
+                      if (result.participationGrades) {
+                        resultTotal += result.participationGrades.reduce((sum, pg) => sum + pg.points, 0);
+                      }
+                      if (result.participationTeamGrades) {
+                        resultTotal += result.participationTeamGrades.reduce((sum, pg) => sum + pg.points, 0);
+                      }
                       return total + resultTotal;
                     }, 0)}
                   </div>
-                  <div className="text-sm text-blue-600">Points Ready</div>
+                  <div className="text-sm text-blue-600">Total Marks Ready</div>
                 </div>
                 <div className="bg-purple-50 border border-purple-200 rounded-lg p-6 text-center">
                   <div className="text-3xl font-bold text-purple-900">
@@ -1627,12 +1668,59 @@ export default function ResultsPage() {
                         </div>
                         <div className="text-right">
                           <div className="text-lg font-bold text-green-600">
-                            {((result.firstPlace?.length || 0) * result.firstPoints) +
-                             ((result.secondPlace?.length || 0) * result.secondPoints) +
-                             ((result.thirdPlace?.length || 0) * result.thirdPoints) +
-                             ((result.firstPlaceTeams?.length || 0) * result.firstPoints) +
-                             ((result.secondPlaceTeams?.length || 0) * result.secondPoints) +
-                             ((result.thirdPlaceTeams?.length || 0) * result.thirdPoints)} pts
+                            {(() => {
+                              let total = 0;
+                              
+                              // Individual/Group results with grades
+                              if (result.firstPlace) {
+                                result.firstPlace.forEach(winner => {
+                                  const gradePoints = getGradePoints(winner.grade || '');
+                                  total += result.firstPoints + gradePoints;
+                                });
+                              }
+                              if (result.secondPlace) {
+                                result.secondPlace.forEach(winner => {
+                                  const gradePoints = getGradePoints(winner.grade || '');
+                                  total += result.secondPoints + gradePoints;
+                                });
+                              }
+                              if (result.thirdPlace) {
+                                result.thirdPlace.forEach(winner => {
+                                  const gradePoints = getGradePoints(winner.grade || '');
+                                  total += result.thirdPoints + gradePoints;
+                                });
+                              }
+                              
+                              // Team results with grades
+                              if (result.firstPlaceTeams) {
+                                result.firstPlaceTeams.forEach(winner => {
+                                  const gradePoints = getGradePoints(winner.grade || '');
+                                  total += result.firstPoints + gradePoints;
+                                });
+                              }
+                              if (result.secondPlaceTeams) {
+                                result.secondPlaceTeams.forEach(winner => {
+                                  const gradePoints = getGradePoints(winner.grade || '');
+                                  total += result.secondPoints + gradePoints;
+                                });
+                              }
+                              if (result.thirdPlaceTeams) {
+                                result.thirdPlaceTeams.forEach(winner => {
+                                  const gradePoints = getGradePoints(winner.grade || '');
+                                  total += result.thirdPoints + gradePoints;
+                                });
+                              }
+                              
+                              // Participation grades (backward compatibility)
+                              if (result.participationGrades) {
+                                total += result.participationGrades.reduce((sum, pg) => sum + pg.points, 0);
+                              }
+                              if (result.participationTeamGrades) {
+                                total += result.participationTeamGrades.reduce((sum, pg) => sum + pg.points, 0);
+                              }
+                              
+                              return total;
+                            })()} pts
                           </div>
                           <div className="text-xs text-gray-500">
                             {new Date(result.updatedAt || result.createdAt || '').toLocaleDateString()}
