@@ -126,7 +126,7 @@ export default function SyncPage() {
           </ShowcaseSection>
 
           {/* Sync FROM Sheets */}
-          <ShowcaseSection title="Sync FROM Google Sheets">
+          {/* <ShowcaseSection title="Sync FROM Google Sheets">
             <div className="space-y-4">
               <p className="text-gray-600 text-sm">
                 Pull data from Google Sheets to your admin panel. This will update your database.
@@ -174,7 +174,7 @@ export default function SyncPage() {
                 </button>
               </div>
             </div>
-          </ShowcaseSection>
+          </ShowcaseSection> */}
         </div>
 
         {/* Sync Results */}
