@@ -74,7 +74,7 @@ export default function AdminPrintPage() {
     setShowPreview(true);
   };
 
-  const handlePrint = (layout: 'single' | '4up' = 'single') => {
+  const handlePrint = (type: 'controller' | 'judgment' = 'controller', layout: 'single' | '4up' = 'single') => {
     if (!selectedProgramme) {
       alert('Please select a programme');
       return;
@@ -105,10 +105,17 @@ export default function AdminPrintPage() {
       candidateData: JSON.stringify(candidateDetails)
     });
 
-    // Choose the appropriate print page based on layout
-    const printUrl = layout === '4up' 
-      ? `/admin/print/scorecard-4up?${params.toString()}`
-      : `/admin/print/scorecard?${params.toString()}`;
+    // Choose the appropriate print page based on type and layout
+    let printUrl = '';
+    if (type === 'controller') {
+      printUrl = layout === '4up' 
+        ? `/admin/print/scorecard-4up?${params.toString()}`
+        : `/admin/print/scorecard?${params.toString()}`;
+    } else {
+      printUrl = layout === '4up' 
+        ? `/admin/print/judgment-4up?${params.toString()}`
+        : `/admin/print/scorecard?${params.toString()}`; // You can create judgment single later if needed
+    }
 
     // Open print page in new window
     const printWindow = window.open(printUrl, '_blank');
@@ -142,12 +149,13 @@ export default function AdminPrintPage() {
       {!showPreview ? (
         // Configuration Form
         <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">📋 Judgment Scorecard Generator</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">📋 Print Center</h2>
           <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <h3 className="font-medium text-blue-900 mb-2">Print Layout Options:</h3>
+            <h3 className="font-medium text-blue-900 mb-2">Print Options:</h3>
             <ul className="text-sm text-blue-800 space-y-1">
-              <li>• <strong>Single:</strong> One full-size scorecard per page (A4)</li>
-              <li>• <strong>4 Per Sheet:</strong> Four compact scorecards per page for efficient printing</li>
+              <li>• <strong>Controllers:</strong> Name list with team codes for event management</li>
+              <li>• <strong>Judgment:</strong> Evaluation scorecards with Score, Grade, Remarks columns</li>
+              <li>• <strong>4 Per Sheet:</strong> Four compact cards per page for efficient printing</li>
             </ul>
           </div>
 
@@ -232,28 +240,60 @@ export default function AdminPrintPage() {
             </div>
           )}
 
-          <div className="mt-6 flex justify-end space-x-4">
-            <button
-              onClick={handleGenerateScorecard}
-              disabled={!selectedProgramme}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
-            >
-              📋 Preview Scorecard
-            </button>
-            <button
-              onClick={() => handlePrint('single')}
-              disabled={!selectedProgramme}
-              className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
-            >
-              🖨️ Print Single
-            </button>
-            <button
-              onClick={() => handlePrint('4up')}
-              disabled={!selectedProgramme}
-              className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
-            >
-              🖨️ Print 4 Per Sheet
-            </button>
+          <div className="mt-6 space-y-4">
+            <div className="flex justify-end">
+              <button
+                onClick={handleGenerateScorecard}
+                disabled={!selectedProgramme}
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
+              >
+                📋 Preview Scorecard
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h3 className="font-semibold text-gray-900 mb-3">👥 Controllers Print</h3>
+                <p className="text-sm text-gray-600 mb-3">Name list with team codes for event management</p>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => handlePrint('controller', 'single')}
+                    disabled={!selectedProgramme}
+                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm"
+                  >
+                    🖨️ Single
+                  </button>
+                  <button
+                    onClick={() => handlePrint('controller', '4up')}
+                    disabled={!selectedProgramme}
+                    className="flex-1 px-4 py-2 bg-green-700 text-white rounded-lg hover:bg-green-800 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm"
+                  >
+                    🖨️ 4 Per Sheet
+                  </button>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h3 className="font-semibold text-gray-900 mb-3">⚖️ Judgment Print</h3>
+                <p className="text-sm text-gray-600 mb-3">Evaluation scorecards with Score, Grade, Remarks</p>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => handlePrint('judgment', 'single')}
+                    disabled={!selectedProgramme}
+                    className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm"
+                  >
+                    🖨️ Single
+                  </button>
+                  <button
+                    onClick={() => handlePrint('judgment', '4up')}
+                    disabled={!selectedProgramme}
+                    className="flex-1 px-4 py-2 bg-purple-700 text-white rounded-lg hover:bg-purple-800 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm"
+                  >
+                    🖨️ 4 Per Sheet
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       ) : (
@@ -271,18 +311,26 @@ export default function AdminPrintPage() {
               >
                 ← Back to Edit
               </button>
-              <button
-                onClick={() => handlePrint('single')}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors mr-2"
-              >
-                🖨️ Print Single
-              </button>
-              <button
-                onClick={() => handlePrint('4up')}
-                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-              >
-                🖨️ Print 4 Per Sheet
-              </button>
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => handlePrint('controller', 'single')}
+                  className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+                >
+                  👥 Controllers Single
+                </button>
+                <button
+                  onClick={() => handlePrint('controller', '4up')}
+                  className="px-3 py-2 bg-green-700 text-white rounded-lg hover:bg-green-800 transition-colors text-sm"
+                >
+                  👥 Controllers 4-Up
+                </button>
+                <button
+                  onClick={() => handlePrint('judgment', '4up')}
+                  className="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
+                >
+                  ⚖️ Judgment 4-Up
+                </button>
+              </div>
             </div>
           </div>
 
