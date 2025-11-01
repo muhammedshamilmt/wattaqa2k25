@@ -146,15 +146,18 @@ export default function ProgrammesPage() {
       
       const method = isEditMode ? 'PUT' : 'POST';
       
+      // Prepare data for submission
+      const { _id, ...submitData } = formData;
+      const requestBody = isEditMode 
+        ? { ...submitData, status: 'active' }
+        : { ...submitData, status: 'active' }; // Exclude _id for new programmes
+      
       const response = await fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          ...formData,
-          status: 'active'
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (response.ok) {
@@ -199,7 +202,14 @@ export default function ProgrammesPage() {
 
   // Handle delete programme
   const handleDelete = async (programmeId: string, programmeName: string) => {
-    if (!confirm(`Are you sure you want to delete "${programmeName}"? This action cannot be undone.`)) {
+    // Get registration count for this programme
+    const registrationCount = participants.filter(p => p.programmeId === programmeId).length;
+    
+    const confirmMessage = registrationCount > 0 
+      ? `⚠️ WARNING: Deleting "${programmeName}" will also delete:\n\n• ${registrationCount} team registration(s)\n• All associated results\n\nThis action cannot be undone. Are you sure?`
+      : `Are you sure you want to delete "${programmeName}"? This action cannot be undone.`;
+    
+    if (!confirm(confirmMessage)) {
       return;
     }
 
@@ -392,7 +402,7 @@ export default function ProgrammesPage() {
                       value={formData.requiredParticipants}
                       onChange={handleInputChange}
                       min="1"
-                      max="20"
+                      max="45"
                       placeholder="Number of participants"
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-700"
                       required

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Team, Result, Candidate, Programme } from '@/types';
+import { Team, Result, Candidate, Programme, ResultStatus } from '@/types';
 
 interface ProgrammeResult {
   programme: Programme;
@@ -57,7 +57,7 @@ export default function ResultsPage() {
       setLoading(true);
       const [teamsRes, resultsRes, candidatesRes, programmesRes] = await Promise.all([
         fetch('/api/teams'),
-        fetch('/api/results'),
+        fetch('/api/results/status?status=published'), // Only fetch published results
         fetch('/api/candidates'),
         fetch('/api/programmes')
       ]);

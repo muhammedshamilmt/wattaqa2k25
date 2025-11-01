@@ -29,6 +29,7 @@ export async function POST(request: Request) {
     
     const newResult = {
       ...body,
+      status: body.status || 'pending', // Default to pending if not specified
       createdAt: new Date(),
       updatedAt: new Date()
     };

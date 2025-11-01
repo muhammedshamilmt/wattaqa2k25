@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
 import { ShowcaseSection } from "@/components/Layouts/showcase-section";
-import { Result, Programme, Candidate, ProgrammeParticipant } from '@/types';
+import { Result, Programme, Candidate, ProgrammeParticipant, ResultStatus } from '@/types';
 
 export default function ResultsPage() {
   const [results, setResults] = useState<Result[]>([]);
@@ -13,6 +13,8 @@ export default function ResultsPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingResultId, setEditingResultId] = useState<string | null>(null);
   
   // Enhanced form state
   const [selectedProgramme, setSelectedProgramme] = useState<Programme | null>(null);
@@ -21,6 +23,7 @@ export default function ResultsPage() {
   const [filteredTeams, setFilteredTeams] = useState<any[]>([]);
   const [showParticipants, setShowParticipants] = useState(false);
   const [teams, setTeams] = useState<any[]>([]);
+  const [programmeSearch, setProgrammeSearch] = useState<string>('');
   
   const [formData, setFormData] = useState({
     programme: '',
@@ -30,16 +33,13 @@ export default function ResultsPage() {
     firstPlace: [] as string[],
     secondPlace: [] as string[],
     thirdPlace: [] as string[],
-    participationGrades: [] as { chestNumber: string; grade: 'A' | 'B' | 'C' | 'D' | 'E' | 'F'; points: number }[],
     // For general programmes (team-based)
     firstPlaceTeams: [] as string[],
     secondPlaceTeams: [] as string[],
     thirdPlaceTeams: [] as string[],
-    participationTeamGrades: [] as { teamCode: string; grade: 'A' | 'B' | 'C' | 'D' | 'E' | 'F'; points: number }[],
     firstPoints: 10,
     secondPoints: 7,
     thirdPoints: 5,
-    participationPoints: 2,
     notes: ''
   });
 
@@ -95,6 +95,45 @@ export default function ResultsPage() {
     fetchData();
   }, []);
 
+  // Static points calculation based on programme type and section
+  const getStaticPoints = (programme: Programme | null) => {
+    if (!programme) return { first: 3, second: 2, third: 1 };
+
+    const section = programme.section;
+    const positionType = programme.positionType;
+
+    if (section === 'general') {
+      if (positionType === 'individual') {
+        return { first: 10, second: 6, third: 3 };
+      } else if (positionType === 'group') {
+        return { first: 15, second: 10, third: 5 };
+      }
+    }
+
+    // Regular programmes (non-general)
+    if (positionType === 'individual') {
+      return { first: 3, second: 2, third: 1 };
+    } else if (positionType === 'group') {
+      return { first: 5, second: 3, third: 1 };
+    }
+
+    // Default fallback
+    return { first: 3, second: 2, third: 1 };
+  };
+
+
+
+  // Filter programmes based on search
+  const getFilteredProgrammes = () => {
+    if (!programmeSearch.trim()) return programmes;
+    
+    return programmes.filter(programme => 
+      programme.name.toLowerCase().includes(programmeSearch.toLowerCase()) ||
+      programme.code.toLowerCase().includes(programmeSearch.toLowerCase()) ||
+      programme.category.toLowerCase().includes(programmeSearch.toLowerCase())
+    );
+  };
+
   // Handle programme selection
   const handleProgrammeSelection = (programmeId: string) => {
     const programme = programmes.find(p => p._id?.toString() === programmeId);
@@ -104,10 +143,15 @@ export default function ResultsPage() {
     setShowParticipants(false);
     
     if (programme) {
+      const staticPoints = getStaticPoints(programme);
       setFormData(prev => ({
         ...prev,
         programme: `${programme.code} - ${programme.name}`,
-        positionType: programme.positionType || 'individual'
+        positionType: programme.positionType || 'individual',
+        // Set static points based on programme type
+        firstPoints: staticPoints.first,
+        secondPoints: staticPoints.second,
+        thirdPoints: staticPoints.third
       }));
     }
   };
@@ -169,8 +213,7 @@ export default function ResultsPage() {
     return [
       ...formData.firstPlace,
       ...formData.secondPlace,
-      ...formData.thirdPlace,
-      ...formData.participationGrades.map(pg => pg.chestNumber)
+      ...formData.thirdPlace
     ].includes(chestNumber);
   };
 
@@ -179,8 +222,7 @@ export default function ResultsPage() {
     return [
       ...formData.firstPlaceTeams,
       ...formData.secondPlaceTeams,
-      ...formData.thirdPlaceTeams,
-      ...formData.participationTeamGrades.map(pg => pg.teamCode)
+      ...formData.thirdPlaceTeams
     ].includes(teamCode);
   };
 
@@ -204,42 +246,79 @@ export default function ResultsPage() {
     }));
   };
 
-  // Add participation grade
-  const addParticipationGrade = (chestNumber: string, grade: 'A' | 'B' | 'C' | 'D' | 'E' | 'F', points: number) => {
-    setFormData(prev => ({
-      ...prev,
-      participationGrades: [
-        ...prev.participationGrades.filter(pg => pg.chestNumber !== chestNumber),
-        { chestNumber, grade, points }
-      ]
-    }));
+
+
+  // Handle edit result
+  const handleEditResult = (result: Result) => {
+    // Find the programme for this result
+    const programme = programmes.find(p => p._id?.toString() === result.programmeId);
+    
+    if (!programme) {
+      alert('Programme not found for this result');
+      return;
+    }
+
+    // Set edit mode
+    setIsEditMode(true);
+    setEditingResultId(result._id?.toString() || null);
+    
+    // Set selected programme and section
+    setSelectedProgramme(programme);
+    setSelectedSection(result.section);
+    
+    // Calculate static points for this programme
+    const staticPoints = getStaticPoints(programme);
+    
+    // Populate form with existing result data
+    setFormData({
+      programme: `${programme.code} - ${programme.name}`,
+      section: result.section,
+      positionType: result.positionType,
+      firstPlace: result.firstPlace?.map(fp => fp.chestNumber) || [],
+      secondPlace: result.secondPlace?.map(sp => sp.chestNumber) || [],
+      thirdPlace: result.thirdPlace?.map(tp => tp.chestNumber) || [],
+      firstPlaceTeams: result.firstPlaceTeams?.map(fpt => fpt.teamCode) || [],
+      secondPlaceTeams: result.secondPlaceTeams?.map(spt => spt.teamCode) || [],
+      thirdPlaceTeams: result.thirdPlaceTeams?.map(tpt => tpt.teamCode) || [],
+      firstPoints: staticPoints.first,
+      secondPoints: staticPoints.second,
+      thirdPoints: staticPoints.third,
+      notes: result.notes || ''
+    });
+
+    // Load participants for this programme and section
+    handleSectionSelection(result.section);
+    
+    // Scroll to form
+    document.getElementById('result-form')?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // Remove participation grade
-  const removeParticipationGrade = (chestNumber: string) => {
-    setFormData(prev => ({
-      ...prev,
-      participationGrades: prev.participationGrades.filter(pg => pg.chestNumber !== chestNumber)
-    }));
-  };
-
-  // Add team participation grade
-  const addTeamParticipationGrade = (teamCode: string, grade: 'A' | 'B' | 'C' | 'D' | 'E' | 'F', points: number) => {
-    setFormData(prev => ({
-      ...prev,
-      participationTeamGrades: [
-        ...prev.participationTeamGrades.filter(pg => pg.teamCode !== teamCode),
-        { teamCode, grade, points }
-      ]
-    }));
-  };
-
-  // Remove team participation grade
-  const removeTeamParticipationGrade = (teamCode: string) => {
-    setFormData(prev => ({
-      ...prev,
-      participationTeamGrades: prev.participationTeamGrades.filter(pg => pg.teamCode !== teamCode)
-    }));
+  // Reset form to add mode
+  const resetForm = () => {
+    setIsEditMode(false);
+    setEditingResultId(null);
+    setSelectedProgramme(null);
+    setSelectedSection('');
+    setFilteredParticipants([]);
+    setFilteredTeams([]);
+    setShowParticipants(false);
+    setProgrammeSearch('');
+    
+    setFormData({
+      programme: '',
+      section: '' as 'senior' | 'junior' | 'sub-junior' | 'general' | '',
+      positionType: '' as 'individual' | 'group' | 'general' | '',
+      firstPlace: [],
+      secondPlace: [],
+      thirdPlace: [],
+      firstPlaceTeams: [],
+      secondPlaceTeams: [],
+      thirdPlaceTeams: [],
+      firstPoints: 10,
+      secondPoints: 7,
+      thirdPoints: 5,
+      notes: ''
+    });
   };
 
   // Handle form submission
@@ -253,54 +332,38 @@ export default function ResultsPage() {
 
     const submitData = {
       ...formData,
+      status: isEditMode ? undefined : ResultStatus.PENDING, // Keep existing status for edits, set pending for new
+      programmeId: selectedProgramme?._id?.toString(),
       // Individual/group results
       firstPlace: formData.firstPlace.map(cn => ({ chestNumber: cn })),
       secondPlace: formData.secondPlace.map(cn => ({ chestNumber: cn })),
       thirdPlace: formData.thirdPlace.map(cn => ({ chestNumber: cn })),
-      participationGrades: formData.participationGrades,
       // Team results
       firstPlaceTeams: formData.firstPlaceTeams.map(tc => ({ teamCode: tc })),
       secondPlaceTeams: formData.secondPlaceTeams.map(tc => ({ teamCode: tc })),
-      thirdPlaceTeams: formData.thirdPlaceTeams.map(tc => ({ teamCode: tc })),
-      participationTeamGrades: formData.participationTeamGrades
+      thirdPlaceTeams: formData.thirdPlaceTeams.map(tc => ({ teamCode: tc }))
     };
 
     try {
       setSubmitting(true);
-      const response = await fetch('/api/results', {
-        method: 'POST',
+      const url = isEditMode ? `/api/results?id=${editingResultId}` : '/api/results';
+      const method = isEditMode ? 'PUT' : 'POST';
+      
+      const response = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(submitData),
       });
 
       if (response.ok) {
         // Reset form
-        setFormData({
-          programme: '',
-          section: '' as any,
-          positionType: '' as any,
-          firstPlace: [],
-          secondPlace: [],
-          thirdPlace: [],
-          participationGrades: [],
-          firstPlaceTeams: [],
-          secondPlaceTeams: [],
-          thirdPlaceTeams: [],
-          participationTeamGrades: [],
-          firstPoints: 10,
-          secondPoints: 7,
-          thirdPoints: 5,
-          participationPoints: 2,
-          notes: ''
-        });
-        setSelectedProgramme(null);
-        setSelectedSection('');
-        setFilteredParticipants([]);
-        setFilteredTeams([]);
-        setShowParticipants(false);
+        resetForm();
         
         await fetchData();
-        alert('Result added successfully!');
+        alert(isEditMode 
+          ? 'Result updated successfully!' 
+          : 'Result added successfully! It has been sent to the checklist for review.'
+        );
       } else {
         const error = await response.json();
         alert(error.error || 'Error adding result');
@@ -311,6 +374,81 @@ export default function ResultsPage() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  // Calculate team points from results
+  const calculateTeamPoints = () => {
+    const teamPoints: { [teamCode: string]: { name: string; color: string; total: number } } = {};
+
+    // Initialize teams
+    teams.forEach(team => {
+      teamPoints[team.code] = {
+        name: team.name,
+        color: team.color,
+        total: 0
+      };
+    });
+
+    // Calculate points from results
+    results.forEach(result => {
+      // Individual/group results
+      if (result.firstPlace) {
+        result.firstPlace.forEach(winner => {
+          const candidate = candidates.find(c => c.chestNumber === winner.chestNumber);
+          if (candidate && teamPoints[candidate.team]) {
+            teamPoints[candidate.team].total += result.firstPoints;
+          }
+        });
+      }
+
+      if (result.secondPlace) {
+        result.secondPlace.forEach(winner => {
+          const candidate = candidates.find(c => c.chestNumber === winner.chestNumber);
+          if (candidate && teamPoints[candidate.team]) {
+            teamPoints[candidate.team].total += result.secondPoints;
+          }
+        });
+      }
+
+      if (result.thirdPlace) {
+        result.thirdPlace.forEach(winner => {
+          const candidate = candidates.find(c => c.chestNumber === winner.chestNumber);
+          if (candidate && teamPoints[candidate.team]) {
+            teamPoints[candidate.team].total += result.thirdPoints;
+          }
+        });
+      }
+
+      // Team results
+      if (result.firstPlaceTeams) {
+        result.firstPlaceTeams.forEach(winner => {
+          if (teamPoints[winner.teamCode]) {
+            teamPoints[winner.teamCode].total += result.firstPoints;
+          }
+        });
+      }
+
+      if (result.secondPlaceTeams) {
+        result.secondPlaceTeams.forEach(winner => {
+          if (teamPoints[winner.teamCode]) {
+            teamPoints[winner.teamCode].total += result.secondPoints;
+          }
+        });
+      }
+
+      if (result.thirdPlaceTeams) {
+        result.thirdPlaceTeams.forEach(winner => {
+          if (teamPoints[winner.teamCode]) {
+            teamPoints[winner.teamCode].total += result.thirdPoints;
+          }
+        });
+      }
+    });
+
+    // Sort teams by total points
+    return Object.entries(teamPoints)
+      .map(([code, data]) => ({ code, ...data }))
+      .sort((a, b) => b.total - a.total);
   };
 
   // Handle delete
@@ -356,9 +494,49 @@ export default function ResultsPage() {
       <Breadcrumb pageName="Results" />
 
       <div className="space-y-6">
+        {/* Navigation */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <div className="flex justify-between items-center">
+            <h2 className="text-lg font-semibold text-gray-900">Result Management</h2>
+            <div className="flex space-x-3">
+              <a
+                href="/admin/results/checklist"
+                className="inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+              >
+                <span className="mr-2">📋</span>
+                Review Checklist
+              </a>
+              <a
+                href="/admin/results/publish"
+                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <span className="mr-2">🚀</span>
+                Publish Results
+              </a>
+            </div>
+          </div>
+          <p className="text-sm text-gray-600 mt-2">
+            Add new results below. They will be sent to the checklist for review before publication.
+          </p>
+        </div>
+
         {/* Add New Result */}
-        <ShowcaseSection title="Add New Result">
-          <form onSubmit={handleSubmit} className="space-y-6">
+        <ShowcaseSection title={isEditMode ? "Edit Result" : "Add New Result"}>
+          <form id="result-form" onSubmit={handleSubmit} className="space-y-6">
+            {/* Programme Search */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                🔍 Search Programmes
+              </label>
+              <input
+                type="text"
+                value={programmeSearch}
+                onChange={(e) => setProgrammeSearch(e.target.value)}
+                placeholder="Search by programme name, code, or category..."
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-700"
+              />
+            </div>
+
             {/* Programme and Section Selection */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -372,18 +550,28 @@ export default function ResultsPage() {
                   required
                 >
                   <option value="">Select programme</option>
-                  {programmes.map((programme) => (
+                  {getFilteredProgrammes().map((programme) => (
                     <option key={programme._id?.toString()} value={programme._id?.toString()}>
                       {programme.code} - {programme.name} ({programme.category})
                     </option>
                   ))}
                 </select>
                 {selectedProgramme && (
-                  <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <div className="text-sm text-blue-800">
-                      <p><strong>Category:</strong> {selectedProgramme.category}</p>
-                      <p><strong>Position Type:</strong> {selectedProgramme.positionType}</p>
-                      <p><strong>Required Participants:</strong> {selectedProgramme.requiredParticipants}</p>
+                  <div className="mt-2 space-y-2">
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="text-sm text-blue-800">
+                        <p><strong>Category:</strong> {selectedProgramme.category}</p>
+                        <p><strong>Position Type:</strong> {selectedProgramme.positionType}</p>
+                        <p><strong>Required Participants:</strong> {selectedProgramme.requiredParticipants}</p>
+                      </div>
+                    </div>
+                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="text-sm text-green-800">
+                        <p><strong>📊 Static Points:</strong></p>
+                        <p>🥇 First: {getStaticPoints(selectedProgramme).first} pts</p>
+                        <p>🥈 Second: {getStaticPoints(selectedProgramme).second} pts</p>
+                        <p>🥉 Third: {getStaticPoints(selectedProgramme).third} pts</p>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -431,7 +619,7 @@ export default function ResultsPage() {
                     const isFirst = formData.firstPlaceTeams.includes(teamEntry.teamCode);
                     const isSecond = formData.secondPlaceTeams.includes(teamEntry.teamCode);
                     const isThird = formData.thirdPlaceTeams.includes(teamEntry.teamCode);
-                    const participationGrade = formData.participationTeamGrades.find(pg => pg.teamCode === teamEntry.teamCode);
+
                     
                     return (
                       <div 
@@ -494,45 +682,7 @@ export default function ResultsPage() {
                             🥉 3rd
                           </button>
                         </div>
-                        
-                        {/* Participation Grade */}
-                        <div className="flex items-center space-x-1">
-                          <select
-                            value={participationGrade?.grade || ''}
-                            onChange={(e) => {
-                              if (e.target.value) {
-                                addTeamParticipationGrade(
-                                  teamEntry.teamCode, 
-                                  e.target.value as 'A' | 'B' | 'C' | 'D' | 'E' | 'F',
-                                  formData.participationPoints
-                                );
-                              } else {
-                                removeTeamParticipationGrade(teamEntry.teamCode);
-                              }
-                            }}
-                            className="text-xs px-1 py-1 border border-gray-300 rounded bg-white"
-                          >
-                            <option value="">Grade</option>
-                            <option value="A">A</option>
-                            <option value="B">B</option>
-                            <option value="C">C</option>
-                            <option value="D">D</option>
-                            <option value="E">E</option>
-                            <option value="F">F</option>
-                          </select>
-                          {participationGrade && (
-                            <input
-                              type="number"
-                              value={participationGrade.points}
-                              onChange={(e) => addTeamParticipationGrade(
-                                teamEntry.teamCode, 
-                                participationGrade.grade, 
-                                parseInt(e.target.value) || 0
-                              )}
-                              className="text-xs px-1 py-1 border border-gray-300 rounded bg-white w-12"
-                            />
-                          )}
-                        </div>
+
                       </div>
                     );
                   })}
@@ -553,7 +703,7 @@ export default function ResultsPage() {
                     const isFirst = formData.firstPlace.includes(participant.chestNumber);
                     const isSecond = formData.secondPlace.includes(participant.chestNumber);
                     const isThird = formData.thirdPlace.includes(participant.chestNumber);
-                    const participationGrade = formData.participationGrades.find(pg => pg.chestNumber === participant.chestNumber);
+
                     
                     return (
                       <div 
@@ -613,45 +763,7 @@ export default function ResultsPage() {
                             🥉 3rd
                           </button>
                         </div>
-                        
-                        {/* Participation Grade */}
-                        <div className="flex items-center space-x-1">
-                          <select
-                            value={participationGrade?.grade || ''}
-                            onChange={(e) => {
-                              if (e.target.value) {
-                                addParticipationGrade(
-                                  participant.chestNumber, 
-                                  e.target.value as 'A' | 'B' | 'C' | 'D' | 'E' | 'F',
-                                  formData.participationPoints
-                                );
-                              } else {
-                                removeParticipationGrade(participant.chestNumber);
-                              }
-                            }}
-                            className="text-xs px-1 py-1 border border-gray-300 rounded bg-white"
-                          >
-                            <option value="">Grade</option>
-                            <option value="A">A</option>
-                            <option value="B">B</option>
-                            <option value="C">C</option>
-                            <option value="D">D</option>
-                            <option value="E">E</option>
-                            <option value="F">F</option>
-                          </select>
-                          {participationGrade && (
-                            <input
-                              type="number"
-                              value={participationGrade.points}
-                              onChange={(e) => addParticipationGrade(
-                                participant.chestNumber, 
-                                participationGrade.grade, 
-                                parseInt(e.target.value) || 0
-                              )}
-                              className="text-xs px-1 py-1 border border-gray-300 rounded bg-white w-12"
-                            />
-                          )}
-                        </div>
+
                       </div>
                     );
                   })}
@@ -679,53 +791,30 @@ export default function ResultsPage() {
               </div>
             )}
 
-            {/* Points Configuration */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Points (1st Place)
-                </label>
-                <input
-                  type="number"
-                  value={formData.firstPoints}
-                  onChange={(e) => setFormData(prev => ({ ...prev, firstPoints: parseInt(e.target.value) || 0 }))}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-700"
-                />
+            {/* Static Points Display */}
+            {selectedProgramme && (
+              <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-4">
+                <h3 className="font-semibold text-green-800 mb-3">📊 Points System (Static)</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <div className="bg-white rounded-lg p-3 border border-green-200">
+                    <div className="font-bold text-yellow-600">🥇 First Place</div>
+                    <div className="text-2xl font-bold text-gray-900">{formData.firstPoints}</div>
+                    <div className="text-xs text-gray-500">points each</div>
+                  </div>
+                  <div className="bg-white rounded-lg p-3 border border-green-200">
+                    <div className="font-bold text-gray-600">🥈 Second Place</div>
+                    <div className="text-2xl font-bold text-gray-900">{formData.secondPoints}</div>
+                    <div className="text-xs text-gray-500">points each</div>
+                  </div>
+                  <div className="bg-white rounded-lg p-3 border border-green-200">
+                    <div className="font-bold text-orange-600">🥉 Third Place</div>
+                    <div className="text-2xl font-bold text-gray-900">{formData.thirdPoints}</div>
+                    <div className="text-xs text-gray-500">points each</div>
+                  </div>
+
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Points (2nd Place)
-                </label>
-                <input
-                  type="number"
-                  value={formData.secondPoints}
-                  onChange={(e) => setFormData(prev => ({ ...prev, secondPoints: parseInt(e.target.value) || 0 }))}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-700"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Points (3rd Place)
-                </label>
-                <input
-                  type="number"
-                  value={formData.thirdPoints}
-                  onChange={(e) => setFormData(prev => ({ ...prev, thirdPoints: parseInt(e.target.value) || 0 }))}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-700"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Points (Participation)
-                </label>
-                <input
-                  type="number"
-                  value={formData.participationPoints}
-                  onChange={(e) => setFormData(prev => ({ ...prev, participationPoints: parseInt(e.target.value) || 0 }))}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white text-gray-700"
-                />
-              </div>
-            </div>
+            )}
 
             {/* Notes */}
             <div>
@@ -741,13 +830,27 @@ export default function ResultsPage() {
               />
             </div>
 
-            <button
-              type="submit"
-              disabled={submitting || !showParticipants}
-              className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-2 rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-200 shadow-lg disabled:opacity-50"
-            >
-              {submitting ? 'Adding Result...' : 'Add Result'}
-            </button>
+            <div className="flex space-x-4">
+              <button
+                type="submit"
+                disabled={submitting || !showParticipants}
+                className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-2 rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-200 shadow-lg disabled:opacity-50"
+              >
+                {submitting 
+                  ? (isEditMode ? 'Updating Result...' : 'Adding Result...') 
+                  : (isEditMode ? 'Update Result' : 'Add Result')
+                }
+              </button>
+              {isEditMode && (
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition-all duration-200"
+                >
+                  Cancel Edit
+                </button>
+              )}
+            </div>
           </form>
         </ShowcaseSection>
 
@@ -764,10 +867,10 @@ export default function ResultsPage() {
                   <tr className="border-b-2 border-gray-200">
                     <th className="text-left py-4 px-4 font-bold text-gray-700">Programme</th>
                     <th className="text-left py-4 px-4 font-bold text-gray-700">Section</th>
+                    <th className="text-left py-4 px-4 font-bold text-gray-700">Status</th>
                     <th className="text-left py-4 px-4 font-bold text-gray-700">🥇 First</th>
                     <th className="text-left py-4 px-4 font-bold text-gray-700">🥈 Second</th>
                     <th className="text-left py-4 px-4 font-bold text-gray-700">🥉 Third</th>
-                    <th className="text-left py-4 px-4 font-bold text-gray-700">🎖️ Participation</th>
                     <th className="text-left py-4 px-4 font-bold text-gray-700">Actions</th>
                   </tr>
                 </thead>
@@ -778,6 +881,17 @@ export default function ResultsPage() {
                       <td className="py-3 px-4">
                         <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-800">
                           {result.section.charAt(0).toUpperCase() + result.section.slice(1).replace('-', ' ')}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          result.status === 'published' ? 'bg-blue-100 text-blue-800' :
+                          result.status === 'checked' ? 'bg-green-100 text-green-800' :
+                          'bg-orange-100 text-orange-800'
+                        }`}>
+                          {result.status === 'published' ? '🚀 Published' :
+                           result.status === 'checked' ? '✅ Checked' :
+                           '⏳ Pending'}
                         </span>
                       </td>
                       <td className="py-3 px-4">
@@ -871,46 +985,15 @@ export default function ResultsPage() {
                         </div>
                       </td>
                       <td className="py-3 px-4">
-                        <div className="text-sm">
-                          {/* Individual/Group Participation */}
-                          {result.participationGrades && result.participationGrades.length > 0 && (
-                            <div className="mb-2">
-                              {result.participationGrades.map((pg, index) => (
-                                <div key={index} className="flex items-center space-x-2 mb-1">
-                                  <span className="font-medium text-gray-900">{pg.chestNumber}</span>
-                                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-800">
-                                    {pg.grade}
-                                  </span>
-                                  <span className="text-xs text-gray-500">({pg.points} pts)</span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                          {/* Team Participation */}
-                          {result.participationTeamGrades && result.participationTeamGrades.length > 0 && (
-                            <div>
-                              {result.participationTeamGrades.map((pg, index) => (
-                                <div key={index} className="flex items-center space-x-2 mb-1">
-                                  <span className="inline-block w-4 h-4 rounded-full mr-2" style={{ backgroundColor: teams.find(t => t.code === pg.teamCode)?.color || '#6B7280' }}></span>
-                                  <span className="font-medium text-gray-900">{pg.teamCode}</span>
-                                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-800">
-                                    {pg.grade}
-                                  </span>
-                                  <span className="text-xs text-gray-500">({pg.points} pts)</span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                          {(!result.participationGrades || result.participationGrades.length === 0) && (!result.participationTeamGrades || result.participationTeamGrades.length === 0) && (
-                            <p className="text-gray-400">-</p>
-                          )}
-                        </div>
-                      </td>
-                      <td className="py-3 px-4">
                         <div className="flex space-x-2">
-                          <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">Edit</button>
                           <button 
-                            onClick={() => handleDelete(result._id!.toString(), result.programme)}
+                            onClick={() => handleEditResult(result)}
+                            className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                          >
+                            Edit
+                          </button>
+                          <button 
+                            onClick={() => handleDelete(result._id!.toString(), result.programme || 'Unknown Programme')}
                             disabled={deleting === result._id?.toString()}
                             className="text-red-600 hover:text-red-800 text-sm font-medium disabled:opacity-50"
                           >
@@ -922,6 +1005,211 @@ export default function ResultsPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+        </ShowcaseSection>
+
+        {/* Grand Marks Summary */}
+        <ShowcaseSection title="📊 Grand Marks Summary">
+          {results.length === 0 ? (
+            <div className="text-center py-8">
+              <div className="text-4xl mb-4">📊</div>
+              <p className="text-gray-500">No results available for summary</p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {/* Summary Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {/* Total Results */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                  <div className="flex items-center">
+                    <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center mr-4">
+                      <span className="text-white text-xl">📋</span>
+                    </div>
+                    <div>
+                      <div className="text-2xl font-bold text-blue-900">{results.length}</div>
+                      <div className="text-sm text-blue-600">Total Results</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Active Teams */}
+                <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+                  <div className="flex items-center">
+                    <div className="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center mr-4">
+                      <span className="text-white text-xl">🏆</span>
+                    </div>
+                    <div>
+                      <div className="text-2xl font-bold text-green-900">{teams.length}</div>
+                      <div className="text-sm text-green-600">Active Teams</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Results by Status */}
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-6">
+                  <div className="flex items-center">
+                    <div className="w-12 h-12 bg-orange-600 rounded-lg flex items-center justify-center mr-4">
+                      <span className="text-white text-xl">📈</span>
+                    </div>
+                    <div>
+                      <div className="text-sm text-orange-600 space-y-1">
+                        <div>⏳ Pending: {results.filter(r => r.status === 'pending').length}</div>
+                        <div>✅ Checked: {results.filter(r => r.status === 'checked').length}</div>
+                        <div>🚀 Published: {results.filter(r => r.status === 'published').length}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Team Points Grid */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                  <span className="mr-2">🏆</span>
+                  Team Grand Points
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+                  {calculateTeamPoints().map((team, index) => (
+                    <div key={team.code} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                      <div className="flex items-center space-x-3">
+                        <div
+                          className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm"
+                          style={{ backgroundColor: team.color }}
+                        >
+                          {team.code}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xl font-bold text-gray-900">{team.total}</div>
+                          <div className="text-xs text-gray-600 truncate">{team.name}</div>
+                        </div>
+                        {index < 3 && (
+                          <div className="text-lg">
+                            {index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </ShowcaseSection>
+
+        {/* Checked Results Summary */}
+        <ShowcaseSection title="✅ Checked Results Summary">
+          {results.filter(r => r.status === 'checked').length === 0 ? (
+            <div className="text-center py-8">
+              <div className="text-4xl mb-4">✅</div>
+              <p className="text-gray-500">No checked results available</p>
+              <p className="text-sm text-gray-400 mt-2">Results will appear here after being reviewed and checked</p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {/* Checked Results Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
+                  <div className="text-3xl font-bold text-green-900">
+                    {results.filter(r => r.status === 'checked').length}
+                  </div>
+                  <div className="text-sm text-green-600">Checked Results</div>
+                </div>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
+                  <div className="text-3xl font-bold text-blue-900">
+                    {results.filter(r => r.status === 'checked').reduce((total, result) => {
+                      let resultTotal = 0;
+                      if (result.firstPlace) resultTotal += result.firstPlace.length * result.firstPoints;
+                      if (result.secondPlace) resultTotal += result.secondPlace.length * result.secondPoints;
+                      if (result.thirdPlace) resultTotal += result.thirdPlace.length * result.thirdPoints;
+                      if (result.firstPlaceTeams) resultTotal += result.firstPlaceTeams.length * result.firstPoints;
+                      if (result.secondPlaceTeams) resultTotal += result.secondPlaceTeams.length * result.secondPoints;
+                      if (result.thirdPlaceTeams) resultTotal += result.thirdPlaceTeams.length * result.thirdPoints;
+                      return total + resultTotal;
+                    }, 0)}
+                  </div>
+                  <div className="text-sm text-blue-600">Points Ready</div>
+                </div>
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-6 text-center">
+                  <div className="text-3xl font-bold text-purple-900">
+                    {results.filter(r => r.status === 'checked').reduce((total, result) => {
+                      let winners = 0;
+                      if (result.firstPlace) winners += result.firstPlace.length;
+                      if (result.secondPlace) winners += result.secondPlace.length;
+                      if (result.thirdPlace) winners += result.thirdPlace.length;
+                      if (result.firstPlaceTeams) winners += result.firstPlaceTeams.length;
+                      if (result.secondPlaceTeams) winners += result.secondPlaceTeams.length;
+                      if (result.thirdPlaceTeams) winners += result.thirdPlaceTeams.length;
+                      return total + winners;
+                    }, 0)}
+                  </div>
+                  <div className="text-sm text-purple-600">Winners Ready</div>
+                </div>
+              </div>
+
+              {/* Checked Results List */}
+              <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                <div className="bg-green-50 px-6 py-4 border-b border-green-200">
+                  <h3 className="text-lg font-semibold text-green-900">Ready for Publication</h3>
+                  <p className="text-sm text-green-700">These results have been checked and are ready to be published</p>
+                </div>
+                <div className="divide-y divide-gray-200">
+                  {results.filter(r => r.status === 'checked').map((result, index) => (
+                    <div key={result._id?.toString()} className="p-4 hover:bg-gray-50">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-gray-900">{result.programme}</h4>
+                          <div className="flex items-center space-x-4 text-sm text-gray-600 mt-1">
+                            <span className="capitalize">{result.section.replace('-', ' ')} section</span>
+                            <span>•</span>
+                            <span className="capitalize">{result.positionType}</span>
+                            <span>•</span>
+                            <span>
+                              {((result.firstPlace?.length || 0) + 
+                                (result.secondPlace?.length || 0) + 
+                                (result.thirdPlace?.length || 0) + 
+                                (result.firstPlaceTeams?.length || 0) + 
+                                (result.secondPlaceTeams?.length || 0) + 
+                                (result.thirdPlaceTeams?.length || 0))} winners
+                            </span>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-lg font-bold text-green-600">
+                            {((result.firstPlace?.length || 0) * result.firstPoints) +
+                             ((result.secondPlace?.length || 0) * result.secondPoints) +
+                             ((result.thirdPlace?.length || 0) * result.thirdPoints) +
+                             ((result.firstPlaceTeams?.length || 0) * result.firstPoints) +
+                             ((result.secondPlaceTeams?.length || 0) * result.secondPoints) +
+                             ((result.thirdPlaceTeams?.length || 0) * result.thirdPoints)} pts
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {new Date(result.updatedAt || result.createdAt || '').toLocaleDateString()}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Quick Actions */}
+              <div className="flex justify-center space-x-4">
+                <a
+                  href="/admin/results/checklist"
+                  className="inline-flex items-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  <span className="mr-2">📋</span>
+                  View in Checklist
+                </a>
+                <a
+                  href="/admin/results/publish"
+                  className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <span className="mr-2">🚀</span>
+                  Publish Results
+                </a>
+              </div>
             </div>
           )}
         </ShowcaseSection>

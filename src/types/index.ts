@@ -47,6 +47,12 @@ export interface Candidate {
   updatedAt?: Date;
 }
 
+export enum ResultStatus {
+  PENDING = 'pending',
+  CHECKED = 'checked',
+  PUBLISHED = 'published'
+}
+
 export interface Result {
   _id?: ObjectId | string;
   id?: string; // For backward compatibility
@@ -54,6 +60,7 @@ export interface Result {
   programme?: string; // Keep for backward compatibility
   section: 'senior' | 'junior' | 'sub-junior' | 'general';
   positionType: 'individual' | 'group' | 'general';
+  status: ResultStatus; // New status field
   // For individual/group programmes (participant-based)
   firstPlace: { chestNumber: string; grade?: 'A+' | 'A' | 'A-' | 'B+' | 'B' | 'B-' | 'C+' | 'C' | 'C-' | 'D+' | 'D' | 'D-' | 'E+' | 'E' | 'E-' | 'F' }[];
   secondPlace: { chestNumber: string; grade?: 'A+' | 'A' | 'A-' | 'B+' | 'B' | 'B-' | 'C+' | 'C' | 'C-' | 'D+' | 'D' | 'D-' | 'E+' | 'E' | 'E-' | 'F' }[];
@@ -69,8 +76,16 @@ export interface Result {
   thirdPoints: number;
   participationPoints?: number;
   notes?: string;
+  reviewNotes?: string; // Notes from admin review
   createdAt?: Date;
   updatedAt?: Date;
+}
+
+export interface EnhancedResult extends Result {
+  programmeName?: string;
+  programmeCode?: string;
+  programmeCategory?: string;
+  programmeSection?: string;
 }
 
 export interface FestivalInfo {

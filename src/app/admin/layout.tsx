@@ -16,8 +16,8 @@ export default function AdminLayout({ children }: PropsWithChildren) {
         <Sidebar />
         <div className="w-full bg-transparent">
           <Header />
-          <main className="isolate mx-auto w-full max-w-screen-2xl overflow-hidden p-4 md:p-6 2xl:p-10">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 min-h-[calc(100vh-200px)]">
+          <main className="mx-auto w-full max-w-screen-2xl overflow-hidden p-4 md:p-6 2xl:p-10 relative">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 min-h-[calc(100vh-200px)] relative">
               {children}
             </div>
           </main>

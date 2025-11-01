@@ -45,8 +45,11 @@ export async function POST(request: Request) {
     const db = await getDatabase();
     const collection = db.collection<Programme>('programmes');
     
+    // Remove _id field if it exists (MongoDB will auto-generate it)
+    const { _id, ...programmeData } = body;
+    
     const newProgramme: Programme = {
-      ...body,
+      ...programmeData,
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -124,12 +127,31 @@ export async function DELETE(request: Request) {
     }
 
     const db = await getDatabase();
-    const collection = db.collection<Programme>('programmes');
+    const programmesCollection = db.collection<Programme>('programmes');
     
-    const result = await collection.deleteOne({ _id: new ObjectId(id) });
-    
-    if (result.deletedCount === 0) {
+    // First, check if programme exists and get its details
+    const programme = await programmesCollection.findOne({ _id: new ObjectId(id) });
+    if (!programme) {
       return NextResponse.json({ error: 'Programme not found' }, { status: 404 });
+    }
+
+    // Delete all programme participants for this programme
+    const participantsCollection = db.collection('programme-participants');
+    const participantsDeletionResult = await participantsCollection.deleteMany({ 
+      programmeId: id 
+    });
+
+    // Delete all results for this programme
+    const resultsCollection = db.collection('results');
+    const resultsDeletionResult = await resultsCollection.deleteMany({ 
+      programmeId: id 
+    });
+
+    // Finally, delete the programme itself
+    const programmeDeletionResult = await programmesCollection.deleteOne({ _id: new ObjectId(id) });
+    
+    if (programmeDeletionResult.deletedCount === 0) {
+      return NextResponse.json({ error: 'Failed to delete programme' }, { status: 500 });
     }
     
     // Auto-sync to Google Sheets
@@ -141,7 +163,15 @@ export async function DELETE(request: Request) {
       // Don't fail the main operation if sync fails
     }
     
-    return NextResponse.json({ success: true, message: 'Programme deleted successfully' });
+    return NextResponse.json({ 
+      success: true, 
+      message: 'Programme deleted successfully',
+      details: {
+        programme: programme.name,
+        participantsDeleted: participantsDeletionResult.deletedCount,
+        resultsDeleted: resultsDeletionResult.deletedCount
+      }
+    });
   } catch (error) {
     console.error('Error deleting programme:', error);
     return NextResponse.json({ error: 'Failed to delete programme' }, { status: 500 });
