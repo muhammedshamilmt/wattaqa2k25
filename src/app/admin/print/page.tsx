@@ -54,8 +54,8 @@ export default function AdminPrintPage() {
       participant.participants.forEach(p => {
         if (typeof p === 'string') {
           chestNumbers.push(p);
-        } else if (p.candidateId) {
-          const candidate = candidates.find(c => c._id?.toString() === p.candidateId);
+        } else if (p && typeof p === 'object' && 'candidateId' in p) {
+          const candidate = candidates.find(c => c._id?.toString() === (p as any).candidateId);
           if (candidate) {
             chestNumbers.push(candidate.chestNumber);
           }
@@ -74,22 +74,44 @@ export default function AdminPrintPage() {
     setShowPreview(true);
   };
 
-  const handlePrint = () => {
+  const handlePrint = (layout: 'single' | '4up' = 'single') => {
     if (!selectedProgramme) {
       alert('Please select a programme');
       return;
     }
 
     const chestNumbers = getParticipantChestNumbers(selectedProgramme._id?.toString() || '');
+    
+    // Get candidate details for the participants
+    const candidateDetails = chestNumbers.map(chestNumber => {
+      const candidate = candidates.find(c => c.chestNumber === chestNumber);
+      return candidate ? {
+        chestNumber: candidate.chestNumber,
+        name: candidate.name,
+        team: candidate.team
+      } : {
+        chestNumber,
+        name: '',
+        team: ''
+      };
+    });
+
     const params = new URLSearchParams({
       evaluator: evaluatorName || '',
       code: selectedProgramme.code,
       name: selectedProgramme.name,
-      participants: chestNumbers.join(',')
+      section: selectedProgramme.section,
+      participants: chestNumbers.join(','),
+      candidateData: JSON.stringify(candidateDetails)
     });
 
+    // Choose the appropriate print page based on layout
+    const printUrl = layout === '4up' 
+      ? `/admin/print/scorecard-4up?${params.toString()}`
+      : `/admin/print/scorecard?${params.toString()}`;
+
     // Open print page in new window
-    const printWindow = window.open(`/admin/print/scorecard?${params.toString()}`, '_blank');
+    const printWindow = window.open(printUrl, '_blank');
     if (printWindow) {
       printWindow.focus();
     }
@@ -120,7 +142,14 @@ export default function AdminPrintPage() {
       {!showPreview ? (
         // Configuration Form
         <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-6">📋 Judgment Scorecard Generator</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">📋 Judgment Scorecard Generator</h2>
+          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <h3 className="font-medium text-blue-900 mb-2">Print Layout Options:</h3>
+            <ul className="text-sm text-blue-800 space-y-1">
+              <li>• <strong>Single:</strong> One full-size scorecard per page (A4)</li>
+              <li>• <strong>4 Per Sheet:</strong> Four compact scorecards per page for efficient printing</li>
+            </ul>
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
@@ -209,14 +238,21 @@ export default function AdminPrintPage() {
               disabled={!selectedProgramme}
               className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
             >
-              � Previewt Scorecard
+              📋 Preview Scorecard
             </button>
             <button
-              onClick={handlePrint}
+              onClick={() => handlePrint('single')}
               disabled={!selectedProgramme}
               className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
             >
-              🖨️ Open Print Page
+              🖨️ Print Single
+            </button>
+            <button
+              onClick={() => handlePrint('4up')}
+              disabled={!selectedProgramme}
+              className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
+            >
+              🖨️ Print 4 Per Sheet
             </button>
           </div>
         </div>
@@ -236,10 +272,16 @@ export default function AdminPrintPage() {
                 ← Back to Edit
               </button>
               <button
-                onClick={handlePrint}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                onClick={() => handlePrint('single')}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors mr-2"
               >
-                🖨️ Print Scorecard
+                🖨️ Print Single
+              </button>
+              <button
+                onClick={() => handlePrint('4up')}
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+              >
+                🖨️ Print 4 Per Sheet
               </button>
             </div>
           </div>

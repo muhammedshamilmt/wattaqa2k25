@@ -9,6 +9,7 @@ export default function ScorecardPrintPage() {
     evaluatorName: '',
     programCode: '',
     programName: '',
+    section: '',
     chestNumbers: [] as string[]
   });
 
@@ -17,12 +18,14 @@ export default function ScorecardPrintPage() {
     const evaluatorName = searchParams.get('evaluator') || '';
     const programCode = searchParams.get('code') || '';
     const programName = searchParams.get('name') || '';
+    const section = searchParams.get('section') || '';
     const chestNumbers = searchParams.get('participants')?.split(',') || [];
 
     setData({
       evaluatorName,
       programCode,
       programName,
+      section,
       chestNumbers
     });
 
