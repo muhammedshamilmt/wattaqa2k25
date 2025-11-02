@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 import { useSidebarContext } from "../sidebar/sidebar-context";
 import { MenuIcon } from "./icons";
 import { Notification } from "./notification";
-import { ThemeToggleSwitch } from "./theme-toggle";
+
 import { UserInfo } from "./user-info";
 
 export function Header() {
@@ -21,25 +21,23 @@ export function Header() {
   const getContextualNav = (isMobile = false) => {
     if (!isResultPage) return null;
     
-    const containerClass = isMobile ? "flex flex-col space-y-2" : "flex items-center space-x-3";
-    const buttonClass = "inline-flex items-center justify-center px-4 py-2 text-white rounded-lg transition-all duration-200 shadow-sm font-medium text-sm";
+    const containerClass = isMobile 
+      ? "flex flex-col space-y-2 w-full" 
+      : "flex items-center justify-center space-x-2";
+    
+    const buttonClass = isMobile
+      ? "inline-flex items-center justify-center px-4 py-2.5 text-white rounded-lg transition-all duration-200 shadow-md hover:shadow-lg font-medium text-sm w-full"
+      : "inline-flex items-center justify-center px-4 py-2 text-white rounded-lg transition-all duration-200 shadow-md hover:shadow-lg font-medium text-sm whitespace-nowrap";
     
     if (pathname === '/admin/results') {
       return (
         <div className={containerClass}>
           <Link
             href="/admin/results/checklist"
-            className={`${buttonClass} bg-orange-600 hover:bg-orange-700`}
+            className={`${buttonClass} bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 border border-blue-500/20 hover:border-purple-500/30`}
           >
             <span className="mr-2">📋</span>
-            Review Checklist
-          </Link>
-          <Link
-            href="/admin/results/publish"
-            className={`${buttonClass} bg-blue-600 hover:bg-blue-700`}
-          >
-            <span className="mr-2">🚀</span>
-            Publish Results
+            <span>Review Checklist</span>
           </Link>
         </div>
       );
@@ -50,17 +48,10 @@ export function Header() {
         <div className={containerClass}>
           <Link
             href="/admin/results"
-            className={`${buttonClass} bg-gray-600 hover:bg-gray-700`}
+            className={`${buttonClass} bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 border border-gray-500/20 hover:border-gray-600/30`}
           >
             <span className="mr-2">←</span>
-            Back to Results
-          </Link>
-          <Link
-            href="/admin/results/publish"
-            className={`${buttonClass} bg-blue-600 hover:bg-blue-700`}
-          >
-            <span className="mr-2">🚀</span>
-            Publish Results
+            <span>Back to Results</span>
           </Link>
         </div>
       );
@@ -71,17 +62,17 @@ export function Header() {
         <div className={containerClass}>
           <Link
             href="/admin/results"
-            className={`${buttonClass} bg-gray-600 hover:bg-gray-700`}
+            className={`${buttonClass} bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 border border-gray-500/20 hover:border-gray-600/30`}
           >
             <span className="mr-2">←</span>
-            Back to Results
+            <span>Back to Results</span>
           </Link>
           <Link
             href="/admin/results/checklist"
-            className={`${buttonClass} bg-orange-600 hover:bg-orange-700`}
+            className={`${buttonClass} bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 border border-blue-500/20 hover:border-purple-500/30`}
           >
             <span className="mr-2">📋</span>
-            Review Checklist
+            <span>Review Checklist</span>
           </Link>
         </div>
       );
@@ -130,11 +121,9 @@ export function Header() {
           </div>
         </div>
 
-        {/* Center Section - Contextual Navigation or Search */}
-        <div className="hidden md:flex flex-1 max-w-2xl mx-8 justify-center">
-          {isResultPage ? (
-            getContextualNav(false)
-          ) : (
+        {/* Center Section - Search Only */}
+        <div className="hidden md:flex flex-1 mx-4 justify-center items-center">
+          {!isResultPage && (
             <div className="relative w-full max-w-md">
               <input
                 type="search"
@@ -149,7 +138,7 @@ export function Header() {
         {/* Right Section - Actions & User */}
         <div className="flex items-center space-x-4">
           {/* Team Status Indicators */}
-          <div className="hidden lg:flex items-center space-x-2 mr-4">
+          <div className="hidden lg:flex items-center space-x-2">
             <div className="flex -space-x-1">
               <div className="w-8 h-8 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full border-2 border-white shadow-sm"></div>
               <div className="w-8 h-8 bg-gradient-to-r from-gray-700 to-gray-900 rounded-full border-2 border-white shadow-sm"></div>
@@ -158,9 +147,13 @@ export function Header() {
             <span className="text-sm text-gray-600 font-medium">3 Teams Active</span>
           </div>
 
+          {/* Contextual Navigation Buttons */}
+          {isResultPage && (
+            <div className="hidden md:flex items-center">
+              {getContextualNav(false)}
+            </div>
+          )}
 
-
-          <ThemeToggleSwitch />
           <Notification />
           <UserInfo />
         </div>

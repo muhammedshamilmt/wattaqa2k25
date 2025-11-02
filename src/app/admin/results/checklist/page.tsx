@@ -10,11 +10,12 @@ import MarksSummary from '@/components/admin/MarksSummary';
 export default function CheckListPage() {
   const [pendingResults, setPendingResults] = useState<EnhancedResult[]>([]);
   const [checkedResults, setCheckedResults] = useState<EnhancedResult[]>([]);
+  const [publishedResults, setPublishedResults] = useState<EnhancedResult[]>([]);
   const [programmes, setProgrammes] = useState<Programme[]>([]);
   // Removed loading state for faster page load
   const [selectedResult, setSelectedResult] = useState<EnhancedResult | null>(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<'pending' | 'checked' | 'summary'>('pending');
+  const [activeTab, setActiveTab] = useState<'pending' | 'checked' | 'published' | 'summary'>('pending');
 
   useEffect(() => {
     fetchData();
@@ -23,19 +24,21 @@ export default function CheckListPage() {
   const fetchData = async () => {
     try {
       // Removed loading state for faster UI
-      const [pendingRes, checkedRes, programmesRes] = await Promise.all([
+      const [pendingRes, checkedRes, publishedRes, programmesRes] = await Promise.all([
         fetch('/api/results/status?status=pending'),
         fetch('/api/results/status?status=checked'),
+        fetch('/api/results/status?status=published'),
         fetch('/api/programmes')
       ]);
 
-      if (!pendingRes.ok || !checkedRes.ok || !programmesRes.ok) {
+      if (!pendingRes.ok || !checkedRes.ok || !publishedRes.ok || !programmesRes.ok) {
         throw new Error('Failed to fetch data');
       }
 
-      const [pending, checked, programmesData] = await Promise.all([
+      const [pending, checked, published, programmesData] = await Promise.all([
         pendingRes.json(),
         checkedRes.json(),
+        publishedRes.json(),
         programmesRes.json()
       ]);
 
@@ -60,6 +63,7 @@ export default function CheckListPage() {
 
       setPendingResults(enrichResults(pending));
       setCheckedResults(enrichResults(checked));
+      setPublishedResults(enrichResults(published));
       setProgrammes(programmesData);
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -182,10 +186,24 @@ export default function CheckListPage() {
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
             >
-              📊 Marks Summary
+              📊 Checked Marks Summary
               {checkedResults.length > 0 && (
                 <span className="ml-2 bg-purple-100 text-purple-800 py-0.5 px-2 rounded-full text-xs">
                   {checkedResults.length}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab('published')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'published'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+            >
+              📊 Published Summary
+              {publishedResults.length > 0 && (
+                <span className="ml-2 bg-blue-100 text-blue-800 py-0.5 px-2 rounded-full text-xs">
+                  {publishedResults.length}
                 </span>
               )}
             </button>
@@ -291,15 +309,15 @@ export default function CheckListPage() {
         </div>
       )}
 
-      {/* Marks Summary Tab */}
+      {/* Checked Marks Summary Tab */}
       {activeTab === 'summary' && (
         <div>
           <div className="mb-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-2">
-              📊 Team Marks Summary
+              📊 Checked Results Marks Summary
             </h2>
             <p className="text-gray-600">
-              Comprehensive breakdown of team performance and marks distribution from checked results.
+              Comprehensive breakdown of team performance and marks distribution from checked results only.
             </p>
           </div>
 
@@ -313,6 +331,39 @@ export default function CheckListPage() {
             </div>
           ) : (
             <MarksSummary results={checkedResults} />
+          )}
+        </div>
+      )}
+
+      {/* Published Summary Tab */}
+      {activeTab === 'published' && (
+        <div>
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+              📊 Published Results Summary
+            </h2>
+            <p className="text-gray-600">
+              Complete team performance summary from all published results.
+            </p>
+            <div className="mt-4 flex space-x-3">
+              <a
+                href="/results"
+                target="_blank"
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
+                👁️ View Public Results
+              </a>
+            </div>
+          </div>
+          
+          {publishedResults.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="text-gray-400 text-6xl mb-4">📊</div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No Published Results</h3>
+              <p className="text-gray-500">Results summary will appear here after being published to the public.</p>
+            </div>
+          ) : (
+            <MarksSummary results={publishedResults} />
           )}
         </div>
       )}
