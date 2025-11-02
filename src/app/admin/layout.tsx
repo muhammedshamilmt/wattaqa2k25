@@ -16,8 +16,8 @@ export default function AdminLayout({ children }: PropsWithChildren) {
         <Sidebar />
         <div className="w-full bg-transparent">
           <Header />
-          <main className="w-full overflow-hidden relative">
-            <div className="bg-white min-h-[calc(100vh-64px)] relative p-3">
+          <main className="w-full relative">
+            <div className="bg-white min-h-[calc(100vh-64px)] relative p-3 overflow-y-auto">
               {children}
             </div>
           </main>

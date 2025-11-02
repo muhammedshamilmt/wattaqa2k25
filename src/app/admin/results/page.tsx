@@ -10,11 +10,17 @@ export default function ResultsPage() {
   const [programmes, setProgrammes] = useState<Programme[]>([]);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [participants, setParticipants] = useState<ProgrammeParticipant[]>([]);
-  // Removed loading state for faster page load
+  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingResultId, setEditingResultId] = useState<string | null>(null);
+
+  // Pagination state for results list
+  const [currentPage, setCurrentPage] = useState(1);
+  const [resultsPerPage] = useState(10);
+  const [searchFilter, setSearchFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   // Enhanced form state
   const [selectedProgramme, setSelectedProgramme] = useState<Programme | null>(null);
@@ -49,7 +55,7 @@ export default function ResultsPage() {
   // Fetch data from APIs
   const fetchData = async () => {
     try {
-      // Removed loading state for faster UI
+      setLoading(true);
       const [resultsRes, programmesRes, candidatesRes, participantsRes, teamsRes] = await Promise.all([
         fetch('/api/results'),
         fetch('/api/programmes'),
@@ -90,7 +96,7 @@ export default function ResultsPage() {
       setParticipants([]);
       setTeams([]);
     } finally {
-      // No loading state to manage
+      setLoading(false);
     }
   };
 
@@ -98,6 +104,26 @@ export default function ResultsPage() {
     // Optimized data loading - start immediately without blocking UI
     fetchData();
   }, []);
+
+  // Debug function to help identify data mismatches
+  useEffect(() => {
+    if (candidates.length > 0 && teams.length > 0) {
+      const unmatchedCandidates = candidates.filter(candidate => {
+        if (!candidate.team) return false;
+        const team = teams.find(t => t.code === candidate.team);
+        return !team;
+      });
+      
+      if (unmatchedCandidates.length > 0) {
+        console.log('Candidates with unmatched teams:', unmatchedCandidates.map(c => ({
+          chestNumber: c.chestNumber,
+          teamCode: c.team,
+          name: c.name
+        })));
+        console.log('Available team codes:', teams.map(t => t.code));
+      }
+    }
+  }, [candidates, teams]);
 
   // Static points calculation based on programme type and section
   const getStaticPoints = (programme: Programme | null) => {
@@ -255,6 +281,14 @@ export default function ResultsPage() {
     return hasPosition || hasGrade;
   };
 
+  // Check if participant has a position (for validation)
+  const getParticipantPosition = (chestNumber: string) => {
+    if (formData.firstPlace.some(p => p.chestNumber === chestNumber)) return 'first';
+    if (formData.secondPlace.some(p => p.chestNumber === chestNumber)) return 'second';
+    if (formData.thirdPlace.some(p => p.chestNumber === chestNumber)) return 'third';
+    return null;
+  };
+
   // Check if team is assigned (position or grade)
   const isTeamAssigned = (teamCode: string) => {
     const hasPosition = [
@@ -266,6 +300,14 @@ export default function ResultsPage() {
     const hasGrade = formData.participationTeamGrades.some(pg => pg.teamCode === teamCode);
 
     return hasPosition || hasGrade;
+  };
+
+  // Check if team has a position (for validation)
+  const getTeamPosition = (teamCode: string) => {
+    if (formData.firstPlaceTeams.some(p => p.teamCode === teamCode)) return 'first';
+    if (formData.secondPlaceTeams.some(p => p.teamCode === teamCode)) return 'second';
+    if (formData.thirdPlaceTeams.some(p => p.teamCode === teamCode)) return 'third';
+    return null;
   };
 
   // Add/remove from position
@@ -281,10 +323,22 @@ export default function ResultsPage() {
           [position]: currentPosition.filter(p => p.chestNumber !== chestNumber)
         };
       } else {
-        // Add to position
+        // Check if participant is already in another position
+        const isInFirstPlace = prev.firstPlace.some(p => p.chestNumber === chestNumber);
+        const isInSecondPlace = prev.secondPlace.some(p => p.chestNumber === chestNumber);
+        const isInThirdPlace = prev.thirdPlace.some(p => p.chestNumber === chestNumber);
+
+        if (isInFirstPlace || isInSecondPlace || isInThirdPlace) {
+          alert(`Participant ${chestNumber} is already assigned to another position. Please remove them from the other position first.`);
+          return prev; // Don't make any changes
+        }
+
+        // Add to position (remove from other positions first, then add to new position)
         return {
           ...prev,
-          [position]: [...currentPosition, { chestNumber }]
+          firstPlace: position === 'firstPlace' ? [...currentPosition, { chestNumber }] : prev.firstPlace.filter(p => p.chestNumber !== chestNumber),
+          secondPlace: position === 'secondPlace' ? [...currentPosition, { chestNumber }] : prev.secondPlace.filter(p => p.chestNumber !== chestNumber),
+          thirdPlace: position === 'thirdPlace' ? [...currentPosition, { chestNumber }] : prev.thirdPlace.filter(p => p.chestNumber !== chestNumber)
         };
       }
     });
@@ -303,10 +357,22 @@ export default function ResultsPage() {
           [position]: currentPosition.filter(p => p.teamCode !== teamCode)
         };
       } else {
-        // Add to position
+        // Check if team is already in another position
+        const isInFirstPlace = prev.firstPlaceTeams.some(p => p.teamCode === teamCode);
+        const isInSecondPlace = prev.secondPlaceTeams.some(p => p.teamCode === teamCode);
+        const isInThirdPlace = prev.thirdPlaceTeams.some(p => p.teamCode === teamCode);
+
+        if (isInFirstPlace || isInSecondPlace || isInThirdPlace) {
+          alert(`Team ${teamCode} is already assigned to another position. Please remove them from the other position first.`);
+          return prev; // Don't make any changes
+        }
+
+        // Add to position (remove from other positions first, then add to new position)
         return {
           ...prev,
-          [position]: [...currentPosition, { teamCode }]
+          firstPlaceTeams: position === 'firstPlaceTeams' ? [...currentPosition, { teamCode }] : prev.firstPlaceTeams.filter(p => p.teamCode !== teamCode),
+          secondPlaceTeams: position === 'secondPlaceTeams' ? [...currentPosition, { teamCode }] : prev.secondPlaceTeams.filter(p => p.teamCode !== teamCode),
+          thirdPlaceTeams: position === 'thirdPlaceTeams' ? [...currentPosition, { teamCode }] : prev.thirdPlaceTeams.filter(p => p.teamCode !== teamCode)
         };
       }
     });
@@ -589,6 +655,9 @@ export default function ResultsPage() {
         // Reset form
         resetForm();
 
+        // Refresh results without showing loading spinner for better UX
+        const tempLoading = loading;
+        setLoading(false);
         await fetchData();
         alert(isEditMode
           ? 'Result updated successfully!'
@@ -604,6 +673,38 @@ export default function ResultsPage() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  // Filter and paginate results
+  const getFilteredResults = () => {
+    let filtered = results;
+
+    // Apply search filter
+    if (searchFilter.trim()) {
+      filtered = filtered.filter(result =>
+        (result.programme || '').toLowerCase().includes(searchFilter.toLowerCase()) ||
+        result.section.toLowerCase().includes(searchFilter.toLowerCase())
+      );
+    }
+
+    // Apply status filter
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(result => result.status === statusFilter);
+    }
+
+    return filtered;
+  };
+
+  const getPaginatedResults = () => {
+    const filtered = getFilteredResults();
+    const startIndex = (currentPage - 1) * resultsPerPage;
+    const endIndex = startIndex + resultsPerPage;
+    return filtered.slice(startIndex, endIndex);
+  };
+
+  const getTotalPages = () => {
+    const filtered = getFilteredResults();
+    return Math.ceil(filtered.length / resultsPerPage);
   };
 
   // Calculate team points from results
@@ -725,6 +826,9 @@ export default function ResultsPage() {
       });
 
       if (response.ok) {
+        // Refresh results without showing loading spinner for better UX
+        const tempLoading = loading;
+        setLoading(false);
         await fetchData();
         alert('Result deleted successfully!');
       } else {
@@ -745,32 +849,8 @@ export default function ResultsPage() {
     <>
       <Breadcrumb pageName="Results" />
 
-      <div className="space-y-2">
-        {/* Navigation */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-lg font-semibold text-gray-900">Result Management</h2>
-            <div className="flex space-x-3">
-              <a
-                href="/admin/results/checklist"
-                className="inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
-              >
-                <span className="mr-2">📋</span>
-                Review Checklist
-              </a>
-              <a
-                href="/admin/results/publish"
-                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                <span className="mr-2">🚀</span>
-                Publish Results
-              </a>
-            </div>
-          </div>
-          <p className="text-sm text-gray-600 mt-2">
-            Add new results below. They will be sent to the checklist for review before publication.
-          </p>
-        </div>
+      <div className="space-y-2 relative">
+
 
         {/* Add New Result */}
         <ShowcaseSection title={isEditMode ? "Edit Result" : "Add New Result"}>
@@ -1346,232 +1426,417 @@ export default function ResultsPage() {
 
         {/* Results List */}
         <ShowcaseSection title="Results List">
-          {results.length === 0 ? (
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="flex flex-col items-center space-y-4">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                <p className="text-gray-600">Loading results...</p>
+              </div>
+            </div>
+          ) : results.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-gray-600">No results found. Add your first result above!</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50">
-                  <tr className="border-b-2 border-gray-200">
-                    <th className="text-left py-4 px-4 font-bold text-gray-700">Programme</th>
-                    <th className="text-left py-4 px-4 font-bold text-gray-700">Section</th>
-                    <th className="text-left py-4 px-4 font-bold text-gray-700">Status</th>
-                    <th className="text-left py-4 px-4 font-bold text-gray-700">🥇 First</th>
-                    <th className="text-left py-4 px-4 font-bold text-gray-700">🥈 Second</th>
-                    <th className="text-left py-4 px-4 font-bold text-gray-700">🥉 Third</th>
-                    <th className="text-left py-4 px-4 font-bold text-gray-700">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {results.map((result) => (
-                    <tr key={result._id?.toString()} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="py-3 px-4 font-medium text-gray-900">{result.programme}</td>
-                      <td className="py-3 px-4">
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-800">
-                          {result.section.charAt(0).toUpperCase() + result.section.slice(1).replace('-', ' ')}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${result.status === 'published' ? 'bg-blue-100 text-blue-800' :
-                          result.status === 'checked' ? 'bg-green-100 text-green-800' :
+            <div className="space-y-4">
+              {/* Search and Filter Controls */}
+              <div className="flex flex-col sm:flex-row gap-4 mb-6">
+                <div className="flex-1">
+                  <input
+                    type="text"
+                    placeholder="Search results by programme or section..."
+                    value={searchFilter}
+                    onChange={(e) => {
+                      setSearchFilter(e.target.value);
+                      setCurrentPage(1); // Reset to first page when searching
+                    }}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+                <div className="sm:w-48">
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => {
+                      setStatusFilter(e.target.value);
+                      setCurrentPage(1); // Reset to first page when filtering
+                    }}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="all">All Status</option>
+                    <option value="pending">⏳ Pending</option>
+                    <option value="checked">✅ Checked</option>
+                    <option value="published">🚀 Published</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Results Count */}
+              <div className="text-sm text-gray-600 mb-4">
+                Showing {getPaginatedResults().length} of {getFilteredResults().length} results
+              </div>
+
+              {/* Optimized Results Cards */}
+              <div className="space-y-4">
+                {getPaginatedResults().map((result) => (
+                  <div key={result._id?.toString()} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+                      {/* Programme Info */}
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-900 text-lg">{result.programme || 'Unknown Programme'}</h3>
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                            {result.section.charAt(0).toUpperCase() + result.section.slice(1).replace('-', ' ')}
+                          </span>
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                            result.positionType === 'general' ? 'bg-indigo-100 text-indigo-800' :
+                            result.positionType === 'individual' ? 'bg-cyan-100 text-cyan-800' :
+                            'bg-teal-100 text-teal-800'
+                          }`}>
+                            {result.positionType === 'general' ? '👥 General' :
+                             result.positionType === 'individual' ? '👤 Individual' : '🤝 Group'}
+                          </span>
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                            result.status === 'published' ? 'bg-blue-100 text-blue-800' :
+                            result.status === 'checked' ? 'bg-green-100 text-green-800' :
                             'bg-orange-100 text-orange-800'
                           }`}>
-                          {result.status === 'published' ? '🚀 Published' :
-                            result.status === 'checked' ? '✅ Checked' :
-                              '⏳ Pending'}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="text-sm">
-                          {/* Individual/Group Results */}
-                          {result.firstPlace && result.firstPlace.length > 0 && (
-                            <div className="mb-2">
-                              {result.firstPlace.map((winner, index) => {
-                                const gradePoints = getGradePoints(winner.grade || '');
-                                const totalMarks = result.firstPoints + gradePoints;
-                                return (
-                                  <div key={index} className="mb-2 p-2 bg-yellow-50 rounded border border-yellow-200">
-                                    <div className="font-medium text-gray-900">{winner.chestNumber}</div>
-                                    {winner.grade && (
-                                      <div className="text-xs text-purple-600 mt-1">
-                                        Grade: <span className="font-bold">{winner.grade}</span> (+{gradePoints} pts)
-                                      </div>
+                            {result.status === 'published' ? '🚀 Published' :
+                             result.status === 'checked' ? '✅ Checked' : '⏳ Pending'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleEditResult(result)}
+                          className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(result._id!.toString(), result.programme || 'Unknown Programme')}
+                          disabled={deleting === result._id?.toString()}
+                          className="px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors disabled:opacity-50"
+                        >
+                          {deleting === result._id?.toString() ? 'Deleting...' : 'Delete'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Simple Winners Summary */}
+                    <div className="mt-4">
+                      <div className="grid grid-cols-3 gap-3 text-sm">
+                        {/* First Place */}
+                        <div className="bg-yellow-50 border border-yellow-200 rounded p-2">
+                          <div className="font-medium text-yellow-800 mb-1">🥇 First</div>
+                          {result.firstPlace?.map((winner, index) => {
+                            const candidate = candidates.find(c => c.chestNumber === winner.chestNumber);
+                            // Try multiple ways to find the team
+                            let team = teams.find(t => t.code === candidate?.team);
+                            if (!team && candidate?.team) {
+                              // Try case-insensitive match
+                              team = teams.find(t => t.code?.toLowerCase() === candidate.team?.toLowerCase());
+                            }
+                            if (!team && candidate?.team) {
+                              // Try string/number conversion
+                              team = teams.find(t => t.code?.toString() === candidate.team?.toString());
+                            }
+                            
+                            const displayName = team?.name || candidate?.team || `Chest ${winner.chestNumber}`;
+                            
+                            return (
+                              <div key={index} className="text-gray-700">
+                                <div className="flex items-center">
+                                  <div
+                                    className="w-3 h-3 rounded-full mr-2"
+                                    style={{ backgroundColor: team?.color || '#6B7280' }}
+                                  ></div>
+                                  <div>
+                                    <span className="font-medium">{displayName}</span>
+                                    <span className="text-xs text-gray-500 ml-1">({winner.chestNumber})</span>
+                                    {!team && candidate?.team && (
+                                      <span className="text-xs text-red-500 ml-1">[Team: {candidate.team}]</span>
                                     )}
-                                    <div className="text-xs text-gray-600 mt-1">
-                                      Total: <span className="font-bold text-yellow-700">{totalMarks} marks</span>
-                                      <span className="text-gray-500"> ({result.firstPoints} pos + {gradePoints} grade)</span>
-                                    </div>
                                   </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                          {/* Team Results */}
-                          {result.firstPlaceTeams && result.firstPlaceTeams.length > 0 && (
-                            <div>
-                              {result.firstPlaceTeams.map((winner, index) => {
-                                const gradePoints = getGradePoints(winner.grade || '');
-                                const totalMarks = result.firstPoints + gradePoints;
-                                return (
-                                  <div key={index} className="mb-2 p-2 bg-yellow-50 rounded border border-yellow-200">
-                                    <div className="flex items-center mb-1">
-                                      <span className="inline-block w-4 h-4 rounded-full mr-2" style={{ backgroundColor: teams.find(t => t.code === winner.teamCode)?.color || '#6B7280' }}></span>
-                                      <span className="font-medium text-gray-900">{winner.teamCode}</span>
-                                    </div>
-                                    {winner.grade && (
-                                      <div className="text-xs text-purple-600 mt-1">
-                                        Grade: <span className="font-bold">{winner.grade}</span> (+{gradePoints} pts)
-                                      </div>
-                                    )}
-                                    <div className="text-xs text-gray-600 mt-1">
-                                      Total: <span className="font-bold text-yellow-700">{totalMarks} marks</span>
-                                      <span className="text-gray-500"> ({result.firstPoints} pos + {gradePoints} grade)</span>
-                                    </div>
+                                </div>
+                                {winner.grade && (
+                                  <div className="text-xs text-purple-600 ml-5">Grade {winner.grade}</div>
+                                )}
+                              </div>
+                            );
+                          })}
+                          {result.firstPlaceTeams?.map((winner, index) => {
+                            const team = teams.find(t => t.code === winner.teamCode);
+                            const displayName = team?.name || winner.teamCode;
+                            
+                            return (
+                              <div key={index} className="text-gray-700">
+                                <div className="flex items-center">
+                                  <div
+                                    className="w-3 h-3 rounded-full mr-2"
+                                    style={{ backgroundColor: team?.color || '#6B7280' }}
+                                  ></div>
+                                  <div>
+                                    <span className="font-medium">{displayName}</span>
+                                    <span className="text-xs text-gray-500 ml-1">({winner.teamCode})</span>
                                   </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                          {(!result.firstPlace || result.firstPlace.length === 0) && (!result.firstPlaceTeams || result.firstPlaceTeams.length === 0) && (
-                            <p className="text-gray-400">-</p>
+                                </div>
+                                {winner.grade && (
+                                  <div className="text-xs text-purple-600 ml-5">Grade {winner.grade}</div>
+                                )}
+                              </div>
+                            );
+                          })}
+                          {(!result.firstPlace?.length && !result.firstPlaceTeams?.length) && (
+                            <div className="text-gray-400">-</div>
                           )}
                         </div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="text-sm">
-                          {/* Individual/Group Results */}
-                          {result.secondPlace && result.secondPlace.length > 0 && (
-                            <div className="mb-2">
-                              {result.secondPlace.map((winner, index) => {
-                                const gradePoints = getGradePoints(winner.grade || '');
-                                const totalMarks = result.secondPoints + gradePoints;
-                                return (
-                                  <div key={index} className="mb-2 p-2 bg-gray-50 rounded border border-gray-200">
-                                    <div className="font-medium text-gray-900">{winner.chestNumber}</div>
-                                    {winner.grade && (
-                                      <div className="text-xs text-purple-600 mt-1">
-                                        Grade: <span className="font-bold">{winner.grade}</span> (+{gradePoints} pts)
-                                      </div>
+
+                        {/* Second Place */}
+                        <div className="bg-gray-50 border border-gray-200 rounded p-2">
+                          <div className="font-medium text-gray-800 mb-1">🥈 Second</div>
+                          {result.secondPlace?.map((winner, index) => {
+                            const candidate = candidates.find(c => c.chestNumber === winner.chestNumber);
+                            // Try multiple ways to find the team
+                            let team = teams.find(t => t.code === candidate?.team);
+                            if (!team && candidate?.team) {
+                              // Try case-insensitive match
+                              team = teams.find(t => t.code?.toLowerCase() === candidate.team?.toLowerCase());
+                            }
+                            if (!team && candidate?.team) {
+                              // Try string/number conversion
+                              team = teams.find(t => t.code?.toString() === candidate.team?.toString());
+                            }
+                            
+                            const displayName = team?.name || candidate?.team || `Chest ${winner.chestNumber}`;
+                            
+                            return (
+                              <div key={index} className="text-gray-700">
+                                <div className="flex items-center">
+                                  <div
+                                    className="w-3 h-3 rounded-full mr-2"
+                                    style={{ backgroundColor: team?.color || '#6B7280' }}
+                                  ></div>
+                                  <div>
+                                    <span className="font-medium">{displayName}</span>
+                                    <span className="text-xs text-gray-500 ml-1">({winner.chestNumber})</span>
+                                    {!team && candidate?.team && (
+                                      <span className="text-xs text-red-500 ml-1">[Team: {candidate.team}]</span>
                                     )}
-                                    <div className="text-xs text-gray-600 mt-1">
-                                      Total: <span className="font-bold text-gray-700">{totalMarks} marks</span>
-                                      <span className="text-gray-500"> ({result.secondPoints} pos + {gradePoints} grade)</span>
-                                    </div>
                                   </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                          {/* Team Results */}
-                          {result.secondPlaceTeams && result.secondPlaceTeams.length > 0 && (
-                            <div>
-                              {result.secondPlaceTeams.map((winner, index) => {
-                                const gradePoints = getGradePoints(winner.grade || '');
-                                const totalMarks = result.secondPoints + gradePoints;
-                                return (
-                                  <div key={index} className="mb-2 p-2 bg-gray-50 rounded border border-gray-200">
-                                    <div className="flex items-center mb-1">
-                                      <span className="inline-block w-4 h-4 rounded-full mr-2" style={{ backgroundColor: teams.find(t => t.code === winner.teamCode)?.color || '#6B7280' }}></span>
-                                      <span className="font-medium text-gray-900">{winner.teamCode}</span>
-                                    </div>
-                                    {winner.grade && (
-                                      <div className="text-xs text-purple-600 mt-1">
-                                        Grade: <span className="font-bold">{winner.grade}</span> (+{gradePoints} pts)
-                                      </div>
-                                    )}
-                                    <div className="text-xs text-gray-600 mt-1">
-                                      Total: <span className="font-bold text-gray-700">{totalMarks} marks</span>
-                                      <span className="text-gray-500"> ({result.secondPoints} pos + {gradePoints} grade)</span>
-                                    </div>
+                                </div>
+                                {winner.grade && (
+                                  <div className="text-xs text-purple-600 ml-5">Grade {winner.grade}</div>
+                                )}
+                              </div>
+                            );
+                          })}
+                          {result.secondPlaceTeams?.map((winner, index) => {
+                            const team = teams.find(t => t.code === winner.teamCode);
+                            const displayName = team?.name || winner.teamCode;
+                            
+                            return (
+                              <div key={index} className="text-gray-700">
+                                <div className="flex items-center">
+                                  <div
+                                    className="w-3 h-3 rounded-full mr-2"
+                                    style={{ backgroundColor: team?.color || '#6B7280' }}
+                                  ></div>
+                                  <div>
+                                    <span className="font-medium">{displayName}</span>
+                                    <span className="text-xs text-gray-500 ml-1">({winner.teamCode})</span>
                                   </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                          {(!result.secondPlace || result.secondPlace.length === 0) && (!result.secondPlaceTeams || result.secondPlaceTeams.length === 0) && (
-                            <p className="text-gray-400">-</p>
+                                </div>
+                                {winner.grade && (
+                                  <div className="text-xs text-purple-600 ml-5">Grade {winner.grade}</div>
+                                )}
+                              </div>
+                            );
+                          })}
+                          {(!result.secondPlace?.length && !result.secondPlaceTeams?.length) && (
+                            <div className="text-gray-400">-</div>
                           )}
                         </div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="text-sm">
-                          {/* Individual/Group Results */}
-                          {result.thirdPlace && result.thirdPlace.length > 0 && (
-                            <div className="mb-2">
-                              {result.thirdPlace.map((winner, index) => {
-                                const gradePoints = getGradePoints(winner.grade || '');
-                                const totalMarks = result.thirdPoints + gradePoints;
-                                return (
-                                  <div key={index} className="mb-2 p-2 bg-orange-50 rounded border border-orange-200">
-                                    <div className="font-medium text-gray-900">{winner.chestNumber}</div>
-                                    {winner.grade && (
-                                      <div className="text-xs text-purple-600 mt-1">
-                                        Grade: <span className="font-bold">{winner.grade}</span> (+{gradePoints} pts)
-                                      </div>
+
+                        {/* Third Place */}
+                        <div className="bg-orange-50 border border-orange-200 rounded p-2">
+                          <div className="font-medium text-orange-800 mb-1">🥉 Third</div>
+                          {result.thirdPlace?.map((winner, index) => {
+                            const candidate = candidates.find(c => c.chestNumber === winner.chestNumber);
+                            // Try multiple ways to find the team
+                            let team = teams.find(t => t.code === candidate?.team);
+                            if (!team && candidate?.team) {
+                              // Try case-insensitive match
+                              team = teams.find(t => t.code?.toLowerCase() === candidate.team?.toLowerCase());
+                            }
+                            if (!team && candidate?.team) {
+                              // Try string/number conversion
+                              team = teams.find(t => t.code?.toString() === candidate.team?.toString());
+                            }
+                            
+                            const displayName = team?.name || candidate?.team || `Chest ${winner.chestNumber}`;
+                            
+                            return (
+                              <div key={index} className="text-gray-700">
+                                <div className="flex items-center">
+                                  <div
+                                    className="w-3 h-3 rounded-full mr-2"
+                                    style={{ backgroundColor: team?.color || '#6B7280' }}
+                                  ></div>
+                                  <div>
+                                    <span className="font-medium">{displayName}</span>
+                                    <span className="text-xs text-gray-500 ml-1">({winner.chestNumber})</span>
+                                    {!team && candidate?.team && (
+                                      <span className="text-xs text-red-500 ml-1">[Team: {candidate.team}]</span>
                                     )}
-                                    <div className="text-xs text-gray-600 mt-1">
-                                      Total: <span className="font-bold text-orange-700">{totalMarks} marks</span>
-                                      <span className="text-gray-500"> ({result.thirdPoints} pos + {gradePoints} grade)</span>
-                                    </div>
                                   </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                          {/* Team Results */}
-                          {result.thirdPlaceTeams && result.thirdPlaceTeams.length > 0 && (
-                            <div>
-                              {result.thirdPlaceTeams.map((winner, index) => {
-                                const gradePoints = getGradePoints(winner.grade || '');
-                                const totalMarks = result.thirdPoints + gradePoints;
-                                return (
-                                  <div key={index} className="mb-2 p-2 bg-orange-50 rounded border border-orange-200">
-                                    <div className="flex items-center mb-1">
-                                      <span className="inline-block w-4 h-4 rounded-full mr-2" style={{ backgroundColor: teams.find(t => t.code === winner.teamCode)?.color || '#6B7280' }}></span>
-                                      <span className="font-medium text-gray-900">{winner.teamCode}</span>
-                                    </div>
-                                    {winner.grade && (
-                                      <div className="text-xs text-purple-600 mt-1">
-                                        Grade: <span className="font-bold">{winner.grade}</span> (+{gradePoints} pts)
-                                      </div>
-                                    )}
-                                    <div className="text-xs text-gray-600 mt-1">
-                                      Total: <span className="font-bold text-orange-700">{totalMarks} marks</span>
-                                      <span className="text-gray-500"> ({result.thirdPoints} pos + {gradePoints} grade)</span>
-                                    </div>
+                                </div>
+                                {winner.grade && (
+                                  <div className="text-xs text-purple-600 ml-5">Grade {winner.grade}</div>
+                                )}
+                              </div>
+                            );
+                          })}
+                          {result.thirdPlaceTeams?.map((winner, index) => {
+                            const team = teams.find(t => t.code === winner.teamCode);
+                            const displayName = team?.name || winner.teamCode;
+                            
+                            return (
+                              <div key={index} className="text-gray-700">
+                                <div className="flex items-center">
+                                  <div
+                                    className="w-3 h-3 rounded-full mr-2"
+                                    style={{ backgroundColor: team?.color || '#6B7280' }}
+                                  ></div>
+                                  <div>
+                                    <span className="font-medium">{displayName}</span>
+                                    <span className="text-xs text-gray-500 ml-1">({winner.teamCode})</span>
                                   </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                          {(!result.thirdPlace || result.thirdPlace.length === 0) && (!result.thirdPlaceTeams || result.thirdPlaceTeams.length === 0) && (
-                            <p className="text-gray-400">-</p>
+                                </div>
+                                {winner.grade && (
+                                  <div className="text-xs text-purple-600 ml-5">Grade {winner.grade}</div>
+                                )}
+                              </div>
+                            );
+                          })}
+                          {(!result.thirdPlace?.length && !result.thirdPlaceTeams?.length) && (
+                            <div className="text-gray-400">-</div>
                           )}
                         </div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={() => handleEditResult(result)}
-                            className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDelete(result._id!.toString(), result.programme || 'Unknown Programme')}
-                            disabled={deleting === result._id?.toString()}
-                            className="text-red-600 hover:text-red-800 text-sm font-medium disabled:opacity-50"
-                          >
-                            {deleting === result._id?.toString() ? 'Deleting...' : 'Delete'}
-                          </button>
+                      </div>
+
+                      {/* Participation Grade Winners */}
+                      {((result.participationGrades && result.participationGrades.length > 0) || (result.participationTeamGrades && result.participationTeamGrades.length > 0)) && (
+                        <div className="mt-3 bg-purple-50 border border-purple-200 rounded p-2">
+                          <div className="font-medium text-purple-800 mb-2">🎖️ Grade Winners</div>
+                          <div className="space-y-1 text-sm">
+                            {/* Individual Grade Winners */}
+                            {result.participationGrades?.map((winner, index) => {
+                              const candidate = candidates.find(c => c.chestNumber === winner.chestNumber);
+                              // Try multiple ways to find the team
+                              let team = teams.find(t => t.code === candidate?.team);
+                              if (!team && candidate?.team) {
+                                // Try case-insensitive match
+                                team = teams.find(t => t.code?.toLowerCase() === candidate.team?.toLowerCase());
+                              }
+                              if (!team && candidate?.team) {
+                                // Try string/number conversion
+                                team = teams.find(t => t.code?.toString() === candidate.team?.toString());
+                              }
+                              
+                              const displayName = team?.name || candidate?.team || `Chest ${winner.chestNumber}`;
+                              
+                              return (
+                                <div key={index} className="flex items-center justify-between">
+                                  <div className="flex items-center">
+                                    <div
+                                      className="w-3 h-3 rounded-full mr-2"
+                                      style={{ backgroundColor: team?.color || '#6B7280' }}
+                                    ></div>
+                                    <div>
+                                      <span className="font-medium text-gray-700">{displayName}</span>
+                                      <span className="text-xs text-gray-500 ml-1">({winner.chestNumber})</span>
+                                      {!team && candidate?.team && (
+                                        <span className="text-xs text-red-500 ml-1">[Team: {candidate.team}]</span>
+                                      )}
+                                    </div>
+                                    <span className="ml-2 text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">
+                                      Grade {winner.grade}
+                                    </span>
+                                  </div>
+                                  <div className="text-xs text-purple-600">{winner.points} pts</div>
+                                </div>
+                              );
+                            })}
+                            {/* Team Grade Winners */}
+                            {result.participationTeamGrades?.map((winner, index) => {
+                              const team = teams.find(t => t.code === winner.teamCode);
+                              const displayName = team?.name || winner.teamCode;
+                              
+                              return (
+                                <div key={index} className="flex items-center justify-between">
+                                  <div className="flex items-center">
+                                    <div
+                                      className="w-3 h-3 rounded-full mr-2"
+                                      style={{ backgroundColor: team?.color || '#6B7280' }}
+                                    ></div>
+                                    <div>
+                                      <span className="font-medium text-gray-700">{displayName}</span>
+                                      <span className="text-xs text-gray-500 ml-1">({winner.teamCode})</span>
+                                    </div>
+                                    <span className="ml-2 text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">
+                                      Grade {winner.grade}
+                                    </span>
+                                  </div>
+                                  <div className="text-xs text-purple-600">{winner.points} pts</div>
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Pagination */}
+              {getTotalPages() > 1 && (
+                <div className="flex justify-center items-center gap-2 mt-6">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Previous
+                  </button>
+                  
+                  <div className="flex gap-1">
+                    {Array.from({ length: getTotalPages() }, (_, i) => i + 1).map(page => (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        className={`px-3 py-2 text-sm rounded ${
+                          currentPage === page
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, getTotalPages()))}
+                    disabled={currentPage === getTotalPages()}
+                    className="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </ShowcaseSection>

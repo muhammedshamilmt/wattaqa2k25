@@ -157,7 +157,10 @@ export default function PublishPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Publish Results</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2 flex items-center">
+          <span className="mr-2">🚀</span>
+          Publish Results
+        </h1>
         <p className="text-gray-600">
           Manage and publish competition results for public viewing
         </p>
