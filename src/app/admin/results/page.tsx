@@ -198,16 +198,33 @@ export default function ResultsPage() {
     }
   };
 
-  // Get available sections based on programme position type
+  // Get available sections based on programme section
   const getAvailableSections = () => {
     if (!selectedProgramme) return [];
 
-    if (selectedProgramme.positionType === 'general') {
-      // For general position type programmes, only show general section
-      return [{ value: 'general', label: 'General' }];
-    } else {
-      // For individual/group position type programmes, show all sections except general
+    const programmeSection = selectedProgramme.section;
+
+    // Only show the programme's own section - results must match programme section
+    if (programmeSection === 'general') {
       return [
+        { value: 'general', label: 'General' }
+      ];
+    } else if (programmeSection === 'senior') {
+      return [
+        { value: 'senior', label: 'Senior' }
+      ];
+    } else if (programmeSection === 'junior') {
+      return [
+        { value: 'junior', label: 'Junior' }
+      ];
+    } else if (programmeSection === 'sub-junior') {
+      return [
+        { value: 'sub-junior', label: 'Sub Junior' }
+      ];
+    } else {
+      // Fallback - show all sections
+      return [
+        { value: 'general', label: 'General' },
         { value: 'senior', label: 'Senior' },
         { value: 'junior', label: 'Junior' },
         { value: 'sub-junior', label: 'Sub Junior' }
@@ -221,8 +238,8 @@ export default function ResultsPage() {
     setFormData(prev => ({ ...prev, section: section as any }));
 
     if (selectedProgramme && section) {
-      if (selectedProgramme.positionType === 'general') {
-        // For general programmes, show teams that registered
+      if (section === 'general') {
+        // For general section, show teams (marks go to teams)
         const programmeParticipants = participants.filter(p =>
           p.programmeId === selectedProgramme._id?.toString()
         );
@@ -241,7 +258,7 @@ export default function ResultsPage() {
         setFilteredTeams(registeredTeams);
         setFilteredParticipants([]);
       } else {
-        // For individual/group programmes, show participants
+        // For senior/junior/sub-junior sections, show individual participants (marks go to individuals)
         const programmeParticipants = participants.filter(p =>
           p.programmeId === selectedProgramme._id?.toString()
         );
@@ -257,7 +274,7 @@ export default function ResultsPage() {
               programmeCode: pp.programmeCode
             };
           })
-        ).filter(p => p.candidate && (section === 'general' || p.candidate.section === section));
+        ).filter(p => p.candidate && p.candidate.section === section);
 
         setFilteredParticipants(detailedParticipants);
         setFilteredTeams([]);
@@ -896,10 +913,20 @@ export default function ResultsPage() {
                     </div>
                     <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
                       <div className="text-sm text-green-800">
-                        <p><strong>📊 Static Points:</strong></p>
-                        <p>🥇 First: {getStaticPoints(selectedProgramme).first} pts</p>
-                        <p>🥈 Second: {getStaticPoints(selectedProgramme).second} pts</p>
-                        <p>🥉 Third: {getStaticPoints(selectedProgramme).third} pts</p>
+                        <p><strong>📊 Points Structure (Section + Position Type):</strong></p>
+                        <div className="grid grid-cols-2 gap-2 mt-2">
+                          <div>
+                            <p className="font-medium">General Section:</p>
+                            <p>• Individual: 10, 6, 3</p>
+                            <p>• Group: 15, 10, 5</p>
+                          </div>
+                          <div>
+                            <p className="font-medium">Age Sections:</p>
+                            <p>• Individual: 3, 2, 1</p>
+                            <p>• Group: 5, 3, 1</p>
+                          </div>
+                        </div>
+                        <p className="mt-2"><strong>Grades:</strong> A=+5, B=+3, C=+1</p>
                       </div>
                     </div>
                   </div>
@@ -907,7 +934,12 @@ export default function ResultsPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Section *
+                  Section * 
+                  {selectedProgramme && (
+                    <span className="text-xs text-gray-500 ml-2">
+                      (Must match programme section: {selectedProgramme.section})
+                    </span>
+                  )}
                 </label>
                 <select
                   value={selectedSection}
@@ -924,25 +956,41 @@ export default function ResultsPage() {
                   ))}
                 </select>
                 {selectedProgramme && (
-                  <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <div className="text-sm text-blue-800">
+                  <div className="mt-2 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                    <div className="text-sm text-purple-800">
                       <p><strong>Position Type:</strong> {selectedProgramme.positionType.charAt(0).toUpperCase() + selectedProgramme.positionType.slice(1)}</p>
-                      <p><strong>Available Sections:</strong> {
-                        selectedProgramme.positionType === 'general'
-                          ? 'General only (team-based competitions)'
-                          : 'Senior, Junior, Sub-Junior (age-based competitions)'
-                      }</p>
+                      <p><strong>Available Sections:</strong> {getAvailableSections().map(s => s.label).join(', ')}</p>
+                      <p><strong>Filtering Logic:</strong> 
+                        Results section must match programme section ({selectedProgramme.section})
+                      </p>
+                      <p><strong>Note:</strong> Section determines who gets marks (General = Teams, Others = Individuals)</p>
                     </div>
                   </div>
                 )}
-                {selectedSection && (
+                {selectedSection && selectedProgramme && (
                   <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
                     <div className="text-sm text-green-800">
                       <p><strong>Selected Section:</strong> {selectedSection.charAt(0).toUpperCase() + selectedSection.slice(1).replace('-', ' ')}</p>
-                      {showParticipants && selectedProgramme?.positionType !== 'general' && (
+                      <p><strong>Points Structure:</strong> 
+                        {selectedSection === 'general' 
+                          ? selectedProgramme.positionType === 'individual' 
+                            ? ' 10, 6, 3 (General + Individual)'
+                            : ' 15, 10, 5 (General + Group)'
+                          : selectedProgramme.positionType === 'individual'
+                            ? ' 3, 2, 1 (Age-based + Individual)'
+                            : ' 5, 3, 1 (Age-based + Group)'
+                        }
+                      </p>
+                      <p><strong>Marks Assignment:</strong> 
+                        {selectedSection === 'general' 
+                          ? ' Teams (team-based competition)'
+                          : ' Individuals (individual participants)'
+                        }
+                      </p>
+                      {showParticipants && selectedSection !== 'general' && (
                         <p><strong>Registered Participants:</strong> {filteredParticipants.length}</p>
                       )}
-                      {showParticipants && selectedProgramme?.positionType === 'general' && (
+                      {showParticipants && selectedSection === 'general' && (
                         <p><strong>Registered Teams:</strong> {filteredTeams.length}</p>
                       )}
                     </div>
@@ -951,13 +999,18 @@ export default function ResultsPage() {
               </div>
             </div>
 
-            {/* Registered Teams Display (for general programmes) */}
-            {showParticipants && selectedProgramme?.positionType === 'general' && filteredTeams.length > 0 && (
+            {/* Registered Teams Display (for general section) */}
+            {showParticipants && selectedSection === 'general' && filteredTeams.length > 0 && (
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                   <span className="mr-2">🏆</span>
-                  Registered Teams ({filteredTeams.length})
+                  Registered Teams - General Section ({filteredTeams.length})
                 </h3>
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-800">
+                    <strong>General Section:</strong> Marks are assigned to teams. Points: {selectedProgramme?.positionType === 'individual' ? '10, 6, 3' : '15, 10, 5'} + Grade bonuses (A=+5, B=+3, C=+1)
+                  </p>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                   {filteredTeams.map((teamEntry, index) => {
                     const isAssigned = isTeamAssigned(teamEntry.teamCode);
@@ -1099,13 +1152,18 @@ export default function ResultsPage() {
               </div>
             )}
 
-            {/* Registered Participants Display (for individual/group programmes) */}
-            {showParticipants && selectedProgramme?.positionType !== 'general' && filteredParticipants.length > 0 && (
+            {/* Registered Participants Display (for age-based sections) */}
+            {showParticipants && selectedSection !== 'general' && filteredParticipants.length > 0 && (
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                   <span className="mr-2">👥</span>
-                  Registered Participants ({filteredParticipants.length})
+                  Registered Participants - {selectedSection.charAt(0).toUpperCase() + selectedSection.slice(1).replace('-', ' ')} Section ({filteredParticipants.length})
                 </h3>
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-800">
+                    <strong>Age-based Section:</strong> Marks are assigned to individuals. Points: {selectedProgramme?.positionType === 'individual' ? '3, 2, 1' : '5, 3, 1'} + Grade bonuses (A=+5, B=+3, C=+1)
+                  </p>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                   {filteredParticipants.map((participant, index) => {
                     const isAssigned = isParticipantAssigned(participant.chestNumber);
@@ -1485,12 +1543,10 @@ export default function ResultsPage() {
                             {result.section.charAt(0).toUpperCase() + result.section.slice(1).replace('-', ' ')}
                           </span>
                           <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                            result.positionType === 'general' ? 'bg-indigo-100 text-indigo-800' :
                             result.positionType === 'individual' ? 'bg-cyan-100 text-cyan-800' :
                             'bg-teal-100 text-teal-800'
                           }`}>
-                            {result.positionType === 'general' ? '👥 General' :
-                             result.positionType === 'individual' ? '👤 Individual' : '🤝 Group'}
+                            {result.positionType === 'individual' ? '👤 Individual' : '🤝 Group'}
                           </span>
                           <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                             result.status === 'published' ? 'bg-blue-100 text-blue-800' :

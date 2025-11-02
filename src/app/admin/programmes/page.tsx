@@ -21,11 +21,15 @@ export default function ProgrammesPage() {
     category: '' as 'arts' | 'sports' | '',
     subcategory: '' as 'stage' | 'non-stage' | '',
     section: '' as 'senior' | 'junior' | 'sub-junior' | 'general' | '',
-    positionType: '' as 'individual' | 'group' | 'general' | '',
+    positionType: '' as 'individual' | 'group' | '',
     requiredParticipants: 1,
     maxParticipants: ''
   });
   const [isEditMode, setIsEditMode] = useState(false);
+  const [showMigrationModal, setShowMigrationModal] = useState(false);
+  const [migrationProgramme, setMigrationProgramme] = useState<Programme | null>(null);
+  const [migrationTarget, setMigrationTarget] = useState<'individual' | 'group'>('individual');
+  const [migrationDismissed, setMigrationDismissed] = useState(false);
 
   // Filter out blank/empty programmes
   const filterValidProgrammes = (programmes: Programme[]) => {
@@ -85,7 +89,7 @@ export default function ProgrammesPage() {
       category: programme.category as 'arts' | 'sports' | '',
       subcategory: programme.subcategory as 'stage' | 'non-stage' | '' || '',
       section: programme.section as 'senior' | 'junior' | 'sub-junior' | 'general' | '',
-      positionType: programme.positionType as 'individual' | 'group' | 'general' | '',
+      positionType: programme.positionType as 'individual' | 'group' | '',
       requiredParticipants: programme.requiredParticipants || 1,
       maxParticipants: programme.maxParticipants?.toString() || ''
     });
@@ -103,7 +107,7 @@ export default function ProgrammesPage() {
       category: '' as 'arts' | 'sports' | '',
       subcategory: '' as 'stage' | 'non-stage' | '',
       section: '' as 'senior' | 'junior' | 'sub-junior' | 'general' | '',
-      positionType: '' as 'individual' | 'group' | 'general' | '',
+      positionType: '' as 'individual' | 'group' | '',
       requiredParticipants: 1,
       maxParticipants: ''
     });
@@ -255,6 +259,39 @@ export default function ProgrammesPage() {
   const programmeRegistrations = getProgrammeRegistrations();
   const totalRegistrations = participants.length;
 
+  // Get programmes with deprecated "general" position type
+  const generalPositionProgrammes = programmes.filter(p => p.positionType === 'general');
+
+  // Handle migration of general position type programmes
+  const handleMigrateProgramme = async (programme: Programme, newPositionType: 'individual' | 'group') => {
+    try {
+      const response = await fetch(`/api/programmes?id=${programme._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...programme,
+          positionType: newPositionType,
+          status: 'active'
+        }),
+      });
+
+      if (response.ok) {
+        await fetchData(); // Refresh the list
+        setShowMigrationModal(false);
+        setMigrationProgramme(null);
+        alert(`Programme "${programme.name}" successfully migrated to ${newPositionType} position type!`);
+      } else {
+        const error = await response.json();
+        throw new Error(error.error || 'Migration failed');
+      }
+    } catch (error) {
+      console.error('Error migrating programme:', error);
+      alert('Error migrating programme. Please try again.');
+    }
+  };
+
   return (
     <>
       <Breadcrumb pageName="Programmes" />
@@ -286,7 +323,8 @@ export default function ProgrammesPage() {
         {activeTab === 'manage' && (
           <>
             {/* Programme Form */}
-            <ShowcaseSection title={isEditMode ? 'Edit Programme' : 'Add New Programme'} id="programme-form">
+            <div id="programme-form">
+              <ShowcaseSection title={isEditMode ? 'Edit Programme' : 'Add New Programme'}>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
@@ -389,7 +427,6 @@ export default function ProgrammesPage() {
                       <option value="">Select position type</option>
                       <option value="individual">Individual</option>
                       <option value="group">Group</option>
-                      <option value="general">General</option>
                     </select>
                   </div>
                   <div>
@@ -429,7 +466,130 @@ export default function ProgrammesPage() {
                   )}
                 </div>
               </form>
-            </ShowcaseSection>
+              </ShowcaseSection>
+            </div>
+
+            {/* Migration Notice for General Position Type */}
+            {generalPositionProgrammes.length > 0 && !migrationDismissed && (
+              <ShowcaseSection title="⚠️ Migration Required">
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start space-x-4 flex-1">
+                      <div className="text-yellow-600 text-2xl">⚠️</div>
+                      <div className="flex-1">
+                      <h3 className="text-lg font-semibold text-yellow-800 mb-2">
+                        Deprecated Position Type Found
+                      </h3>
+                      <p className="text-yellow-700 mb-4">
+                        The following programmes use the deprecated "General" position type. Please migrate them based on their section:
+                        <br/>• <strong>General section</strong> programmes should use <strong>Group</strong> position type (marks go to teams)
+                        <br/>• <strong>Age-based sections</strong> (Senior/Junior/Sub-Junior) should use <strong>Individual</strong> position type (marks go to individuals)
+                      </p>
+                      
+                      <div className="space-y-3">
+                        {generalPositionProgrammes.map((programme) => (
+                          <div key={programme._id?.toString()} className="bg-white border border-yellow-300 rounded-lg p-4">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="font-semibold text-gray-900">{programme.name}</div>
+                                <div className="text-sm text-gray-600">
+                                  Code: {programme.code} • Section: {programme.section}
+                                </div>
+                              </div>
+                              <div className="flex space-x-2">
+                                {programme.section === 'general' ? (
+                                  <button
+                                    onClick={() => {
+                                      setMigrationProgramme(programme);
+                                      setMigrationTarget('group');
+                                      setShowMigrationModal(true);
+                                    }}
+                                    className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors"
+                                  >
+                                    → Group (Recommended)
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => {
+                                      setMigrationProgramme(programme);
+                                      setMigrationTarget('individual');
+                                      setShowMigrationModal(true);
+                                    }}
+                                    className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
+                                  >
+                                    → Individual (Recommended)
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => {
+                                    setMigrationProgramme(programme);
+                                    setMigrationTarget(programme.section === 'general' ? 'individual' : 'group');
+                                    setShowMigrationModal(true);
+                                  }}
+                                  className="px-3 py-1 bg-gray-500 text-white text-sm rounded hover:bg-gray-600 transition-colors"
+                                >
+                                  → {programme.section === 'general' ? 'Individual' : 'Group'}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      
+                      <div className="mt-4 p-3 bg-yellow-100 rounded-lg">
+                        <p className="text-sm text-yellow-800">
+                          <strong>Migration Guide:</strong><br/>
+                          • Choose <strong>Individual</strong> for age-based sections (Senior/Junior/Sub-Junior) - marks go to individual participants<br/>
+                          • Choose <strong>Group</strong> for General section programmes - marks go to the entire team
+                        </p>
+                      </div>
+                      </div>
+                    </div>
+                    <div className="flex flex-col space-y-2 ml-4">
+                      <button
+                        onClick={() => setMigrationDismissed(true)}
+                        className="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2"
+                        title="Mark migration as complete and hide this notice"
+                      >
+                        <span>✓</span>
+                        <span>All Good</span>
+                      </button>
+                      <button
+                        onClick={() => setMigrationDismissed(true)}
+                        className="px-4 py-2 bg-gray-500 text-white text-sm rounded-lg hover:bg-gray-600 transition-colors flex items-center space-x-2"
+                        title="Hide this notice for now"
+                      >
+                        <span>✕</span>
+                        <span>Hide</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </ShowcaseSection>
+            )}
+
+            {/* Hidden Migration Notice */}
+            {generalPositionProgrammes.length > 0 && migrationDismissed && (
+              <div className="bg-orange-100 border border-orange-300 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="text-orange-600 text-lg">⚠️</div>
+                    <div>
+                      <p className="text-orange-800 font-medium">
+                        {generalPositionProgrammes.length} programme{generalPositionProgrammes.length !== 1 ? 's' : ''} still need{generalPositionProgrammes.length === 1 ? 's' : ''} migration
+                      </p>
+                      <p className="text-orange-700 text-sm">Migration notice is hidden. Click to review.</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setMigrationDismissed(false)}
+                    className="px-4 py-2 bg-orange-600 text-white text-sm rounded-lg hover:bg-orange-700 transition-colors"
+                  >
+                    Review Migration
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Programmes List */}
             <ShowcaseSection title="Programmes List">
@@ -536,29 +696,37 @@ export default function ProgrammesPage() {
                 <div className="text-center p-6 bg-gray-50 border border-gray-200 rounded-lg">
                   <div className="text-3xl mb-3">📊</div>
                   <h3 className="font-semibold text-gray-900 mb-2">Total Programmes</h3>
-                  <p className="text-2xl font-bold text-gray-900">25</p>
+                  <p className="text-2xl font-bold text-gray-900">{programmes.length}</p>
                   <p className="text-sm text-gray-600">Active programmes</p>
                 </div>
 
                 <div className="text-center p-6 bg-gray-50 border border-gray-200 rounded-lg">
                   <div className="text-3xl mb-3">👤</div>
                   <h3 className="font-semibold text-gray-900 mb-2">Individual</h3>
-                  <p className="text-2xl font-bold text-gray-900">15</p>
+                  <p className="text-2xl font-bold text-gray-900">{programmes.filter(p => p.positionType === 'individual').length}</p>
                   <p className="text-sm text-gray-600">Individual competitions</p>
                 </div>
 
                 <div className="text-center p-6 bg-gray-50 border border-gray-200 rounded-lg">
                   <div className="text-3xl mb-3">👥</div>
                   <h3 className="font-semibold text-gray-900 mb-2">Group</h3>
-                  <p className="text-2xl font-bold text-gray-900">8</p>
+                  <p className="text-2xl font-bold text-gray-900">{programmes.filter(p => p.positionType === 'group').length}</p>
                   <p className="text-sm text-gray-600">Group competitions</p>
                 </div>
 
                 <div className="text-center p-6 bg-gray-50 border border-gray-200 rounded-lg">
-                  <div className="text-3xl mb-3">🌟</div>
-                  <h3 className="font-semibold text-gray-900 mb-2">General</h3>
-                  <p className="text-2xl font-bold text-gray-900">2</p>
-                  <p className="text-sm text-gray-600">General events</p>
+                  <div className="text-3xl mb-3">⚠️</div>
+                  <h3 className="font-semibold text-gray-900 mb-2">Migration Needed</h3>
+                  <p className="text-2xl font-bold text-red-600">{generalPositionProgrammes.length}</p>
+                  <p className="text-sm text-gray-600">Deprecated programmes</p>
+                  {generalPositionProgrammes.length > 0 && migrationDismissed && (
+                    <button
+                      onClick={() => setMigrationDismissed(false)}
+                      className="mt-2 px-3 py-1 bg-yellow-600 text-white text-xs rounded hover:bg-yellow-700 transition-colors"
+                    >
+                      Show Migration
+                    </button>
+                  )}
                 </div>
               </div>
             </ShowcaseSection>
@@ -696,6 +864,62 @@ export default function ProgrammesPage() {
           </>
         )}
       </div>
+
+      {/* Migration Confirmation Modal */}
+      {showMigrationModal && migrationProgramme && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Confirm Position Type Migration
+            </h3>
+            
+            <div className="mb-4">
+              <p className="text-gray-700 mb-2">
+                You are about to migrate:
+              </p>
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <div className="font-semibold">{migrationProgramme.name}</div>
+                <div className="text-sm text-gray-600">Code: {migrationProgramme.code}</div>
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <p className="text-gray-700 mb-2">
+                From: <span className="font-semibold text-red-600">General</span> → 
+                To: <span className="font-semibold text-green-600 capitalize">{migrationTarget}</span>
+              </p>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+              <p className="text-sm text-blue-800">
+                <strong>What this means:</strong><br/>
+                {migrationTarget === 'individual' 
+                  ? 'This programme will use individual marking - each participant gets their own marks based on the section rules (Senior/Junior/Sub-Junior sections assign marks to individuals).'
+                  : 'This programme will use team marking - the entire team gets the same marks (General section assigns marks to teams).'
+                }
+              </p>
+            </div>
+
+            <div className="flex space-x-3">
+              <button
+                onClick={() => handleMigrateProgramme(migrationProgramme, migrationTarget)}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Confirm Migration
+              </button>
+              <button
+                onClick={() => {
+                  setShowMigrationModal(false);
+                  setMigrationProgramme(null);
+                }}
+                className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
