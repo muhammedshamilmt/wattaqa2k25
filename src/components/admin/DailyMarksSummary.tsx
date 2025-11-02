@@ -25,7 +25,7 @@ interface DailyMarksSummaryProps {
 export default function DailyMarksSummary({ results }: DailyMarksSummaryProps) {
   const [teams, setTeams] = useState<Team[]>([]);
   const [dailyMarks, setDailyMarks] = useState<DailyMarks[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Removed loading state for faster rendering
   const [selectedDate, setSelectedDate] = useState<string>('');
 
   useEffect(() => {
@@ -46,7 +46,7 @@ export default function DailyMarksSummary({ results }: DailyMarksSummaryProps) {
     } catch (error) {
       console.error('Error fetching teams:', error);
     } finally {
-      setLoading(false);
+      // No loading state to manage
     }
   };
 
@@ -160,13 +160,7 @@ export default function DailyMarksSummary({ results }: DailyMarksSummaryProps) {
     return dailyMarks.find(day => day.date === selectedDate);
   };
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
+  // Removed loading spinner - render content immediately
 
   const selectedDay = getSelectedDayData();
 

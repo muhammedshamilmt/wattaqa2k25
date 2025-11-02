@@ -4,14 +4,14 @@ import { useState, useEffect } from 'react';
 import { EnhancedResult, Programme, ResultStatus } from '@/types';
 import ResultReviewModal from '@/components/admin/ResultReviewModal';
 import ResultCard from '@/components/admin/ResultCard';
-import LoadingSpinner from '@/components/ui/LoadingSpinner';
+// Removed LoadingSpinner import for faster page load
 import MarksSummary from '@/components/admin/MarksSummary';
 
 export default function CheckListPage() {
   const [pendingResults, setPendingResults] = useState<EnhancedResult[]>([]);
   const [checkedResults, setCheckedResults] = useState<EnhancedResult[]>([]);
   const [programmes, setProgrammes] = useState<Programme[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Removed loading state for faster page load
   const [selectedResult, setSelectedResult] = useState<EnhancedResult | null>(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'pending' | 'checked' | 'summary'>('pending');
@@ -22,7 +22,7 @@ export default function CheckListPage() {
 
   const fetchData = async () => {
     try {
-      setLoading(true);
+      // Removed loading state for faster UI
       const [pendingRes, checkedRes, programmesRes] = await Promise.all([
         fetch('/api/results/status?status=pending'),
         fetch('/api/results/status?status=checked'),
@@ -64,7 +64,7 @@ export default function CheckListPage() {
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
-      setLoading(false);
+      // No loading state to manage
     }
   };
 
@@ -129,13 +129,7 @@ export default function CheckListPage() {
     return programme ? `${programme.name} (${programme.code})` : 'Unknown Programme';
   };
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <LoadingSpinner size="lg" />
-      </div>
-    );
-  }
+  // Removed loading spinner - show content immediately
 
   return (
     <div className="container mx-auto px-4 py-8 relative">

@@ -7,7 +7,7 @@ export default function AdminPrintPage() {
   const [programmes, setProgrammes] = useState<Programme[]>([]);
   const [participants, setParticipants] = useState<ProgrammeParticipant[]>([]);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Removed loading state for faster print page load
 
   const [selectedProgramme, setSelectedProgramme] = useState<Programme | null>(null);
   const [evaluatorName, setEvaluatorName] = useState('');
@@ -19,7 +19,7 @@ export default function AdminPrintPage() {
 
   const fetchData = async () => {
     try {
-      setLoading(true);
+      // Removed loading state for faster UI
       const [programmesRes, participantsRes, candidatesRes] = await Promise.all([
         fetch('/api/programmes'),
         fetch('/api/programme-participants'),
@@ -38,7 +38,7 @@ export default function AdminPrintPage() {
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
-      setLoading(false);
+      // No loading state to manage
     }
   };
 
@@ -124,16 +124,7 @@ export default function AdminPrintPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading programmes...</p>
-        </div>
-      </div>
-    );
-  }
+  // Removed loading spinner - show print page immediately
 
   const chestNumbers = selectedProgramme ? getParticipantChestNumbers(selectedProgramme._id?.toString() || '') : [];
 

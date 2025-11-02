@@ -30,7 +30,7 @@ export default function MarksSummary({ results }: MarksSummaryProps) {
   const [teams, setTeams] = useState<Team[]>([]);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [teamMarks, setTeamMarks] = useState<TeamMarks[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Removed loading state for faster rendering
   const [selectedView, setSelectedView] = useState<'summary' | 'detailed' | 'daily'>('summary');
 
   useEffect(() => {
@@ -60,7 +60,7 @@ export default function MarksSummary({ results }: MarksSummaryProps) {
     } catch (error) {
       console.error('Error fetching teams and candidates:', error);
     } finally {
-      setLoading(false);
+      // No loading state to manage
     }
   };
 
@@ -267,13 +267,7 @@ export default function MarksSummary({ results }: MarksSummaryProps) {
 
 
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
+  // Removed loading spinner - render content immediately
 
   return (
     <div className="space-y-6">

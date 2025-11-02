@@ -10,7 +10,7 @@ export default function ResultsPage() {
   const [programmes, setProgrammes] = useState<Programme[]>([]);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [participants, setParticipants] = useState<ProgrammeParticipant[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Removed loading state for faster page load
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -49,7 +49,7 @@ export default function ResultsPage() {
   // Fetch data from APIs
   const fetchData = async () => {
     try {
-      setLoading(true);
+      // Removed loading state for faster UI
       const [resultsRes, programmesRes, candidatesRes, participantsRes, teamsRes] = await Promise.all([
         fetch('/api/results'),
         fetch('/api/programmes'),
@@ -90,11 +90,12 @@ export default function ResultsPage() {
       setParticipants([]);
       setTeams([]);
     } finally {
-      setLoading(false);
+      // No loading state to manage
     }
   };
 
   useEffect(() => {
+    // Optimized data loading - start immediately without blocking UI
     fetchData();
   }, []);
 
@@ -738,16 +739,7 @@ export default function ResultsPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <>
-        <Breadcrumb pageName="Results" />
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-        </div>
-      </>
-    );
-  }
+  // Remove loading spinner - show content immediately
 
   return (
     <>

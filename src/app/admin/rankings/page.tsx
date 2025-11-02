@@ -44,7 +44,7 @@ export default function RankingsPage() {
   const [results, setResults] = useState<Result[]>([]);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [programmes, setProgrammes] = useState<Programme[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Removed loading state for faster rankings load
   const [teamRankings, setTeamRankings] = useState<TeamRanking[]>([]);
   const [topPerformers, setTopPerformers] = useState<TopPerformer[]>([]);
   const [rankingStats, setRankingStats] = useState<RankingStats>({
@@ -63,7 +63,7 @@ export default function RankingsPage() {
   // Fetch data from APIs
   const fetchData = async () => {
     try {
-      setLoading(true);
+      // Removed loading state for faster UI
       const [teamsRes, resultsRes, candidatesRes, programmesRes] = await Promise.all([
         fetch('/api/teams'),
         fetch('/api/results'),
@@ -90,7 +90,7 @@ export default function RankingsPage() {
       setCandidates([]);
       setProgrammes([]);
     } finally {
-      setLoading(false);
+      // No loading state to manage
     }
   };
 
@@ -346,19 +346,7 @@ export default function RankingsPage() {
     });
   };
 
-  if (loading) {
-    return (
-      <>
-        <Breadcrumb pageName="Rankings & Analytics Dashboard" />
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading comprehensive rankings data...</p>
-          </div>
-        </div>
-      </>
-    );
-  }
+  // Removed loading spinner - show rankings immediately
 
   return (
     <>
@@ -434,10 +422,10 @@ export default function RankingsPage() {
             
             <button
               onClick={fetchData}
-              disabled={loading}
+              disabled={false}
               className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center gap-2"
             >
-              {loading ? (
+              {false ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                   Refreshing...

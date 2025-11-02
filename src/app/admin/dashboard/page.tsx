@@ -43,7 +43,7 @@ export default function DashboardPage() {
   const [results, setResults] = useState<Result[]>([]);
   const [festivalInfo, setFestivalInfo] = useState<FestivalInfo | null>(null);
   const [schedule, setSchedule] = useState<Schedule[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Removed loading state for faster dashboard load
   const [dashboardStats, setDashboardStats] = useState<DashboardStats>({
     totalTeams: 0,
     totalCandidates: 0,
@@ -65,7 +65,7 @@ export default function DashboardPage() {
   // Fetch all data
   const fetchData = async () => {
     try {
-      setLoading(true);
+      // Removed loading state for faster UI
       const [teamsRes, candidatesRes, programmesRes, resultsRes, festivalRes, scheduleRes] = await Promise.all([
         fetch('/api/teams'),
         fetch('/api/candidates'),
@@ -99,7 +99,7 @@ export default function DashboardPage() {
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
-      setLoading(false);
+      // No loading state to manage
     }
   };
 
@@ -336,16 +336,7 @@ export default function DashboardPage() {
     return `${Math.floor(diffInMinutes / 1440)}d ago`;
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading dashboard data...</p>
-        </div>
-      </div>
-    );
-  }
+  // Removed loading spinner - show dashboard immediately
 
   return (
     <div className="space-y-8">
@@ -397,10 +388,10 @@ export default function DashboardPage() {
             </label>
             <button
               onClick={fetchData}
-              disabled={loading}
+              disabled={false}
               className="bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center gap-2"
             >
-              {loading ? (
+              {false ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                   Refreshing...

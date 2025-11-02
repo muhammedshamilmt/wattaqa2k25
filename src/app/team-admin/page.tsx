@@ -13,7 +13,7 @@ export default function TeamDashboard() {
   const [programmes, setProgrammes] = useState<Programme[]>([]);
   const [participants, setParticipants] = useState<ProgrammeParticipant[]>([]);
   const [results, setResults] = useState<Result[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Removed loading state for faster team dashboard load
 
   useEffect(() => {
     fetchDashboardData();
@@ -21,7 +21,7 @@ export default function TeamDashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      setLoading(true);
+      // Removed loading state for faster UI
       const [candidatesRes, programmesRes, participantsRes, resultsRes] = await Promise.all([
         fetch(`/api/candidates?team=${teamCode}`),
         fetch('/api/programmes'),
@@ -43,20 +43,11 @@ export default function TeamDashboard() {
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
-      setLoading(false);
+      // No loading state to manage
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-600 border-t-transparent mx-auto mb-4"></div>
-          <p className="text-gray-600 text-lg">Loading dashboard...</p>
-        </div>
-      </div>
-    );
-  }
+  // Removed loading spinner - show team dashboard immediately
 
   // Calculate statistics
   const totalCandidates = candidates.length;
