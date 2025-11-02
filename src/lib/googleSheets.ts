@@ -114,8 +114,8 @@ export function convertToSheetFormat(data: any[], type: string): any[][] {
         programme.section || '',
         programme.positionType || '',
         programme.status || '',
-        programme.createdAt?.toISOString() || '',
-        programme.updatedAt?.toISOString() || ''
+        programme.createdAt ? new Date(programme.createdAt).toISOString() : '',
+        programme.updatedAt ? new Date(programme.updatedAt).toISOString() : ''
       ]);
 
     case 'results':

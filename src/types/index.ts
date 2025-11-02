@@ -26,8 +26,8 @@ export interface Programme {
   section: 'senior' | 'junior' | 'sub-junior' | 'general';
   positionType: 'individual' | 'group' | 'general';
   type?: 'individual' | 'group' | 'general'; // Alias for positionType
-  requiredParticipants: number; // Number of participants required
-  maxParticipants?: number; // Maximum participants allowed
+  requiredParticipants: number; // Minimum number of participants required
+  maxParticipants?: number; // Maximum participants allowed (optional, for range-based registration)
   status: 'active' | 'inactive' | 'completed';
   createdAt?: Date;
   updatedAt?: Date;

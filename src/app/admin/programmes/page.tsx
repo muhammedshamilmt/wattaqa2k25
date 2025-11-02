@@ -21,7 +21,7 @@ export default function ProgrammesPage() {
     category: '' as 'arts' | 'sports' | '',
     subcategory: '' as 'stage' | 'non-stage' | '',
     section: '' as 'senior' | 'junior' | 'sub-junior' | 'general' | '',
-    positionType: '' as 'individual' | 'group' | '',
+    positionType: '' as 'individual' | 'group' | 'general' | '',
     requiredParticipants: 1,
     maxParticipants: ''
   });
@@ -82,17 +82,20 @@ export default function ProgrammesPage() {
 
   // Load program data into form for editing
   const handleEditProgramme = (programme: Programme) => {
-    setFormData({
+    console.log('Editing programme:', programme);
+    const editData = {
       _id: programme._id?.toString() || '',
       code: programme.code || '',
       name: programme.name || '',
       category: programme.category as 'arts' | 'sports' | '',
-      subcategory: programme.subcategory as 'stage' | 'non-stage' | '' || '',
+      subcategory: (programme.subcategory as 'stage' | 'non-stage') || '',
       section: programme.section as 'senior' | 'junior' | 'sub-junior' | 'general' | '',
-      positionType: programme.positionType as 'individual' | 'group' | '',
+      positionType: programme.positionType || '',
       requiredParticipants: programme.requiredParticipants || 1,
       maxParticipants: programme.maxParticipants?.toString() || ''
-    });
+    };
+    console.log('Setting form data:', editData);
+    setFormData(editData);
     setIsEditMode(true);
     // Scroll to form
     document.getElementById('programme-form')?.scrollIntoView({ behavior: 'smooth' });
@@ -107,7 +110,7 @@ export default function ProgrammesPage() {
       category: '' as 'arts' | 'sports' | '',
       subcategory: '' as 'stage' | 'non-stage' | '',
       section: '' as 'senior' | 'junior' | 'sub-junior' | 'general' | '',
-      positionType: '' as 'individual' | 'group' | '',
+      positionType: '' as 'individual' | 'group' | 'general' | '',
       requiredParticipants: 1,
       maxParticipants: ''
     });
@@ -116,10 +119,26 @@ export default function ProgrammesPage() {
 
   // Check if program code already exists (excluding current program in edit mode)
   const isProgramCodeExists = (code: string) => {
-    return programmes.some(programme => 
-      programme.code.toLowerCase() === code.toLowerCase() && 
-      (!isEditMode || programme._id?.toString() !== formData._id)
+    if (!code) return false;
+    
+    const duplicates = programmes.filter(programme => 
+      programme.code.toLowerCase() === code.toLowerCase()
     );
+    
+    console.log('Checking code:', code, 'isEditMode:', isEditMode, 'formData._id:', formData._id);
+    console.log('Found programmes with same code:', duplicates);
+    
+    if (!isEditMode) {
+      // For new programmes, any duplicate is invalid
+      return duplicates.length > 0;
+    } else {
+      // For editing, exclude the current programme
+      const otherDuplicates = duplicates.filter(programme => 
+        programme._id?.toString() !== formData._id
+      );
+      console.log('Other duplicates (excluding current):', otherDuplicates);
+      return otherDuplicates.length > 0;
+    }
   };
 
   // Handle form submission
@@ -136,10 +155,33 @@ export default function ProgrammesPage() {
       return;
     }
 
-    // Check for duplicate program code
-    if (isProgramCodeExists(formData.code)) {
-      alert('A program with this code already exists');
+    // Validate participant range
+    if (formData.maxParticipants && parseInt(formData.maxParticipants) < formData.requiredParticipants) {
+      alert('Maximum participants must be greater than or equal to minimum participants');
       return;
+    }
+
+    // Check for duplicate program code (skip if editing the same programme)
+    if (!isEditMode) {
+      // Only check for duplicates when adding new programmes
+      const isDuplicate = isProgramCodeExists(formData.code);
+      if (isDuplicate) {
+        alert(`A program with code "${formData.code}" already exists. Please choose a different code.`);
+        return;
+      }
+    } else {
+      // For editing, only check if the code has actually changed
+      const originalProgramme = programmes.find(p => p._id?.toString() === formData._id);
+      if (originalProgramme && originalProgramme.code !== formData.code) {
+        // Code has changed, check for duplicates
+        const isDuplicate = isProgramCodeExists(formData.code);
+        if (isDuplicate) {
+          console.log('Duplicate check failed - isEditMode:', isEditMode, 'formData._id:', formData._id);
+          alert(`A program with code "${formData.code}" already exists. Please use a different code.`);
+          return;
+        }
+      }
+      // If code hasn't changed, skip duplicate check entirely
     }
 
     try {
@@ -155,6 +197,8 @@ export default function ProgrammesPage() {
       const requestBody = isEditMode 
         ? { ...submitData, status: 'active' }
         : { ...submitData, status: 'active' }; // Exclude _id for new programmes
+      
+      console.log('Submitting:', { method, url, requestBody, isEditMode });
       
       const response = await fetch(url, {
         method,
@@ -431,7 +475,7 @@ export default function ProgrammesPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Required Participants
+                      Minimum Participants (Required)
                     </label>
                     <input
                       type="number"
@@ -440,10 +484,45 @@ export default function ProgrammesPage() {
                       onChange={handleInputChange}
                       min="1"
                       max="45"
-                      placeholder="Number of participants"
+                      placeholder="Minimum number of participants"
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-700"
                       required
                     />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Maximum Participants (Optional)
+                    </label>
+                    <input
+                      type="number"
+                      name="maxParticipants"
+                      value={formData.maxParticipants}
+                      onChange={handleInputChange}
+                      min={formData.requiredParticipants || 1}
+                      max="45"
+                      placeholder="Maximum allowed (leave empty for no limit)"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-700"
+                    />
+                  </div>
+                </div>
+
+                {/* Participant Range Display */}
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <h4 className="font-semibold text-green-800 mb-2">📊 Participant Range Summary</h4>
+                    <div className="text-sm text-green-700">
+                      {formData.maxParticipants && parseInt(formData.maxParticipants) > formData.requiredParticipants ? (
+                        <div>
+                          <p><strong>Range:</strong> {formData.requiredParticipants} to {formData.maxParticipants} participants</p>
+                          <p><strong>Teams can register with:</strong> {formData.requiredParticipants}, {formData.requiredParticipants + 1}{parseInt(formData.maxParticipants) > formData.requiredParticipants + 1 ? `, ... ${formData.maxParticipants}` : ''} participants</p>
+                        </div>
+                      ) : (
+                        <div>
+                          <p><strong>Fixed:</strong> Exactly {formData.requiredParticipants} participant{formData.requiredParticipants !== 1 ? 's' : ''} required</p>
+                          <p><strong>Teams must register with:</strong> {formData.requiredParticipants} participant{formData.requiredParticipants !== 1 ? 's' : ''} only</p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -652,9 +731,26 @@ export default function ProgrammesPage() {
                             </span>
                           </td>
                           <td className="py-3 px-4">
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">
-                              {programme.requiredParticipants || 1} required
-                            </span>
+                            <div className="space-y-1">
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">
+                                {programme.maxParticipants && programme.maxParticipants > programme.requiredParticipants
+                                  ? `${programme.requiredParticipants}-${programme.maxParticipants} participants`
+                                  : `${programme.requiredParticipants || 1} participants`
+                                }
+                              </span>
+                              <div>
+                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-bold ${
+                                  programme.maxParticipants && programme.maxParticipants > programme.requiredParticipants
+                                    ? 'bg-blue-100 text-blue-800 border border-blue-200' 
+                                    : 'bg-gray-100 text-gray-800 border border-gray-200'
+                                }`}>
+                                  {programme.maxParticipants && programme.maxParticipants > programme.requiredParticipants
+                                    ? '📊 Range' 
+                                    : '🔒 Fixed'
+                                  }
+                                </span>
+                              </div>
+                            </div>
                           </td>
                           <td className="py-3 px-4">
                             <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${programme.status === 'active' ? 'bg-green-500 text-white' : 'bg-gray-500 text-white'
