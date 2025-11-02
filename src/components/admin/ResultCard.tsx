@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { EnhancedResult, ResultStatus } from '@/types';
 
 interface ResultCardProps {
@@ -8,7 +9,6 @@ interface ResultCardProps {
     onReview: () => void;
     onStatusUpdate: (resultId: string, status: ResultStatus, notes?: string) => void;
     showActions?: boolean;
-    isChecked?: boolean;
 }
 
 export default function ResultCard({
@@ -16,9 +16,9 @@ export default function ResultCard({
     programmeName,
     onReview,
     onStatusUpdate,
-    showActions = true,
-    isChecked = false
+    showActions = true
 }: ResultCardProps) {
+    const [showDetails, setShowDetails] = useState(false);
     const getStatusBadge = (status: ResultStatus) => {
         const badges = {
             [ResultStatus.PENDING]: 'bg-orange-100 text-orange-800 border-orange-200',
@@ -207,6 +207,58 @@ export default function ResultCard({
         return { positionPoints, gradePoints, participationPoints };
     };
 
+    const getWinnersDisplay = () => {
+        const winners = [];
+        
+        // Individual winners
+        if (result.firstPlace && result.firstPlace.length > 0) {
+            winners.push({
+                position: '1st Place',
+                participants: result.firstPlace.map(w => `${w.chestNumber}${w.grade ? ` (${w.grade})` : ''}`),
+                color: 'bg-yellow-100 text-yellow-800 border-yellow-200'
+            });
+        }
+        if (result.secondPlace && result.secondPlace.length > 0) {
+            winners.push({
+                position: '2nd Place',
+                participants: result.secondPlace.map(w => `${w.chestNumber}${w.grade ? ` (${w.grade})` : ''}`),
+                color: 'bg-gray-100 text-gray-800 border-gray-200'
+            });
+        }
+        if (result.thirdPlace && result.thirdPlace.length > 0) {
+            winners.push({
+                position: '3rd Place',
+                participants: result.thirdPlace.map(w => `${w.chestNumber}${w.grade ? ` (${w.grade})` : ''}`),
+                color: 'bg-orange-100 text-orange-800 border-orange-200'
+            });
+        }
+
+        // Team winners
+        if (result.firstPlaceTeams && result.firstPlaceTeams.length > 0) {
+            winners.push({
+                position: '1st Place (Team)',
+                participants: result.firstPlaceTeams.map(w => `${w.teamCode}${w.grade ? ` (${w.grade})` : ''}`),
+                color: 'bg-yellow-100 text-yellow-800 border-yellow-200'
+            });
+        }
+        if (result.secondPlaceTeams && result.secondPlaceTeams.length > 0) {
+            winners.push({
+                position: '2nd Place (Team)',
+                participants: result.secondPlaceTeams.map(w => `${w.teamCode}${w.grade ? ` (${w.grade})` : ''}`),
+                color: 'bg-gray-100 text-gray-800 border-gray-200'
+            });
+        }
+        if (result.thirdPlaceTeams && result.thirdPlaceTeams.length > 0) {
+            winners.push({
+                position: '3rd Place (Team)',
+                participants: result.thirdPlaceTeams.map(w => `${w.teamCode}${w.grade ? ` (${w.grade})` : ''}`),
+                color: 'bg-orange-100 text-orange-800 border-orange-200'
+            });
+        }
+
+        return winners;
+    };
+
     return (
         <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6 hover:shadow-lg transition-shadow relative">
             {/* Header */}
@@ -230,50 +282,101 @@ export default function ResultCard({
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-2 gap-4 mb-4">
+            <div className="grid grid-cols-1 gap-4 mb-4">
                 <div className="bg-gray-50 rounded-lg p-3">
                     <div className="text-sm text-gray-600">Total Participants</div>
                     <div className="text-xl font-bold text-gray-900">{getTotalParticipants()}</div>
                 </div>
-                <div className="bg-blue-50 rounded-lg p-3">
-                    <div className="text-sm text-blue-600">Total Points</div>
-                    <div className="text-xl font-bold text-blue-900">{getTotalPoints()}</div>
-                </div>
             </div>
 
-            {/* Mark Breakdown */}
-            {(() => {
-                const breakdown = getMarkBreakdown();
-                const hasGrades = breakdown.gradePoints > 0;
-                const hasParticipation = breakdown.participationPoints > 0;
-                
-                if (hasGrades || hasParticipation) {
-                    return (
-                        <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-3 mb-4">
-                            <div className="text-xs text-gray-600 mb-2">Mark Breakdown:</div>
-                            <div className="flex flex-wrap gap-2 text-xs">
-                                <span className="bg-green-100 text-green-800 px-2 py-1 rounded">
-                                    Position: {breakdown.positionPoints}
-                                </span>
-                                {hasGrades && (
-                                    <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded">
-                                        Grade: +{breakdown.gradePoints}
-                                    </span>
-                                )}
-                                {hasParticipation && (
-                                    <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                                        Participation: {breakdown.participationPoints}
-                                    </span>
-                                )}
-                                <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded font-bold">
-                                    Total: {getTotalPoints()}
-                                </span>
+            {/* Toggle Details Button */}
+            <div className="mb-4">
+                <button
+                    onClick={() => setShowDetails(!showDetails)}
+                    className="w-full flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                    <span className="text-sm font-medium text-gray-700">
+                        {showDetails ? 'Hide Details' : 'Show Details'}
+                    </span>
+                    <span className={`transform transition-transform ${showDetails ? 'rotate-180' : ''}`}>
+                        ▼
+                    </span>
+                </button>
+            </div>
+
+            {/* Expandable Details */}
+            {showDetails && (
+                <div className="mb-4 space-y-3">
+                    {/* Winners */}
+                    {getWinnersDisplay().length > 0 && (
+                        <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-4">
+                            <h4 className="text-sm font-semibold text-gray-800 mb-3">🏆 Winners</h4>
+                            <div className="space-y-2">
+                                {getWinnersDisplay().map((winner, index) => (
+                                    <div key={index} className="flex items-center justify-between">
+                                        <span className="text-sm font-medium text-gray-700">{winner.position}:</span>
+                                        <div className="flex flex-wrap gap-1">
+                                            {winner.participants.map((participant, pIndex) => (
+                                                <span
+                                                    key={pIndex}
+                                                    className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium border ${winner.color}`}
+                                                >
+                                                    {participant}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         </div>
-                    );
-                }
-                return null;
-            })()}
+                    )}
+
+                    {/* Participation Grades */}
+                    {((result.participationGrades && result.participationGrades.length > 0) || 
+                      (result.participationTeamGrades && result.participationTeamGrades.length > 0)) && (
+                        <div className="bg-green-50 rounded-lg p-4">
+                            <h4 className="text-sm font-semibold text-gray-800 mb-3">📝 Participation Grades</h4>
+                            <div className="space-y-2">
+                                {result.participationGrades && result.participationGrades.map((pg, index) => (
+                                    <div key={index} className="flex items-center justify-between">
+                                        <span className="text-sm text-gray-700">{pg.chestNumber}</span>
+                                        <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800 border border-green-200">
+                                            Grade {pg.grade} ({pg.points} pts)
+                                        </span>
+                                    </div>
+                                ))}
+                                {result.participationTeamGrades && result.participationTeamGrades.map((pg, index) => (
+                                    <div key={index} className="flex items-center justify-between">
+                                        <span className="text-sm text-gray-700">Team {pg.teamCode}</span>
+                                        <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800 border border-green-200">
+                                            Grade {pg.grade} ({pg.points} pts)
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Points Structure */}
+                    <div className="bg-purple-50 rounded-lg p-4">
+                        <h4 className="text-sm font-semibold text-gray-800 mb-3">📊 Points Structure</h4>
+                        <div className="grid grid-cols-3 gap-2 text-xs">
+                            <div className="text-center">
+                                <div className="font-medium text-gray-700">1st Place</div>
+                                <div className="text-yellow-600 font-bold">{result.firstPoints} pts</div>
+                            </div>
+                            <div className="text-center">
+                                <div className="font-medium text-gray-700">2nd Place</div>
+                                <div className="text-gray-600 font-bold">{result.secondPoints} pts</div>
+                            </div>
+                            <div className="text-center">
+                                <div className="font-medium text-gray-700">3rd Place</div>
+                                <div className="text-orange-600 font-bold">{result.thirdPoints} pts</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Notes */}
             {result.notes && (
@@ -297,20 +400,12 @@ export default function ResultCard({
 
             {/* Actions */}
             {showActions && (
-                <div className="flex justify-between items-center pt-4 border-t border-gray-200">
-                    <button
-                        onClick={onReview}
-                        className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center space-x-1"
-                    >
-                        <span>👁️</span>
-                        <span>Review Details</span>
-                    </button>
-
+                <div className="flex justify-end items-center pt-4 border-t border-gray-200">
                     <div className="flex space-x-2">
                         {result.status === ResultStatus.PENDING && (
                             <button
                                 onClick={() => onStatusUpdate(result._id!.toString(), ResultStatus.CHECKED)}
-                                className="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors"
+                                className="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors font-medium"
                             >
                                 ✓ Check
                             </button>
@@ -320,13 +415,13 @@ export default function ResultCard({
                             <>
                                 <button
                                     onClick={() => onStatusUpdate(result._id!.toString(), ResultStatus.PUBLISHED)}
-                                    className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
+                                    className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors font-medium"
                                 >
                                     🚀 Publish
                                 </button>
                                 <button
                                     onClick={() => onStatusUpdate(result._id!.toString(), ResultStatus.PENDING)}
-                                    className="px-3 py-1 bg-orange-600 text-white text-xs rounded hover:bg-orange-700 transition-colors"
+                                    className="px-4 py-2 bg-orange-600 text-white text-sm rounded-lg hover:bg-orange-700 transition-colors font-medium"
                                 >
                                     ↩️ Pending
                                 </button>
