@@ -40,6 +40,14 @@ export default function TeamDashboard() {
       setProgrammes(programmesData);
       setParticipants(participantsData);
       setResults(resultsData);
+      
+      // Debug logging to understand data structure
+      console.log('Team Dashboard Data:', {
+        candidates: candidatesData?.slice(0, 2),
+        programmes: programmesData?.slice(0, 2),
+        participants: participantsData?.slice(0, 2),
+        results: resultsData?.slice(0, 2)
+      });
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
@@ -58,20 +66,20 @@ export default function TeamDashboard() {
     );
   }
 
-  // Calculate statistics
-  const totalCandidates = candidates.length;
-  const totalParticipations = participants.length;
-  const totalPoints = candidates.reduce((sum, candidate) => sum + candidate.points, 0);
+  // Calculate statistics with safe fallbacks
+  const totalCandidates = candidates?.length || 0;
+  const totalParticipations = participants?.length || 0;
+  const totalPoints = candidates?.reduce((sum, candidate) => sum + (candidate.points || 0), 0) || 0;
 
-  // Group candidates by section
+  // Group candidates by section with safe fallbacks
   const candidatesBySection = {
-    senior: candidates.filter(c => c.section === 'senior').length,
-    junior: candidates.filter(c => c.section === 'junior').length,
-    'sub-junior': candidates.filter(c => c.section === 'sub-junior').length,
+    senior: candidates?.filter(c => c.section === 'senior').length || 0,
+    junior: candidates?.filter(c => c.section === 'junior').length || 0,
+    'sub-junior': candidates?.filter(c => c.section === 'sub-junior').length || 0,
   };
 
   // Filter team results - check if team appears in any position
-  const teamResults = results.filter(result => {
+  const teamResults = (results || []).filter(result => {
     if (result.status !== 'published') return false;
     
     // Check if team appears in any position for general programmes
@@ -83,7 +91,7 @@ export default function TeamDashboard() {
     }
     
     // For individual/group programmes, check if any team candidates are in results
-    const teamCandidateChests = candidates.map(c => c.chestNumber);
+    const teamCandidateChests = (candidates || []).map(c => c.chestNumber);
     return result.firstPlace?.some(p => teamCandidateChests.includes(p.chestNumber)) ||
            result.secondPlace?.some(p => teamCandidateChests.includes(p.chestNumber)) ||
            result.thirdPlace?.some(p => teamCandidateChests.includes(p.chestNumber)) ||
@@ -95,7 +103,7 @@ export default function TeamDashboard() {
     if (result.positionType === 'general') {
       return result.firstPlaceTeams?.some(t => t.teamCode === teamCode);
     }
-    const teamCandidateChests = candidates.map(c => c.chestNumber);
+    const teamCandidateChests = (candidates || []).map(c => c.chestNumber);
     return result.firstPlace?.some(p => teamCandidateChests.includes(p.chestNumber));
   }).length;
 
@@ -105,7 +113,7 @@ export default function TeamDashboard() {
              result.secondPlaceTeams?.some(t => t.teamCode === teamCode) ||
              result.thirdPlaceTeams?.some(t => t.teamCode === teamCode);
     }
-    const teamCandidateChests = candidates.map(c => c.chestNumber);
+    const teamCandidateChests = (candidates || []).map(c => c.chestNumber);
     return result.firstPlace?.some(p => teamCandidateChests.includes(p.chestNumber)) ||
            result.secondPlace?.some(p => teamCandidateChests.includes(p.chestNumber)) ||
            result.thirdPlace?.some(p => teamCandidateChests.includes(p.chestNumber));
@@ -123,7 +131,7 @@ export default function TeamDashboard() {
       if (result.thirdPlaceTeams?.some(t => t.teamCode === teamCode)) return { position: 3, type: 'team' };
       return { position: 4, type: 'team' };
     } else {
-      const teamCandidateChests = candidates.map(c => c.chestNumber);
+      const teamCandidateChests = (candidates || []).map(c => c.chestNumber);
       if (result.firstPlace?.some(p => teamCandidateChests.includes(p.chestNumber))) return { position: 1, type: 'individual' };
       if (result.secondPlace?.some(p => teamCandidateChests.includes(p.chestNumber))) return { position: 2, type: 'individual' };
       if (result.thirdPlace?.some(p => teamCandidateChests.includes(p.chestNumber))) return { position: 3, type: 'individual' };
@@ -134,8 +142,8 @@ export default function TeamDashboard() {
   const recentActivities = [
     ...recentResults.map(result => {
       // Find programme by matching _id, id, or code
-      const programme = programmes.find(p => 
-        p._id === result.programmeId || 
+      const programme = (programmes || []).find(p => 
+        p._id?.toString() === result.programmeId || 
         p.id === result.programmeId || 
         p.code === result.programmeId
       );
@@ -148,7 +156,7 @@ export default function TeamDashboard() {
       // Get candidate names for individual results
       let candidateNames = '';
       if (teamPosition.type === 'individual') {
-        const teamCandidateChests = candidates.map(c => c.chestNumber);
+        const teamCandidateChests = (candidates || []).map(c => c.chestNumber);
         const allPositions = [
           ...(result.firstPlace || []),
           ...(result.secondPlace || []),
@@ -158,7 +166,7 @@ export default function TeamDashboard() {
         const teamCandidatesInResult = allPositions
           .filter(p => teamCandidateChests.includes(p.chestNumber))
           .map(p => {
-            const candidate = candidates.find(c => c.chestNumber === p.chestNumber);
+            const candidate = (candidates || []).find(c => c.chestNumber === p.chestNumber);
             return candidate?.name || p.chestNumber;
           });
         
@@ -174,15 +182,12 @@ export default function TeamDashboard() {
         icon: teamPosition.position <= 3 ? '🏅' : '🎯'
       };
     }),
-    ...participants.slice(-3).map(participant => {
-      const programme = programmes.find(p => 
-        p._id === participant.programmeCode || 
-        p.id === participant.programmeCode || 
-        p.code === participant.programmeCode
-      );
+    ...(participants || []).slice(-3).map(participant => {
+      // ProgrammeParticipant has programmeCode field that should match Programme.code
+      const programme = (programmes || []).find(p => p.code === participant.programmeCode);
       return {
         type: 'registration',
-        message: `Registered for ${programme?.name || participant.programmeCode}`,
+        message: `Registered for ${programme?.name || participant.programmeName || participant.programmeCode}`,
         time: new Date(participant.createdAt || '').toLocaleDateString(),
         icon: '🎯'
       };
@@ -357,7 +362,12 @@ export default function TeamDashboard() {
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {recentResults.map((result, index) => {
-                const programme = programmes.find(p => p.code === result.programmeId);
+                // Find programme by matching _id, id, or code
+                const programme = (programmes || []).find(p => 
+                  p._id?.toString() === result.programmeId || 
+                  p.id === result.programmeId || 
+                  p.code === result.programmeId
+                );
                 const teamPosition = getTeamPositionInResult(result);
                 const positionColors = {
                   1: 'bg-yellow-100 text-yellow-800 border-yellow-200',
@@ -366,10 +376,33 @@ export default function TeamDashboard() {
                 };
                 const defaultColor = 'bg-blue-100 text-blue-800 border-blue-200';
                 
+                // Get participant names for this result
+                const getParticipantNames = () => {
+                  if (teamPosition.type === 'team') return 'Team Result';
+                  
+                  const teamCandidateChests = (candidates || []).map(c => c.chestNumber);
+                  const allPositions = [
+                    ...(result.firstPlace || []),
+                    ...(result.secondPlace || []),
+                    ...(result.thirdPlace || [])
+                  ];
+                  
+                  const teamCandidatesInResult = allPositions
+                    .filter(p => teamCandidateChests.includes(p.chestNumber))
+                    .map(p => {
+                      const candidate = (candidates || []).find(c => c.chestNumber === p.chestNumber);
+                      return candidate?.name || p.chestNumber;
+                    });
+                  
+                  return teamCandidatesInResult.length > 0 
+                    ? teamCandidatesInResult.join(', ')
+                    : 'Individual Result';
+                };
+                
                 return (
                   <div key={index} className="p-4 bg-gray-50/80 backdrop-blur-sm rounded-lg border border-gray-200/50">
                     <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-medium text-gray-900 text-sm">{programme?.name || result.programmeId}</h3>
+                      <h3 className="font-medium text-gray-900 text-sm truncate">{programme?.name || 'Unknown Programme'}</h3>
                       <span className={`px-2 py-1 rounded-full text-xs font-medium border ${
                         positionColors[teamPosition.position as keyof typeof positionColors] || defaultColor
                       }`}>
@@ -379,7 +412,7 @@ export default function TeamDashboard() {
                          `#${teamPosition.position}`}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-600">{teamPosition.type === 'team' ? 'Team Result' : 'Individual Result'}</p>
+                    <p className="text-xs text-gray-600 truncate">{getParticipantNames()}</p>
                     <p className="text-xs text-gray-500 mt-1">
                       {new Date(result.createdAt || '').toLocaleDateString()}
                     </p>
