@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getDatabase } from '@/lib/mongodb';
 import { Result, ResultStatus } from '@/types';
 import { ObjectId } from 'mongodb';
+import { syncResultToSheets } from '@/lib/googleSheets';
 
 export async function PATCH(
   request: Request,
@@ -37,9 +38,23 @@ export async function PATCH(
       return NextResponse.json({ error: 'Result not found' }, { status: 404 });
     }
     
+    // Sync to Google Sheets only when result is published
+    if (status === ResultStatus.PUBLISHED) {
+      try {
+        const updatedResult = await collection.findOne({ _id: new ObjectId(id) });
+        if (updatedResult) {
+          await syncResultToSheets(updatedResult);
+          console.log(`Result ${id} synced to Google Sheets after publishing`);
+        }
+      } catch (syncError) {
+        console.error('Error syncing published result to sheets:', syncError);
+        // Don't fail the main operation if sync fails
+      }
+    }
+    
     return NextResponse.json({ 
       success: true, 
-      message: `Result status updated to ${status}` 
+      message: `Result status updated to ${status}${status === ResultStatus.PUBLISHED ? ' and synced to Google Sheets' : ''}` 
     });
   } catch (error) {
     console.error('Error updating result status:', error);

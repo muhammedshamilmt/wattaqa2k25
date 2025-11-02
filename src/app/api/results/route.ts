@@ -42,13 +42,8 @@ export async function POST(request: Request) {
       ...newResult
     };
     
-    // Auto-sync to Google Sheets
-    try {
-      await syncResultToSheets(resultWithId);
-    } catch (syncError) {
-      console.error('Error syncing to sheets:', syncError);
-      // Don't fail the main operation if sync fails
-    }
+    // Note: Google Sheets sync will happen only when result is published
+    // No sync on initial creation (pending status)
     
     return NextResponse.json({ success: true, id: result.insertedId.toString() });
   } catch (error) {
@@ -82,17 +77,8 @@ export async function PUT(request: Request) {
       }
     );
 
-    // Auto-sync to Google Sheets
-    try {
-      // Get the updated result for sync
-      const updatedResult = await collection.findOne({ _id: new ObjectId(id) });
-      if (updatedResult) {
-        await syncResultToSheets(updatedResult);
-      }
-    } catch (syncError) {
-      console.error('Error syncing to sheets:', syncError);
-      // Don't fail the main operation if sync fails
-    }
+    // Note: Google Sheets sync will happen only when result is published
+    // No sync on regular updates
     
     return NextResponse.json({ success: true, message: 'Result updated successfully' });
   } catch (error) {
