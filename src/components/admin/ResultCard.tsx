@@ -392,15 +392,17 @@ export default function ResultCard({
                                             <div key={pIndex} className="flex items-center justify-between py-2 px-3 rounded-lg border border-gray-200 bg-white mb-2">
                                                 <div className="flex items-center space-x-3">
                                                     <span className="text-sm font-medium text-gray-700">{winner.position}:</span>
-                                                    <span className="font-bold text-gray-900">{participant.chestNumber}</span>
+                                                    <div className="flex items-center space-x-1">
+                                                        <span className="font-bold text-gray-900">{participant.chestNumber}</span>
+                                                        {participant.grade && (
+                                                            <span className="text-xs bg-blue-100 text-blue-800 px-1 py-0.5 rounded">
+                                                                {participant.grade}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                                <div className="flex items-center space-x-2">
+                                                <div className="flex items-center">
                                                     <span className="text-sm text-gray-700">{participant.teamName}</span>
-                                                    {participant.grade && (
-                                                        <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                                                            Grade {participant.grade}
-                                                        </span>
-                                                    )}
                                                 </div>
                                             </div>
                                         ))}
@@ -423,7 +425,7 @@ export default function ResultCard({
                                             <span className="text-xs text-gray-600">{getTeamName(pg.chestNumber)}</span>
                                         </div>
                                         <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800 border border-green-200">
-                                            Grade {pg.grade} ({pg.points} pts)
+                                            {pg.grade}
                                         </span>
                                     </div>
                                 ))}
@@ -434,7 +436,7 @@ export default function ResultCard({
                                             <span className="text-xs text-gray-600">Team {pg.teamCode}</span>
                                         </div>
                                         <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800 border border-green-200">
-                                            Grade {pg.grade} ({pg.points} pts)
+                                            {pg.grade}
                                         </span>
                                     </div>
                                 ))}
