@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { EnhancedResult, Programme, ResultStatus, Team } from '@/types';
+import { EnhancedResult, Programme, ResultStatus, Team, Candidate } from '@/types';
 import ResultCard from '@/components/admin/ResultCard';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
@@ -10,6 +10,7 @@ export default function PublishPage() {
   const [checkedResults, setCheckedResults] = useState<EnhancedResult[]>([]);
   const [programmes, setProgrammes] = useState<Programme[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'published' | 'ready'>('published');
 
@@ -20,22 +21,24 @@ export default function PublishPage() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [publishedRes, checkedRes, programmesRes, teamsRes] = await Promise.all([
+      const [publishedRes, checkedRes, programmesRes, teamsRes, candidatesRes] = await Promise.all([
         fetch('/api/results/status?status=published'),
         fetch('/api/results/status?status=checked'),
         fetch('/api/programmes'),
-        fetch('/api/teams')
+        fetch('/api/teams'),
+        fetch('/api/candidates')
       ]);
 
-      if (!publishedRes.ok || !checkedRes.ok || !programmesRes.ok || !teamsRes.ok) {
+      if (!publishedRes.ok || !checkedRes.ok || !programmesRes.ok || !teamsRes.ok || !candidatesRes.ok) {
         throw new Error('Failed to fetch data');
       }
 
-      const [published, checked, programmesData, teamsData] = await Promise.all([
+      const [published, checked, programmesData, teamsData, candidatesData] = await Promise.all([
         publishedRes.json(),
         checkedRes.json(),
         programmesRes.json(),
-        teamsRes.json()
+        teamsRes.json(),
+        candidatesRes.json()
       ]);
 
       // Enrich results with programme information
@@ -59,6 +62,7 @@ export default function PublishPage() {
       setCheckedResults(enrichResults(checked));
       setProgrammes(programmesData);
       setTeams(teamsData);
+      setCandidates(candidatesData);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -280,6 +284,8 @@ export default function PublishPage() {
                   onReview={() => {}}
                   onStatusUpdate={handleStatusUpdate}
                   showActions={false}
+                  teams={teams}
+                  candidates={candidates}
                 />
               ))}
             </div>
@@ -347,7 +353,8 @@ export default function PublishPage() {
                     onReview={() => {}}
                     onStatusUpdate={handleStatusUpdate}
                     showActions={true}
-                    isChecked={true}
+                    teams={teams}
+                    candidates={candidates}
                   />
                 ))}
               </div>

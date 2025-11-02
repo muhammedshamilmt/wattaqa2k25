@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { EnhancedResult, Programme, ResultStatus, Team } from '@/types';
+import { EnhancedResult, Programme, ResultStatus, Team, Candidate } from '@/types';
 import ResultReviewModal from '@/components/admin/ResultReviewModal';
 import ResultCard from '@/components/admin/ResultCard';
 // Removed LoadingSpinner import for faster page load
@@ -13,6 +13,7 @@ export default function CheckListPage() {
   const [publishedResults, setPublishedResults] = useState<EnhancedResult[]>([]);
   const [programmes, setProgrammes] = useState<Programme[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
   // Removed loading state for faster page load
   const [selectedResult, setSelectedResult] = useState<EnhancedResult | null>(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
@@ -35,24 +36,26 @@ export default function CheckListPage() {
   const fetchData = async () => {
     try {
       // Removed loading state for faster UI
-      const [pendingRes, checkedRes, publishedRes, programmesRes, teamsRes] = await Promise.all([
+      const [pendingRes, checkedRes, publishedRes, programmesRes, teamsRes, candidatesRes] = await Promise.all([
         fetch('/api/results/status?status=pending'),
         fetch('/api/results/status?status=checked'),
         fetch('/api/results/status?status=published'),
         fetch('/api/programmes'),
-        fetch('/api/teams')
+        fetch('/api/teams'),
+        fetch('/api/candidates')
       ]);
 
-      if (!pendingRes.ok || !checkedRes.ok || !publishedRes.ok || !programmesRes.ok || !teamsRes.ok) {
+      if (!pendingRes.ok || !checkedRes.ok || !publishedRes.ok || !programmesRes.ok || !teamsRes.ok || !candidatesRes.ok) {
         throw new Error('Failed to fetch data');
       }
 
-      const [pending, checked, published, programmesData, teamsData] = await Promise.all([
+      const [pending, checked, published, programmesData, teamsData, candidatesData] = await Promise.all([
         pendingRes.json(),
         checkedRes.json(),
         publishedRes.json(),
         programmesRes.json(),
-        teamsRes.json()
+        teamsRes.json(),
+        candidatesRes.json()
       ]);
 
       // Enrich results with programme information
@@ -79,6 +82,7 @@ export default function CheckListPage() {
       setPublishedResults(enrichResults(published));
       setProgrammes(programmesData);
       setTeams(teamsData);
+      setCandidates(candidatesData);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -395,6 +399,7 @@ export default function CheckListPage() {
                   onStatusUpdate={handleStatusUpdate}
                   showActions={true}
                   teams={teams}
+                  candidates={candidates}
                 />
               ))}
             </div>
@@ -529,6 +534,7 @@ export default function CheckListPage() {
                   onStatusUpdate={handleStatusUpdate}
                   showActions={true}
                   teams={teams}
+                  candidates={candidates}
                 />
               ))}
             </div>

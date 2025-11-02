@@ -2,7 +2,14 @@ import { NextResponse } from 'next/server';
 import { getDatabase } from '@/lib/mongodb';
 import { Result, ResultStatus } from '@/types';
 import { ObjectId } from 'mongodb';
-import { syncResultToSheets } from '@/lib/googleSheets';
+// Import Google Sheets sync with error handling
+let syncResultToSheets: any = null;
+try {
+  const googleSheetsModule = require('@/lib/googleSheets');
+  syncResultToSheets = googleSheetsModule.syncResultToSheets;
+} catch (error) {
+  console.warn('Google Sheets integration not available:', error.message);
+}
 
 export async function GET(request: Request) {
   try {
@@ -55,22 +62,24 @@ export async function PATCH(request: Request) {
     
     // Sync to Google Sheets only when results are published
     if (status === ResultStatus.PUBLISHED && result.modifiedCount > 0) {
-      try {
-        const publishedResults = await collection.find({ _id: { $in: objectIds } }).toArray();
-        
-        // Sync each published result to Google Sheets
-        for (const publishedResult of publishedResults) {
-          try {
-            await syncResultToSheets(publishedResult);
-          } catch (syncError) {
-            console.error(`Error syncing result ${publishedResult._id} to sheets:`, syncError);
+      if (syncResultToSheets) {
+        try {
+          const publishedResults = await collection.find({ _id: { $in: objectIds } }).toArray();
+          
+          // Sync each published result to Google Sheets
+          for (const publishedResult of publishedResults) {
+            try {
+              await syncResultToSheets(publishedResult);
+            } catch (syncError) {
+              console.error(`Error syncing result ${publishedResult._id} to sheets:`, syncError);
+            }
           }
+          
+          console.log(`${publishedResults.length} results synced to Google Sheets after bulk publishing`);
+        } catch (syncError) {
+          console.error('Error syncing published results to sheets:', syncError);
+          // Don't fail the main operation if sync fails
         }
-        
-        console.log(`${publishedResults.length} results synced to Google Sheets after bulk publishing`);
-      } catch (syncError) {
-        console.error('Error syncing published results to sheets:', syncError);
-        // Don't fail the main operation if sync fails
       }
     }
     

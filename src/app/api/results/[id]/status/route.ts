@@ -2,7 +2,14 @@ import { NextResponse } from 'next/server';
 import { getDatabase } from '@/lib/mongodb';
 import { Result, ResultStatus } from '@/types';
 import { ObjectId } from 'mongodb';
-import { syncResultToSheets } from '@/lib/googleSheets';
+// Import Google Sheets sync with error handling
+let syncResultToSheets: any = null;
+try {
+  const googleSheetsModule = require('@/lib/googleSheets');
+  syncResultToSheets = googleSheetsModule.syncResultToSheets;
+} catch (error) {
+  console.warn('Google Sheets integration not available:', error.message);
+}
 
 export async function PATCH(
   request: Request,
@@ -39,7 +46,7 @@ export async function PATCH(
     }
     
     // Sync to Google Sheets only when result is published
-    if (status === ResultStatus.PUBLISHED) {
+    if (status === ResultStatus.PUBLISHED && syncResultToSheets) {
       try {
         const updatedResult = await collection.findOne({ _id: new ObjectId(id) });
         if (updatedResult) {
@@ -54,7 +61,7 @@ export async function PATCH(
     
     return NextResponse.json({ 
       success: true, 
-      message: `Result status updated to ${status}${status === ResultStatus.PUBLISHED ? ' and synced to Google Sheets' : ''}` 
+      message: `Result status updated to ${status}${status === ResultStatus.PUBLISHED && syncResultToSheets ? ' and synced to Google Sheets' : ''}` 
     });
   } catch (error) {
     console.error('Error updating result status:', error);

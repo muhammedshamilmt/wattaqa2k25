@@ -2,7 +2,14 @@ import { NextResponse } from 'next/server';
 import { getDatabase } from '@/lib/mongodb';
 import { Result } from '@/types';
 import { ObjectId } from 'mongodb';
-import { syncResultToSheets } from '@/lib/googleSheets';
+// Import Google Sheets sync with error handling
+let syncResultToSheets: any = null;
+try {
+  const googleSheetsModule = require('@/lib/googleSheets');
+  syncResultToSheets = googleSheetsModule.syncResultToSheets;
+} catch (error) {
+  console.warn('Google Sheets integration not available:', error.message);
+}
 
 
 export async function GET(request: Request) {

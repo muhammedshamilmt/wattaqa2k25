@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { EnhancedResult, ResultStatus, Team } from '@/types';
+import { EnhancedResult, ResultStatus, Team, Candidate } from '@/types';
 
 interface ResultCardProps {
     result: EnhancedResult;
@@ -10,6 +10,7 @@ interface ResultCardProps {
     onStatusUpdate: (resultId: string, status: ResultStatus, notes?: string) => void;
     showActions?: boolean;
     teams?: Team[];
+    candidates?: Candidate[];
 }
 
 export default function ResultCard({
@@ -18,7 +19,8 @@ export default function ResultCard({
     onReview,
     onStatusUpdate,
     showActions = true,
-    teams = []
+    teams = [],
+    candidates = []
 }: ResultCardProps) {
     const [showDetails, setShowDetails] = useState(false);
     const getStatusBadge = (status: ResultStatus) => {
@@ -209,6 +211,14 @@ export default function ResultCard({
         return { positionPoints, gradePoints, participationPoints };
     };
 
+    // Helper function to get participant name from chest number
+    const getParticipantName = (chestNumber: string) => {
+        if (!chestNumber) return 'Unknown Participant';
+        
+        const candidate = candidates.find(c => c.chestNumber === chestNumber);
+        return candidate ? candidate.name : 'Unknown Participant';
+    };
+
     // Helper function to get team name from chest number
     const getTeamName = (chestNumber: string) => {
         if (!chestNumber) return 'Unknown Team';
@@ -254,7 +264,16 @@ export default function ResultCard({
     };
 
     const getWinnersDisplay = () => {
-        const winners = [];
+        const winners: Array<{
+            position: string;
+            participants: Array<{
+                chestNumber: string;
+                participantName?: string;
+                teamName: string;
+                grade?: string;
+            }>;
+            color: string;
+        }> = [];
         
         // Individual winners
         if (result.firstPlace && result.firstPlace.length > 0) {
@@ -262,6 +281,7 @@ export default function ResultCard({
                 position: '🥇 1st Prize',
                 participants: result.firstPlace.map(w => ({
                     chestNumber: w.chestNumber,
+                    participantName: getParticipantName(w.chestNumber),
                     teamName: getTeamName(w.chestNumber),
                     grade: w.grade
                 })),
@@ -273,6 +293,7 @@ export default function ResultCard({
                 position: '🥈 2nd Prize',
                 participants: result.secondPlace.map(w => ({
                     chestNumber: w.chestNumber,
+                    participantName: getParticipantName(w.chestNumber),
                     teamName: getTeamName(w.chestNumber),
                     grade: w.grade
                 })),
@@ -284,6 +305,7 @@ export default function ResultCard({
                 position: '🥉 3rd Prize',
                 participants: result.thirdPlace.map(w => ({
                     chestNumber: w.chestNumber,
+                    participantName: getParticipantName(w.chestNumber),
                     teamName: getTeamName(w.chestNumber),
                     grade: w.grade
                 })),
@@ -387,12 +409,17 @@ export default function ResultCard({
                                             <div key={pIndex} className="flex items-center justify-between py-1.5 px-2 rounded border border-gray-200 bg-white mb-1">
                                                 <div className="flex items-center space-x-2">
                                                     <span className="text-xs font-medium text-gray-700">{winner.position}:</span>
-                                                    <div className="flex items-center space-x-1">
-                                                        <span className="font-bold text-gray-900 text-sm">{participant.chestNumber}</span>
-                                                        {participant.grade && (
-                                                            <span className="text-xs bg-blue-100 text-blue-800 px-1 py-0.5 rounded">
-                                                                {participant.grade}
-                                                            </span>
+                                                    <div className="flex flex-col">
+                                                        <div className="flex items-center space-x-1">
+                                                            <span className="font-bold text-gray-900 text-sm">{participant.chestNumber}</span>
+                                                            {participant.grade && (
+                                                                <span className="text-xs bg-blue-100 text-blue-800 px-1 py-0.5 rounded">
+                                                                    {participant.grade}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        {participant.participantName && (
+                                                            <span className="text-xs text-gray-600 font-medium">{participant.participantName}</span>
                                                         )}
                                                     </div>
                                                 </div>
@@ -416,7 +443,10 @@ export default function ResultCard({
                                 {result.participationGrades && result.participationGrades.map((pg, index) => (
                                     <div key={index} className="flex items-center justify-between">
                                         <div className="flex flex-col">
-                                            <span className="text-sm font-medium text-gray-800">{pg.chestNumber}</span>
+                                            <div className="flex items-center space-x-2">
+                                                <span className="text-sm font-medium text-gray-800">{pg.chestNumber}</span>
+                                                <span className="text-xs text-gray-600 font-medium">({getParticipantName(pg.chestNumber)})</span>
+                                            </div>
                                             <span className="text-xs text-gray-600">{getTeamName(pg.chestNumber)}</span>
                                         </div>
                                         <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800 border border-green-200">
