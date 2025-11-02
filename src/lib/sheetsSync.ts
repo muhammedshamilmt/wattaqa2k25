@@ -83,7 +83,13 @@ export class GoogleSheetsSync {
       // Get data from MongoDB if not provided
       if (!data) {
         const collection = this.db.collection(type);
-        data = await collection.find({}).toArray();
+        
+        // For results, only sync published results
+        if (type === 'results') {
+          data = await collection.find({ status: 'published' }).toArray();
+        } else {
+          data = await collection.find({}).toArray();
+        }
       }
 
       if (!data || data.length === 0) {

@@ -409,6 +409,12 @@ export async function syncProgrammeRegistrationToSheets(registration: any) {
 // Sync result to Google Sheets
 export async function syncResultToSheets(result: any) {
   try {
+    // Only sync published results to Google Sheets
+    if (result.status !== 'published') {
+      console.log(`Skipping sync for result ${result._id} - status is ${result.status}, not published`);
+      return;
+    }
+
     const sheets = await getGoogleSheetsClient();
     const spreadsheetId = SPREADSHEET_CONFIG.SPREADSHEET_ID;
 
