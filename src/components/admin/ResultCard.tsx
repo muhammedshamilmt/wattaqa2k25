@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { EnhancedResult, ResultStatus } from '@/types';
+import { EnhancedResult, ResultStatus, Team } from '@/types';
 
 interface ResultCardProps {
     result: EnhancedResult;
@@ -9,6 +9,7 @@ interface ResultCardProps {
     onReview: () => void;
     onStatusUpdate: (resultId: string, status: ResultStatus, notes?: string) => void;
     showActions?: boolean;
+    teams?: Team[];
 }
 
 export default function ResultCard({
@@ -16,7 +17,8 @@ export default function ResultCard({
     programmeName,
     onReview,
     onStatusUpdate,
-    showActions = true
+    showActions = true,
+    teams = []
 }: ResultCardProps) {
     const [showDetails, setShowDetails] = useState(false);
     const getStatusBadge = (status: ResultStatus) => {
@@ -207,28 +209,94 @@ export default function ResultCard({
         return { positionPoints, gradePoints, participationPoints };
     };
 
+    // Helper function to get team name from chest number
+    const getTeamName = (chestNumber: string) => {
+        if (!chestNumber) return 'Unknown Team';
+        
+        console.log('Processing chest number:', chestNumber);
+        console.log('Available teams:', teams.map(t => ({ code: t.code, name: t.name })));
+        
+        // Extract team code from chest number
+        let teamCode = '';
+        
+        // Method 1: Check if it starts with 3 letters (like SMD001, INT001, AQS001)
+        const threeLetterMatch = chestNumber.match(/^([A-Z]{3})/i);
+        if (threeLetterMatch) {
+            teamCode = threeLetterMatch[1].toUpperCase();
+            console.log('Found 3-letter team code:', teamCode);
+        } else if (chestNumber.match(/^[A-Z]/i)) {
+            // Method 2: Single letter (like A001, B002) 
+            teamCode = chestNumber.charAt(0).toUpperCase();
+            console.log('Found single-letter team code:', teamCode);
+        } else {
+            // Method 3: Pure numbers (like 605, 402, 211) - need to map to teams
+            console.log('Pure number chest number detected:', chestNumber);
+            
+            // Map number ranges to teams based on your system
+            const num = parseInt(chestNumber);
+            if (num >= 600 && num < 700) {
+                teamCode = 'AQS'; // Team 6xx = AQS
+            } else if (num >= 400 && num < 500) {
+                teamCode = 'INT'; // Team 4xx = INT  
+            } else if (num >= 200 && num < 300) {
+                teamCode = 'SMD'; // Team 2xx = SMD
+            } else if (num >= 100 && num < 200) {
+                teamCode = 'A'; // Team 1xx = Team A
+            } else {
+                // Default mapping based on first digit
+                const firstDigit = chestNumber.charAt(0);
+                teamCode = firstDigit;
+            }
+            console.log('Mapped number to team code:', teamCode);
+        }
+        
+        // Find team by code
+        const team = teams.find(t => t.code?.toUpperCase() === teamCode);
+        console.log('Found team:', team);
+        
+        // Return team name or fallback
+        if (team) {
+            return team.name;
+        } else {
+            // If no team found, show just the team code
+            return teamCode;
+        }
+    };
+
     const getWinnersDisplay = () => {
         const winners = [];
         
         // Individual winners
         if (result.firstPlace && result.firstPlace.length > 0) {
             winners.push({
-                position: '1st Place',
-                participants: result.firstPlace.map(w => `${w.chestNumber}${w.grade ? ` (${w.grade})` : ''}`),
+                position: '🥇 1st Prize',
+                participants: result.firstPlace.map(w => ({
+                    chestNumber: w.chestNumber,
+                    teamName: getTeamName(w.chestNumber),
+                    grade: w.grade
+                })),
                 color: 'bg-yellow-100 text-yellow-800 border-yellow-200'
             });
         }
         if (result.secondPlace && result.secondPlace.length > 0) {
             winners.push({
-                position: '2nd Place',
-                participants: result.secondPlace.map(w => `${w.chestNumber}${w.grade ? ` (${w.grade})` : ''}`),
+                position: '🥈 2nd Prize',
+                participants: result.secondPlace.map(w => ({
+                    chestNumber: w.chestNumber,
+                    teamName: getTeamName(w.chestNumber),
+                    grade: w.grade
+                })),
                 color: 'bg-gray-100 text-gray-800 border-gray-200'
             });
         }
         if (result.thirdPlace && result.thirdPlace.length > 0) {
             winners.push({
-                position: '3rd Place',
-                participants: result.thirdPlace.map(w => `${w.chestNumber}${w.grade ? ` (${w.grade})` : ''}`),
+                position: '🥉 3rd Prize',
+                participants: result.thirdPlace.map(w => ({
+                    chestNumber: w.chestNumber,
+                    teamName: getTeamName(w.chestNumber),
+                    grade: w.grade
+                })),
                 color: 'bg-orange-100 text-orange-800 border-orange-200'
             });
         }
@@ -236,22 +304,34 @@ export default function ResultCard({
         // Team winners
         if (result.firstPlaceTeams && result.firstPlaceTeams.length > 0) {
             winners.push({
-                position: '1st Place (Team)',
-                participants: result.firstPlaceTeams.map(w => `${w.teamCode}${w.grade ? ` (${w.grade})` : ''}`),
+                position: '🥇 1st Prize (Team)',
+                participants: result.firstPlaceTeams.map(w => ({
+                    chestNumber: w.teamCode,
+                    teamName: `Team ${w.teamCode}`,
+                    grade: w.grade
+                })),
                 color: 'bg-yellow-100 text-yellow-800 border-yellow-200'
             });
         }
         if (result.secondPlaceTeams && result.secondPlaceTeams.length > 0) {
             winners.push({
-                position: '2nd Place (Team)',
-                participants: result.secondPlaceTeams.map(w => `${w.teamCode}${w.grade ? ` (${w.grade})` : ''}`),
+                position: '🥈 2nd Prize (Team)',
+                participants: result.secondPlaceTeams.map(w => ({
+                    chestNumber: w.teamCode,
+                    teamName: `Team ${w.teamCode}`,
+                    grade: w.grade
+                })),
                 color: 'bg-gray-100 text-gray-800 border-gray-200'
             });
         }
         if (result.thirdPlaceTeams && result.thirdPlaceTeams.length > 0) {
             winners.push({
-                position: '3rd Place (Team)',
-                participants: result.thirdPlaceTeams.map(w => `${w.teamCode}${w.grade ? ` (${w.grade})` : ''}`),
+                position: '🥉 3rd Prize (Team)',
+                participants: result.thirdPlaceTeams.map(w => ({
+                    chestNumber: w.teamCode,
+                    teamName: `Team ${w.teamCode}`,
+                    grade: w.grade
+                })),
                 color: 'bg-orange-100 text-orange-800 border-orange-200'
             });
         }
@@ -281,13 +361,7 @@ export default function ResultCard({
                 </div>
             </div>
 
-            {/* Stats */}
-            <div className="grid grid-cols-1 gap-4 mb-4">
-                <div className="bg-gray-50 rounded-lg p-3">
-                    <div className="text-sm text-gray-600">Total Participants</div>
-                    <div className="text-xl font-bold text-gray-900">{getTotalParticipants()}</div>
-                </div>
-            </div>
+
 
             {/* Toggle Details Button */}
             <div className="mb-4">
@@ -313,18 +387,23 @@ export default function ResultCard({
                             <h4 className="text-sm font-semibold text-gray-800 mb-3">🏆 Winners</h4>
                             <div className="space-y-2">
                                 {getWinnersDisplay().map((winner, index) => (
-                                    <div key={index} className="flex items-center justify-between">
-                                        <span className="text-sm font-medium text-gray-700">{winner.position}:</span>
-                                        <div className="flex flex-wrap gap-1">
-                                            {winner.participants.map((participant, pIndex) => (
-                                                <span
-                                                    key={pIndex}
-                                                    className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium border ${winner.color}`}
-                                                >
-                                                    {participant}
-                                                </span>
-                                            ))}
-                                        </div>
+                                    <div key={index}>
+                                        {winner.participants.map((participant, pIndex) => (
+                                            <div key={pIndex} className="flex items-center justify-between py-2 px-3 rounded-lg border border-gray-200 bg-white mb-2">
+                                                <div className="flex items-center space-x-3">
+                                                    <span className="text-sm font-medium text-gray-700">{winner.position}:</span>
+                                                    <span className="font-bold text-gray-900">{participant.chestNumber}</span>
+                                                </div>
+                                                <div className="flex items-center space-x-2">
+                                                    <span className="text-sm text-gray-700">{participant.teamName}</span>
+                                                    {participant.grade && (
+                                                        <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                                            Grade {participant.grade}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
                                 ))}
                             </div>
@@ -339,7 +418,10 @@ export default function ResultCard({
                             <div className="space-y-2">
                                 {result.participationGrades && result.participationGrades.map((pg, index) => (
                                     <div key={index} className="flex items-center justify-between">
-                                        <span className="text-sm text-gray-700">{pg.chestNumber}</span>
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-medium text-gray-800">{pg.chestNumber}</span>
+                                            <span className="text-xs text-gray-600">{getTeamName(pg.chestNumber)}</span>
+                                        </div>
                                         <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800 border border-green-200">
                                             Grade {pg.grade} ({pg.points} pts)
                                         </span>
@@ -347,7 +429,10 @@ export default function ResultCard({
                                 ))}
                                 {result.participationTeamGrades && result.participationTeamGrades.map((pg, index) => (
                                     <div key={index} className="flex items-center justify-between">
-                                        <span className="text-sm text-gray-700">Team {pg.teamCode}</span>
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-medium text-gray-800">Team {pg.teamCode}</span>
+                                            <span className="text-xs text-gray-600">Team {pg.teamCode}</span>
+                                        </div>
                                         <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800 border border-green-200">
                                             Grade {pg.grade} ({pg.points} pts)
                                         </span>
@@ -357,24 +442,7 @@ export default function ResultCard({
                         </div>
                     )}
 
-                    {/* Points Structure */}
-                    <div className="bg-purple-50 rounded-lg p-4">
-                        <h4 className="text-sm font-semibold text-gray-800 mb-3">📊 Points Structure</h4>
-                        <div className="grid grid-cols-3 gap-2 text-xs">
-                            <div className="text-center">
-                                <div className="font-medium text-gray-700">1st Place</div>
-                                <div className="text-yellow-600 font-bold">{result.firstPoints} pts</div>
-                            </div>
-                            <div className="text-center">
-                                <div className="font-medium text-gray-700">2nd Place</div>
-                                <div className="text-gray-600 font-bold">{result.secondPoints} pts</div>
-                            </div>
-                            <div className="text-center">
-                                <div className="font-medium text-gray-700">3rd Place</div>
-                                <div className="text-orange-600 font-bold">{result.thirdPoints} pts</div>
-                            </div>
-                        </div>
-                    </div>
+
                 </div>
             )}
 
