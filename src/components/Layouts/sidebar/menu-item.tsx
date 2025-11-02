@@ -23,6 +23,7 @@ export function MenuItem(
     className?: string;
     children: React.ReactNode;
     isActive: boolean;
+    title?: string;
   } & ({ as?: "button"; onClick: () => void } | { as: "link"; href: string }),
 ) {
   const { toggleSidebar, isMobile } = useSidebarContext();
@@ -40,6 +41,7 @@ export function MenuItem(
           }),
           props.className,
         )}
+        title={props.title}
       >
         {props.children}
       </Link>
@@ -54,6 +56,7 @@ export function MenuItem(
         isActive: props.isActive,
         className: "flex w-full items-center gap-3 py-2.5",
       })}
+      title={props.title}
     >
       {props.children}
     </button>

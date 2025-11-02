@@ -129,7 +129,7 @@ export default function AdminPrintPage() {
   const chestNumbers = selectedProgramme ? getParticipantChestNumbers(selectedProgramme._id?.toString() || '') : [];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-2">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Print & Judgment Center</h1>
@@ -231,7 +231,7 @@ export default function AdminPrintPage() {
             </div>
           )}
 
-          <div className="mt-6 space-y-4">
+          <div className="mt-3 space-y-2">
             <div className="flex justify-end">
               <button
                 onClick={handleGenerateScorecard}
@@ -289,7 +289,7 @@ export default function AdminPrintPage() {
         </div>
       ) : (
         // Preview and Print Controls
-        <div className="space-y-4">
+        <div className="space-y-2">
           <div className="bg-white rounded-lg shadow p-4 flex justify-between items-center no-print">
             <div>
               <h2 className="text-lg font-semibold text-gray-900">📄 Scorecard Preview</h2>

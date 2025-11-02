@@ -745,7 +745,7 @@ export default function ResultsPage() {
     <>
       <Breadcrumb pageName="Results" />
 
-      <div className="space-y-6">
+      <div className="space-y-2">
         {/* Navigation */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
           <div className="flex justify-between items-center">

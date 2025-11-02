@@ -11,6 +11,10 @@ type SidebarContextType = {
   setIsOpen: (open: boolean) => void;
   isMobile: boolean;
   toggleSidebar: () => void;
+  isCollapsed: boolean;
+  toggleCollapse: () => void;
+  isHoverExpanded: boolean;
+  setIsHoverExpanded: (expanded: boolean) => void;
 };
 
 const SidebarContext = createContext<SidebarContextType | null>(null);
@@ -31,11 +35,15 @@ export function SidebarProvider({
   defaultOpen?: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isHoverExpanded, setIsHoverExpanded] = useState(false);
   const isMobile = useIsMobile();
 
   useEffect(() => {
     if (isMobile) {
       setIsOpen(false);
+      setIsCollapsed(false); // Reset collapse state on mobile
+      setIsHoverExpanded(false); // Reset hover state on mobile
     } else {
       setIsOpen(true);
     }
@@ -45,14 +53,25 @@ export function SidebarProvider({
     setIsOpen((prev) => !prev);
   }
 
+  function toggleCollapse() {
+    if (!isMobile) {
+      setIsCollapsed((prev) => !prev);
+      setIsHoverExpanded(false); // Reset hover state when toggling
+    }
+  }
+
   return (
     <SidebarContext.Provider
       value={{
-        state: isOpen ? "expanded" : "collapsed",
+        state: isOpen ? (isCollapsed && !isHoverExpanded ? "collapsed" : "expanded") : "collapsed",
         isOpen,
         setIsOpen,
         isMobile,
         toggleSidebar,
+        isCollapsed,
+        toggleCollapse,
+        isHoverExpanded,
+        setIsHoverExpanded,
       }}
     >
       {children}

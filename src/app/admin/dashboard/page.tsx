@@ -551,7 +551,7 @@ export default function DashboardPage() {
             </div>
             
             {teamPerformances.length > 0 ? (
-              <div className="space-y-4">
+              <div className="space-y-2">
                 <div className="text-center p-6 bg-gradient-to-br from-yellow-50 to-orange-50 rounded-lg border-2 border-yellow-200">
                   <div className="text-4xl mb-3">👑</div>
                   <h4 className="text-2xl font-bold text-gray-900 mb-2">{teamPerformances[0].team.name}</h4>
@@ -598,7 +598,7 @@ export default function DashboardPage() {
       )}
 
       {activeTab === 'analytics' && (
-        <div className="space-y-8">
+        <div className="space-y-3">
           {/* Competition Progress */}
           <div className="bg-white rounded-lg shadow-md p-6">
             <h3 className="text-xl font-bold text-gray-900 mb-6">📈 Competition Analytics</h3>

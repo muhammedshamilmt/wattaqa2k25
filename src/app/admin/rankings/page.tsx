@@ -472,10 +472,10 @@ export default function RankingsPage() {
         </div>
       </div>
 
-      <div className="space-y-6">
+      <div className="space-y-2">
         {/* Overview Tab */}
         {activeView === 'overview' && (
-          <div className="space-y-8">
+          <div className="space-y-3">
             {/* Top 3 Teams Podium */}
             <ShowcaseSection title="🏆 Championship Podium">
               {teamRankings.length >= 3 ? (
@@ -787,7 +787,7 @@ export default function RankingsPage() {
 
         {/* Analytics Tab */}
         {activeView === 'analytics' && (
-          <div className="space-y-8">
+          <div className="space-y-3">
             {/* Performance Insights */}
             <ShowcaseSection title="📈 Performance Insights">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
