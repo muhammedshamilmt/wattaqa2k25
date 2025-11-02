@@ -17,6 +17,11 @@ export default function CheckListPage() {
   const [selectedResult, setSelectedResult] = useState<EnhancedResult | null>(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'pending' | 'checked' | 'published' | 'summary'>('pending');
+  
+  // Search and filter states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterSection, setFilterSection] = useState('');
+  const [filterCategory, setFilterCategory] = useState('');
 
   useEffect(() => {
     fetchData();
@@ -137,6 +142,33 @@ export default function CheckListPage() {
     return programme ? `${programme.name} (${programme.code})` : 'Unknown Programme';
   };
 
+  // Filter and search functions
+  const getFilteredResults = (results: EnhancedResult[]) => {
+    return results.filter(result => {
+      const programmeName = getProgrammeName(result).toLowerCase();
+      const matchesSearch = searchTerm === '' || 
+        programmeName.includes(searchTerm.toLowerCase()) ||
+        result.programmeCode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        result.section.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesSection = filterSection === '' || result.section === filterSection;
+      const matchesCategory = filterCategory === '' || result.programmeCategory === filterCategory;
+      
+      return matchesSearch && matchesSection && matchesCategory;
+    });
+  };
+
+  // Get unique sections and categories for filters
+  const getAvailableSections = () => {
+    const sections = [...new Set(pendingResults.map(r => r.section))];
+    return sections.sort();
+  };
+
+  const getAvailableCategories = () => {
+    const categories = [...new Set(pendingResults.map(r => r.programmeCategory).filter(Boolean))];
+    return categories.sort();
+  };
+
   // Removed loading spinner - show content immediately
 
   return (
@@ -220,7 +252,7 @@ export default function CheckListPage() {
         <div>
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-semibold text-gray-900">
-              Pending Results ({pendingResults.length})
+              Pending Results ({getFilteredResults(pendingResults).length} of {pendingResults.length})
             </h2>
             {pendingResults.length > 0 && (
               <button
@@ -235,15 +267,94 @@ export default function CheckListPage() {
             )}
           </div>
 
+          {/* Search and Filter Controls */}
+          {pendingResults.length > 0 && (
+            <div className="mb-6 space-y-4">
+              {/* Search Bar */}
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <span className="text-gray-400">🔍</span>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Search by programme name, code, or section..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-700"
+                />
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+
+              {/* Filter Controls */}
+              <div className="flex flex-wrap gap-4">
+                <div className="flex-1 min-w-48">
+                  <select
+                    value={filterSection}
+                    onChange={(e) => setFilterSection(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-700 text-sm"
+                  >
+                    <option value="">All Sections</option>
+                    {getAvailableSections().map(section => (
+                      <option key={section} value={section}>
+                        {section.charAt(0).toUpperCase() + section.slice(1).replace('-', ' ')}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex-1 min-w-48">
+                  <select
+                    value={filterCategory}
+                    onChange={(e) => setFilterCategory(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-700 text-sm"
+                  >
+                    <option value="">All Categories</option>
+                    {getAvailableCategories().map(category => (
+                      <option key={category} value={category}>
+                        {category ? category.charAt(0).toUpperCase() + category.slice(1) : 'Unknown'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {(searchTerm || filterSection || filterCategory) && (
+                  <button
+                    onClick={() => {
+                      setSearchTerm('');
+                      setFilterSection('');
+                      setFilterCategory('');
+                    }}
+                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm"
+                  >
+                    Clear Filters
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
           {pendingResults.length === 0 ? (
             <div className="text-center py-12">
               <div className="text-gray-400 text-6xl mb-4">📋</div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">No Pending Results</h3>
               <p className="text-gray-500">All results have been reviewed and checked.</p>
             </div>
+          ) : getFilteredResults(pendingResults).length === 0 ? (
+            <div className="text-center py-12">
+              <div className="text-gray-400 text-4xl mb-4">🔍</div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No Results Found</h3>
+              <p className="text-gray-500">Try adjusting your search or filter criteria.</p>
+            </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {pendingResults.map((result) => (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {getFilteredResults(pendingResults).map((result) => (
                 <ResultCard
                   key={result._id?.toString()}
                   result={result}
@@ -297,7 +408,7 @@ export default function CheckListPage() {
               <p className="text-gray-500">Results will appear here after being reviewed and checked.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {checkedResults.map((result) => (
                 <ResultCard
                   key={result._id?.toString()}

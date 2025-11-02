@@ -213,9 +213,6 @@ export default function ResultCard({
     const getTeamName = (chestNumber: string) => {
         if (!chestNumber) return 'Unknown Team';
         
-        console.log('Processing chest number:', chestNumber);
-        console.log('Available teams:', teams.map(t => ({ code: t.code, name: t.name })));
-        
         // Extract team code from chest number
         let teamCode = '';
         
@@ -223,16 +220,11 @@ export default function ResultCard({
         const threeLetterMatch = chestNumber.match(/^([A-Z]{3})/i);
         if (threeLetterMatch) {
             teamCode = threeLetterMatch[1].toUpperCase();
-            console.log('Found 3-letter team code:', teamCode);
         } else if (chestNumber.match(/^[A-Z]/i)) {
             // Method 2: Single letter (like A001, B002) 
             teamCode = chestNumber.charAt(0).toUpperCase();
-            console.log('Found single-letter team code:', teamCode);
         } else {
-            // Method 3: Pure numbers (like 605, 402, 211) - need to map to teams
-            console.log('Pure number chest number detected:', chestNumber);
-            
-            // Map number ranges to teams based on your system
+            // Method 3: Pure numbers (like 605, 402, 211) - map to teams
             const num = parseInt(chestNumber);
             if (num >= 600 && num < 700) {
                 teamCode = 'AQS'; // Team 6xx = AQS
@@ -247,12 +239,10 @@ export default function ResultCard({
                 const firstDigit = chestNumber.charAt(0);
                 teamCode = firstDigit;
             }
-            console.log('Mapped number to team code:', teamCode);
         }
         
         // Find team by code
         const team = teams.find(t => t.code?.toUpperCase() === teamCode);
-        console.log('Found team:', team);
         
         // Return team name or fallback
         if (team) {
@@ -340,20 +330,25 @@ export default function ResultCard({
     };
 
     return (
-        <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6 hover:shadow-lg transition-shadow relative">
+        <div className="bg-white rounded-lg shadow-md border border-gray-200 p-4 hover:shadow-lg transition-shadow relative">
             {/* Header */}
-            <div className="flex justify-between items-start mb-4">
+            <div className="flex justify-between items-start mb-3">
                 <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                    <h3 className={`text-base font-semibold mb-1 leading-tight ${
+                        result.status === ResultStatus.PENDING ? 'text-orange-700' :
+                        result.status === ResultStatus.CHECKED ? 'text-green-700' :
+                        result.status === ResultStatus.PUBLISHED ? 'text-blue-700' :
+                        'text-gray-900'
+                    }`}>
                         {programmeName}
                     </h3>
-                    <div className="flex items-center space-x-2 text-sm text-gray-600">
+                    <div className="flex items-center space-x-2 text-xs text-gray-600">
                         <span className="capitalize">{result.section.replace('-', ' ')}</span>
                         <span>•</span>
                         <span className="capitalize">{result.positionType}</span>
                     </div>
                 </div>
-                <div className="flex flex-col items-end space-y-2">
+                <div className="flex flex-col items-end space-y-1">
                     {getStatusBadge(result.status)}
                     <div className="text-xs text-gray-500">
                         {new Date(result.createdAt || '').toLocaleDateString()}
@@ -364,15 +359,15 @@ export default function ResultCard({
 
 
             {/* Toggle Details Button */}
-            <div className="mb-4">
+            <div className="mb-3">
                 <button
                     onClick={() => setShowDetails(!showDetails)}
-                    className="w-full flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                    className="w-full flex items-center justify-between p-2 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
                 >
-                    <span className="text-sm font-medium text-gray-700">
+                    <span className="text-xs font-medium text-gray-700">
                         {showDetails ? 'Hide Details' : 'Show Details'}
                     </span>
-                    <span className={`transform transition-transform ${showDetails ? 'rotate-180' : ''}`}>
+                    <span className={`transform transition-transform text-xs ${showDetails ? 'rotate-180' : ''}`}>
                         ▼
                     </span>
                 </button>
@@ -380,20 +375,20 @@ export default function ResultCard({
 
             {/* Expandable Details */}
             {showDetails && (
-                <div className="mb-4 space-y-3">
+                <div className="mb-3 space-y-2">
                     {/* Winners */}
                     {getWinnersDisplay().length > 0 && (
-                        <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-4">
-                            <h4 className="text-sm font-semibold text-gray-800 mb-3">🏆 Winners</h4>
+                        <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-3">
+                            <h4 className="text-xs font-semibold text-gray-800 mb-2">🏆 Winners</h4>
                             <div className="space-y-2">
                                 {getWinnersDisplay().map((winner, index) => (
                                     <div key={index}>
                                         {winner.participants.map((participant, pIndex) => (
-                                            <div key={pIndex} className="flex items-center justify-between py-2 px-3 rounded-lg border border-gray-200 bg-white mb-2">
-                                                <div className="flex items-center space-x-3">
-                                                    <span className="text-sm font-medium text-gray-700">{winner.position}:</span>
+                                            <div key={pIndex} className="flex items-center justify-between py-1.5 px-2 rounded border border-gray-200 bg-white mb-1">
+                                                <div className="flex items-center space-x-2">
+                                                    <span className="text-xs font-medium text-gray-700">{winner.position}:</span>
                                                     <div className="flex items-center space-x-1">
-                                                        <span className="font-bold text-gray-900">{participant.chestNumber}</span>
+                                                        <span className="font-bold text-gray-900 text-sm">{participant.chestNumber}</span>
                                                         {participant.grade && (
                                                             <span className="text-xs bg-blue-100 text-blue-800 px-1 py-0.5 rounded">
                                                                 {participant.grade}
@@ -402,7 +397,7 @@ export default function ResultCard({
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center">
-                                                    <span className="text-sm text-gray-700">{participant.teamName}</span>
+                                                    <span className="text-xs text-gray-700">{participant.teamName}</span>
                                                 </div>
                                             </div>
                                         ))}
