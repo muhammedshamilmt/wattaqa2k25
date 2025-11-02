@@ -51,17 +51,16 @@ export default function MarksSummary({ results, showDailyProgress = false }: Mar
         fetch('/api/candidates')
       ]);
 
-      console.log('Teams API response:', teamsRes.status, teamsRes.ok);
-      console.log('Candidates API response:', candidatesRes.status, candidatesRes.ok);
-
       if (teamsRes.ok && candidatesRes.ok) {
         const [teamsData, candidatesData] = await Promise.all([
           teamsRes.json(),
           candidatesRes.json()
         ]);
 
-        console.log('Teams data:', teamsData);
-        console.log('Candidates data:', candidatesData);
+        console.log('Teams loaded:', teamsData.length);
+        console.log('Candidates loaded:', candidatesData.length);
+        console.log('AQS team found:', teamsData.find((t: any) => t.code === 'AQS') ? 'YES' : 'NO');
+        console.log('AQS candidates:', candidatesData.filter((c: any) => c.team === 'AQS').length);
 
         setTeams(teamsData || []);
         setCandidates(candidatesData || []);
@@ -107,6 +106,13 @@ export default function MarksSummary({ results, showDailyProgress = false }: Mar
       };
     });
 
+    console.log('Processing', results.length, 'results for', Object.keys(teamMarksMap).length, 'teams');
+    
+    if (results.length === 0) {
+      console.log('⚠️ No results to process - this explains why all teams show 0 points');
+      return;
+    }
+
     // Calculate marks from results
     results.forEach(result => {
       const programmeType = result.positionType;
@@ -122,6 +128,9 @@ export default function MarksSummary({ results, showDailyProgress = false }: Mar
             // Add position points + grade points
             const gradePoints = getGradePoints(winner.grade || '');
             const totalPoints = result.firstPoints + gradePoints;
+            if (candidate.team === 'AQS') {
+              console.log(`✅ Adding ${totalPoints} points to AQS team for ${programmeName} (${winner.chestNumber})`);
+            }
             teamMarksMap[candidate.team][programmeType] += totalPoints;
             teamMarksMap[candidate.team].total += totalPoints;
             teamMarksMap[candidate.team].participantCount += 1;
@@ -132,6 +141,10 @@ export default function MarksSummary({ results, showDailyProgress = false }: Mar
               points: totalPoints,
               type: programmeType
             });
+          } else if (candidate) {
+            console.log(`❌ Team ${candidate.team} not found in teamMarksMap for candidate ${winner.chestNumber}`);
+          } else {
+            console.log(`❌ Candidate not found for chest number ${winner.chestNumber}`);
           }
         });
       }
@@ -178,23 +191,7 @@ export default function MarksSummary({ results, showDailyProgress = false }: Mar
         });
       }
 
-      if (result.participationGrades) {
-        result.participationGrades.forEach(pg => {
-          const candidate = candidates.find(c => c.chestNumber === pg.chestNumber);
-          if (candidate && teamMarksMap[candidate.team]) {
-            teamMarksMap[candidate.team][programmeType] += pg.points;
-            teamMarksMap[candidate.team].total += pg.points;
-            teamMarksMap[candidate.team].participantCount += 1;
-            teamMarksMap[candidate.team].programmes.push({
-              name: programmeName,
-              category: programmeCategory,
-              section: programmeSection,
-              points: pg.points,
-              type: programmeType
-            });
-          }
-        });
-      }
+
 
       // Process team results
       if (result.firstPlaceTeams) {
@@ -203,6 +200,9 @@ export default function MarksSummary({ results, showDailyProgress = false }: Mar
             // Add position points + grade points
             const gradePoints = getGradePoints(winner.grade || '');
             const totalPoints = result.firstPoints + gradePoints;
+            if (winner.teamCode === 'AQS') {
+              console.log(`✅ Adding ${totalPoints} points to AQS team for ${programmeName} (team result)`);
+            }
             teamMarksMap[winner.teamCode].general += totalPoints;
             teamMarksMap[winner.teamCode].total += totalPoints;
             teamMarksMap[winner.teamCode].participantCount += 1;
@@ -213,6 +213,8 @@ export default function MarksSummary({ results, showDailyProgress = false }: Mar
               points: totalPoints,
               type: 'general'
             });
+          } else {
+            console.log(`❌ Team ${winner.teamCode} not found in teamMarksMap`);
           }
         });
       }
@@ -257,26 +259,13 @@ export default function MarksSummary({ results, showDailyProgress = false }: Mar
         });
       }
 
-      if (result.participationTeamGrades) {
-        result.participationTeamGrades.forEach(pg => {
-          if (teamMarksMap[pg.teamCode]) {
-            teamMarksMap[pg.teamCode].general += pg.points;
-            teamMarksMap[pg.teamCode].total += pg.points;
-            teamMarksMap[pg.teamCode].participantCount += 1;
-            teamMarksMap[pg.teamCode].programmes.push({
-              name: programmeName,
-              category: programmeCategory,
-              section: programmeSection,
-              points: pg.points,
-              type: 'general'
-            });
-          }
-        });
-      }
+
     });
 
     // Sort teams by total marks
     const sortedTeamMarks = Object.values(teamMarksMap).sort((a, b) => b.total - a.total);
+    console.log('Final team marks:', sortedTeamMarks);
+    console.log('AQS final marks:', sortedTeamMarks.find(t => t.teamCode === 'AQS'));
     setTeamMarks(sortedTeamMarks);
   };
 

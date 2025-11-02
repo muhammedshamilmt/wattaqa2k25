@@ -282,16 +282,6 @@ export default function CheckListPage() {
         });
       }
       
-      if (result.participationGrades && result.participationGrades.length > 0) {
-        result.participationGrades.forEach(pg => {
-          const teamCode = getTeamCodeFromChestNumber(pg.chestNumber);
-          if (teamTotals[teamCode]) {
-            teamTotals[teamCode].points += pg.points;
-            teamTotals[teamCode].results += 1;
-          }
-        });
-      }
-      
       // Team results - assign points directly to teams
       if (result.firstPlaceTeams && result.firstPlaceTeams.length > 0) {
         result.firstPlaceTeams.forEach(winner => {
@@ -322,15 +312,6 @@ export default function CheckListPage() {
             const totalPoints = result.thirdPoints + gradePoints;
             teamTotals[winner.teamCode].points += totalPoints;
             teamTotals[winner.teamCode].results += 1;
-          }
-        });
-      }
-      
-      if (result.participationTeamGrades && result.participationTeamGrades.length > 0) {
-        result.participationTeamGrades.forEach(pg => {
-          if (teamTotals[pg.teamCode]) {
-            teamTotals[pg.teamCode].points += pg.points;
-            teamTotals[pg.teamCode].results += 1;
           }
         });
       }
@@ -375,16 +356,6 @@ export default function CheckListPage() {
         });
       }
       
-      if (result.participationGrades && result.participationGrades.length > 0) {
-        result.participationGrades.forEach(pg => {
-          const teamCode = getTeamCodeFromChestNumber(pg.chestNumber);
-          if (teamTotals[teamCode]) {
-            teamTotals[teamCode].points += pg.points;
-            teamTotals[teamCode].results += 1;
-          }
-        });
-      }
-      
       // Team results - assign points directly to teams
       if (result.firstPlaceTeams && result.firstPlaceTeams.length > 0) {
         result.firstPlaceTeams.forEach(winner => {
@@ -415,15 +386,6 @@ export default function CheckListPage() {
             const totalPoints = result.thirdPoints + gradePoints;
             teamTotals[winner.teamCode].points += totalPoints;
             teamTotals[winner.teamCode].results += 1;
-          }
-        });
-      }
-      
-      if (result.participationTeamGrades && result.participationTeamGrades.length > 0) {
-        result.participationTeamGrades.forEach(pg => {
-          if (teamTotals[pg.teamCode]) {
-            teamTotals[pg.teamCode].points += pg.points;
-            teamTotals[pg.teamCode].results += 1;
           }
         });
       }
