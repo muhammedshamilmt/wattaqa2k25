@@ -24,9 +24,10 @@ interface TeamMarks {
 
 interface MarksSummaryProps {
   results: EnhancedResult[];
+  showDailyProgress?: boolean;
 }
 
-export default function MarksSummary({ results }: MarksSummaryProps) {
+export default function MarksSummary({ results, showDailyProgress = false }: MarksSummaryProps) {
   const [teams, setTeams] = useState<Team[]>([]);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [teamMarks, setTeamMarks] = useState<TeamMarks[]>([]);
@@ -50,17 +51,31 @@ export default function MarksSummary({ results }: MarksSummaryProps) {
         fetch('/api/candidates')
       ]);
 
-      const [teamsData, candidatesData] = await Promise.all([
-        teamsRes.json(),
-        candidatesRes.json()
-      ]);
+      console.log('Teams API response:', teamsRes.status, teamsRes.ok);
+      console.log('Candidates API response:', candidatesRes.status, candidatesRes.ok);
 
-      setTeams(teamsData || []);
-      setCandidates(candidatesData || []);
+      if (teamsRes.ok && candidatesRes.ok) {
+        const [teamsData, candidatesData] = await Promise.all([
+          teamsRes.json(),
+          candidatesRes.json()
+        ]);
+
+        console.log('Teams data:', teamsData);
+        console.log('Candidates data:', candidatesData);
+
+        setTeams(teamsData || []);
+        setCandidates(candidatesData || []);
+      } else {
+        console.error('API Error - Teams:', teamsRes.status, 'Candidates:', candidatesRes.status);
+        // Set empty arrays if API fails
+        setTeams([]);
+        setCandidates([]);
+      }
     } catch (error) {
       console.error('Error fetching teams and candidates:', error);
-    } finally {
-      // No loading state to manage
+      // Set empty arrays on error
+      setTeams([]);
+      setCandidates([]);
     }
   };
 
@@ -342,23 +357,42 @@ export default function MarksSummary({ results }: MarksSummaryProps) {
           >
             📋 Detailed View
           </button>
-          <button
-            onClick={() => setSelectedView('daily')}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              selectedView === 'daily'
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            📅 Daily Progress
-          </button>
+          {showDailyProgress && (
+            <button
+              onClick={() => setSelectedView('daily')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                selectedView === 'daily'
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              📅 Daily Progress
+            </button>
+          )}
+
         </div>
       </div>
 
       {/* Summary View */}
       {selectedView === 'summary' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {teamMarks.map((team, index) => (
+        <div>
+          {teams.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="text-gray-400 text-6xl mb-4">⚠️</div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Unable to Load Teams Data</h3>
+              <p className="text-gray-500 mb-4">
+                There was an issue loading teams and candidates data from the API.
+              </p>
+              <button
+                onClick={fetchTeamsAndCandidates}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                🔄 Retry Loading
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {teamMarks.map((team, index) => (
             <div key={team.teamCode} className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
               {/* Team Header */}
               <div className="flex items-center justify-between mb-4">
@@ -417,6 +451,8 @@ export default function MarksSummary({ results }: MarksSummaryProps) {
               </div>
             </div>
           ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -500,9 +536,10 @@ export default function MarksSummary({ results }: MarksSummaryProps) {
       )}
 
       {/* Daily Progress View */}
-      {selectedView === 'daily' && (
+      {selectedView === 'daily' && showDailyProgress && (
         <DailyMarksSummary results={results} />
       )}
+
     </div>
   );
 }

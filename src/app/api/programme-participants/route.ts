@@ -1,13 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { MongoClient, ObjectId } from 'mongodb';
-// Import Google Sheets sync with error handling
-let syncProgrammeRegistrationToSheets: any = null;
-try {
-  const googleSheetsModule = require('@/lib/googleSheets');
-  syncProgrammeRegistrationToSheets = googleSheetsModule.syncProgrammeRegistrationToSheets;
-} catch (error) {
-  console.warn('Google Sheets integration not available:', error.message);
-}
+import { syncProgrammeRegistrationToSheets } from '@/lib/googleSheets';
 
 const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017';
 
@@ -91,13 +84,11 @@ export async function POST(request: NextRequest) {
     };
     
     // Sync to Google Sheets (don't block the response if it fails)
-    if (syncProgrammeRegistrationToSheets) {
-      try {
-        await syncProgrammeRegistrationToSheets(createdParticipant);
-        console.log(`✅ Programme registration synced to Google Sheets for team ${teamCode}`);
-      } catch (error) {
-        console.error('⚠️ Failed to sync to Google Sheets, but registration was saved:', error);
-      }
+    try {
+      await syncProgrammeRegistrationToSheets(createdParticipant);
+      console.log(`✅ Programme registration synced to Google Sheets for team ${teamCode}`);
+    } catch (error) {
+      console.error('⚠️ Failed to sync to Google Sheets, but registration was saved:', error);
     }
     
     return NextResponse.json(createdParticipant, { status: 201 });

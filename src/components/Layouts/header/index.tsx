@@ -7,15 +7,20 @@ import { usePathname } from "next/navigation";
 import { useSidebarContext } from "../sidebar/sidebar-context";
 import { MenuIcon } from "./icons";
 import { Notification } from "./notification";
+import { useGrandMarks } from "@/contexts/GrandMarksContext";
 
 import { UserInfo } from "./user-info";
 
 export function Header() {
   const { toggleSidebar, isMobile } = useSidebarContext();
   const pathname = usePathname();
+  const { grandMarks, isCalculationActive } = useGrandMarks();
   
   // Check if we're on a result management page
   const isResultPage = pathname?.startsWith('/admin/results');
+  
+  // Check if we're specifically on the checklist page
+  const isChecklistPage = pathname === '/admin/results/checklist';
   
   // Get contextual navigation based on current page
   const getContextualNav = (isMobile = false) => {
@@ -121,9 +126,41 @@ export function Header() {
           </div>
         </div>
 
-        {/* Center Section - Search Only */}
+        {/* Center Section - Search or Grand Marks Preview */}
         <div className="hidden md:flex flex-1 mx-4 justify-center items-center">
-          {!isResultPage && (
+          {isChecklistPage && isCalculationActive && grandMarks.length > 0 ? (
+            <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-lg px-4 py-2">
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-4">
+                  {grandMarks.slice(0, 3).map((team, index) => (
+                    <div key={team.teamCode} className="flex items-center space-x-2 bg-white bg-opacity-50 rounded-lg px-2 py-1">
+                      <div 
+                        className="w-6 h-6 rounded-full flex items-center justify-center text-white font-bold text-xs"
+                        style={{ backgroundColor: team.color || '#6366f1' }}
+                      >
+                        {index + 1}
+                      </div>
+                      <div 
+                        className="w-8 h-8 rounded-full flex items-center justify-center text-white font-medium text-xs p-1"
+                        style={{ backgroundColor: team.color || '#6366f1' }}
+                      >
+                        {team.teamCode}
+                      </div>
+                      <span 
+                        className="text-xs text-white px-2 py-1 rounded-full font-bold"
+                        style={{ backgroundColor: team.color || '#6366f1' }}
+                      >
+                        {Math.round(team.points)}
+                      </span>
+                    </div>
+                  ))}
+                  {grandMarks.length > 3 && (
+                    <span className="text-xs text-gray-600">+{grandMarks.length - 3} more</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : !isResultPage ? (
             <div className="relative w-full max-w-md">
               <input
                 type="search"
@@ -132,7 +169,7 @@ export function Header() {
               />
               <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             </div>
-          )}
+          ) : null}
         </div>
 
         {/* Right Section - Actions & User */}

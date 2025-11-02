@@ -9,6 +9,7 @@ interface ResultCardProps {
     onReview: () => void;
     onStatusUpdate: (resultId: string, status: ResultStatus, notes?: string) => void;
     showActions?: boolean;
+    actionMode?: 'full' | 'checkOnly' | 'none';
     teams?: Team[];
     candidates?: Candidate[];
 }
@@ -19,6 +20,7 @@ export default function ResultCard({
     onReview,
     onStatusUpdate,
     showActions = true,
+    actionMode = 'full',
     teams = [],
     candidates = []
 }: ResultCardProps) {
@@ -494,7 +496,7 @@ export default function ResultCard({
             )}
 
             {/* Actions */}
-            {showActions && (
+            {showActions && actionMode !== 'none' && (
                 <div className="flex justify-end items-center pt-4 border-t border-gray-200">
                     <div className="flex space-x-2">
                         {result.status === ResultStatus.PENDING && (
@@ -506,7 +508,7 @@ export default function ResultCard({
                             </button>
                         )}
 
-                        {result.status === ResultStatus.CHECKED && (
+                        {result.status === ResultStatus.CHECKED && actionMode === 'full' && (
                             <>
                                 <button
                                     onClick={() => onStatusUpdate(result._id!.toString(), ResultStatus.PUBLISHED)}
@@ -521,6 +523,15 @@ export default function ResultCard({
                                     ↩️ Pending
                                 </button>
                             </>
+                        )}
+
+                        {result.status === ResultStatus.CHECKED && actionMode === 'checkOnly' && (
+                            <button
+                                onClick={() => onStatusUpdate(result._id!.toString(), ResultStatus.PENDING)}
+                                className="px-4 py-2 bg-orange-600 text-white text-sm rounded-lg hover:bg-orange-700 transition-colors font-medium"
+                            >
+                                ↩️ Pending
+                            </button>
                         )}
                     </div>
                 </div>
