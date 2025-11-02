@@ -147,7 +147,7 @@ export default function ScheduleDetailPage({}: ScheduleDetailProps) {
   };
 
   const getProgrammeResults = (programmeName: string) => {
-    return results.filter(r => r.programme.includes(programmeName));
+    return results.filter(r => r.programme?.includes(programmeName));
   };
 
   const filteredProgrammes = programmes.filter(programme => {
@@ -161,7 +161,7 @@ export default function ScheduleDetailPage({}: ScheduleDetailProps) {
   );
 
   const completedProgrammes = programmes.filter(prog =>
-    results.some(result => result.programme.includes(prog.name))
+    results.some(result => result.programme?.includes(prog.name))
   );
 
   if (loading) {

@@ -81,7 +81,7 @@ export default function TeamProgrammesPage() {
     artsStageGeneral: availableProgrammes.filter(p => p.category === 'arts' && (p.subcategory === 'stage' || !p.subcategory) && p.section === 'general'),
     artsNonStage: availableProgrammes.filter(p => p.category === 'arts' && p.subcategory === 'non-stage' && p.section !== 'general'),
     artsNonStageGeneral: availableProgrammes.filter(p => p.category === 'arts' && p.subcategory === 'non-stage' && p.section === 'general'),
-    general: availableProgrammes.filter(p => p.category === 'general')
+    general: availableProgrammes.filter(p => p.section === 'general')
   };
 
   if (loading) {
@@ -372,7 +372,7 @@ function ProgrammeCard({
   const openEditModal = () => {
     // Pre-populate with existing participants
     if (existingParticipant) {
-      setSelectedParticipants(existingParticipant.participants.map(p => p.candidateId || p));
+      setSelectedParticipants(existingParticipant.participants);
     }
     setSearchTerm('');
     setShowEditModal(true);

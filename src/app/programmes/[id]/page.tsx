@@ -111,7 +111,7 @@ export default function ProgrammeDetailPage() {
 
   const getProgrammeResults = () => {
     if (!programme) return [];
-    return results.filter(r => r.programme.includes(programme.name));
+    return results.filter(r => r.programme?.includes(programme.name));
   };
 
   const getProgrammeStatus = () => {

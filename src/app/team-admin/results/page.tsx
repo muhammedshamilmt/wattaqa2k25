@@ -202,7 +202,7 @@ export default function TeamResultsPage() {
                   <div className="flex justify-between items-start mb-4">
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900">
-                        {getProgrammeName(result.programme)}
+                        {getProgrammeName(result.programme || '')}
                       </h3>
                       <p className="text-sm text-gray-600 capitalize">
                         {result.section} • {result.positionType}

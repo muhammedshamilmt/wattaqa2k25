@@ -94,7 +94,7 @@ export default function ProgrammesPage() {
   };
 
   const getProgrammeResults = (programmeName: string) => {
-    return results.filter(r => r.programme.includes(programmeName));
+    return results.filter(r => r.programme?.includes(programmeName));
   };
 
   const getProgrammeStatus = (programme: Programme) => {

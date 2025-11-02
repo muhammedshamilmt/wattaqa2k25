@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { ShowcaseSection } from "@/components/Layouts/showcase-section";
 import { Result, Programme, Candidate, ProgrammeParticipant, ResultStatus } from '@/types';
+import { getPositionPoints, getGradePoints, calculateTotalPoints, getMarkingRulesSummary } from '@/utils/markingSystem';
 
 export default function ResultsPage() {
   const [results, setResults] = useState<Result[]>([]);
@@ -124,32 +125,10 @@ export default function ResultsPage() {
     }
   }, [candidates, teams]);
 
-  // Static points calculation based on programme type and section
-  const getStaticPoints = (programme: Programme | null) => {
+  // Dynamic points calculation using centralized marking system
+  const getDynamicPoints = (programme: Programme | null) => {
     if (!programme) return { first: 3, second: 2, third: 1 };
-
-    const section = programme.section;
-    const positionType = programme.positionType;
-
-    if (section === 'general') {
-      if (positionType === 'individual') {
-        return { first: 10, second: 6, third: 3 };
-      } else if (positionType === 'group') {
-        return { first: 15, second: 10, third: 5 };
-      }
-    }
-
-    // Senior, Junior, Sub-Junior sections
-    if (section === 'senior' || section === 'junior' || section === 'sub-junior') {
-      if (positionType === 'individual') {
-        return { first: 3, second: 2, third: 1 };
-      } else if (positionType === 'group') {
-        return { first: 5, second: 3, third: 1 };
-      }
-    }
-
-    // Default fallback
-    return { first: 3, second: 2, third: 1 };
+    return getPositionPoints(programme.section, programme.positionType);
   };
 
 
@@ -175,7 +154,7 @@ export default function ResultsPage() {
     setShowParticipants(false);
 
     if (programme) {
-      const staticPoints = getStaticPoints(programme);
+      const dynamicPoints = getDynamicPoints(programme);
       setFormData(prev => ({
         ...prev,
         programme: `${programme.code} - ${programme.name}`,
@@ -190,10 +169,10 @@ export default function ResultsPage() {
         thirdPlaceTeams: [],
         participationGrades: [],
         participationTeamGrades: [],
-        // Set static points based on programme type
-        firstPoints: staticPoints.first,
-        secondPoints: staticPoints.second,
-        thirdPoints: staticPoints.third
+        // Set dynamic points based on programme section and position type
+        firstPoints: dynamicPoints.first,
+        secondPoints: dynamicPoints.second,
+        thirdPoints: dynamicPoints.third
       }));
     }
   };
@@ -547,8 +526,8 @@ export default function ResultsPage() {
     setSelectedProgramme(programme);
     setSelectedSection(result.section);
 
-    // Calculate static points for this programme
-    const staticPoints = getStaticPoints(programme);
+    // Calculate dynamic points for this programme
+    const dynamicPoints = getDynamicPoints(programme);
 
     // Helper function to convert old grades to new format
     const convertGrade = (oldGrade?: string): 'A' | 'B' | 'C' | undefined => {
@@ -598,9 +577,9 @@ export default function ResultsPage() {
         grade: convertGrade(pg.grade) as 'A' | 'B' | 'C',
         points: pg.points
       })).filter(pg => pg.grade), // Only include valid grades
-      firstPoints: staticPoints.first,
-      secondPoints: staticPoints.second,
-      thirdPoints: staticPoints.third,
+      firstPoints: dynamicPoints.first,
+      secondPoints: dynamicPoints.second,
+      thirdPoints: dynamicPoints.third,
       notes: result.notes || ''
     });
 
@@ -888,6 +867,54 @@ export default function ResultsPage() {
 
         {/* Add New Result */}
         <ShowcaseSection title={isEditMode ? "Edit Result" : "Add New Result"}>
+          {/* Marking System Rules Display */}
+          <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-semibold text-blue-900 flex items-center">
+                <span className="mr-2">📊</span>
+                Marking System Rules
+              </h3>
+              <button
+                type="button"
+                onClick={() => alert(getMarkingRulesSummary())}
+                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+              >
+                View Details
+              </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div>
+                <h4 className="font-semibold text-blue-800 mb-2">Position Points:</h4>
+                <ul className="space-y-1 text-blue-700">
+                  <li>• Senior/Junior/Sub-Junior Individual: 3-2-1</li>
+                  <li>• Senior/Junior/Sub-Junior Group: 5-3-1</li>
+                  <li>• General Individual: 10-6-3</li>
+                  <li>• General Group: 15-10-5</li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-semibold text-blue-800 mb-2">Grade Points (Added):</h4>
+                <ul className="space-y-1 text-blue-700">
+                  <li>• A Grade: +5 points</li>
+                  <li>• B Grade: +3 points</li>
+                  <li>• C Grade: +1 point</li>
+                </ul>
+              </div>
+            </div>
+            {selectedProgramme && (
+              <div className="mt-3 p-3 bg-white rounded-lg border border-blue-200">
+                <h4 className="font-semibold text-blue-800 mb-1">Current Programme Points:</h4>
+                <p className="text-blue-700 text-sm">
+                  <span className="font-medium">{selectedProgramme.name}</span> 
+                  ({selectedProgramme.section} • {selectedProgramme.positionType}): 
+                  <span className="ml-2 font-bold">
+                    1st={formData.firstPoints}, 2nd={formData.secondPoints}, 3rd={formData.thirdPoints}
+                  </span>
+                </p>
+              </div>
+            )}
+          </div>
+
           <form id="result-form" onSubmit={handleSubmit} className="space-y-6">
             {/* Programme Search */}
             <div className="mb-4">

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getDatabase } from '@/lib/mongodb';
-import { Result } from '@/types';
+import { Result, ResultStatus } from '@/types';
 import { ObjectId } from 'mongodb';
 // Import Google Sheets sync with error handling
 let syncResultToSheets: any = null;
@@ -8,7 +8,7 @@ try {
   const googleSheetsModule = require('@/lib/googleSheets');
   syncResultToSheets = googleSheetsModule.syncResultToSheets;
 } catch (error) {
-  console.warn('Google Sheets integration not available:', error.message);
+  console.warn('Google Sheets integration not available:', error instanceof Error ? error.message : 'Unknown error');
 }
 
 
@@ -21,7 +21,7 @@ export async function GET(request: Request) {
     const collection = db.collection<Result>('results');
     
     // If this is a team view request, only return published results
-    const filter = teamView === 'true' ? { status: 'published' } : {};
+    const filter = teamView === 'true' ? { status: ResultStatus.PUBLISHED } : {};
     
     const results = await collection.find(filter).toArray();
     

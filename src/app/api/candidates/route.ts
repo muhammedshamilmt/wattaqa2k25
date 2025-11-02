@@ -14,10 +14,10 @@ export async function GET(request: Request) {
     
     // Build query with team filter if provided
     let query: any = {
-      name: { $exists: true, $ne: '', $ne: null },
-      chestNumber: { $exists: true, $ne: '', $ne: null },
-      team: { $exists: true, $ne: '', $ne: null },
-      section: { $exists: true, $ne: '', $ne: null }
+      name: { $exists: true, $nin: ['', null] },
+      chestNumber: { $exists: true, $nin: ['', null] },
+      team: { $exists: true, $nin: ['', null] },
+      section: { $exists: true, $nin: ['', null] }
     };
     
     // Add team filter if specified

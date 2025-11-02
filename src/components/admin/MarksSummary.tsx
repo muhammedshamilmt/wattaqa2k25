@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { EnhancedResult, Team, Candidate } from '@/types';
 import DailyMarksSummary from './DailyMarksSummary';
+import { getGradePoints } from '@/utils/markingSystem';
 
 interface TeamMarks {
   teamCode: string;
@@ -85,15 +86,7 @@ export default function MarksSummary({ results, showDailyProgress = false }: Mar
     }
   };
 
-  // Grade points mapping
-  const getGradePoints = (grade: string) => {
-    const gradePoints: { [key: string]: number } = {
-      'A': 5,
-      'B': 3,
-      'C': 1
-    };
-    return gradePoints[grade] || 0;
-  };
+  // Note: Using centralized getGradePoints from markingSystem utility
 
   // Helper function to get programme name by ID
   const getProgrammeName = (result: any) => {

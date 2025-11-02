@@ -185,7 +185,7 @@ export default function BasicPage() {
                 </h3>
                 <div className="space-y-3">
                   {teams.map((team, index) => (
-                    <div key={team._id || index} className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                    <div key={team._id?.toString() || index} className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg">
                       <div className="flex items-center space-x-3">
                         <div className={`w-8 h-8 ${getTeamColor(team.name)} rounded-lg flex items-center justify-center`}>
                           <span className="text-white font-bold text-sm">{team.name.split(' ')[1]?.[0] || 'T'}</span>
@@ -240,7 +240,7 @@ export default function BasicPage() {
               </div>
               <ul className="text-sm text-gray-700 space-y-3 font-medium">
                 {artsProgrammes.map((programme, index) => (
-                  <li key={programme._id || index} className="flex items-center space-x-2">
+                  <li key={programme._id?.toString() || index} className="flex items-center space-x-2">
                     <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
                     <span>{programme.name}</span>
                   </li>
@@ -259,7 +259,7 @@ export default function BasicPage() {
               </div>
               <ul className="text-sm text-gray-700 space-y-3 font-medium">
                 {sportsProgrammes.map((programme, index) => (
-                  <li key={programme._id || index} className="flex items-center space-x-2">
+                  <li key={programme._id?.toString() || index} className="flex items-center space-x-2">
                     <span className="w-2 h-2 bg-green-500 rounded-full"></span>
                     <span>{programme.name}</span>
                   </li>

@@ -25,11 +25,13 @@ export async function GET(request: Request) {
     // Otherwise, fetch all programmes
     // Filter out blank/empty programmes using MongoDB query
     const programmes = await collection.find({
-      name: { $exists: true, $ne: '', $ne: null },
-      code: { $exists: true, $ne: '', $ne: null },
-      category: { $exists: true, $ne: '', $ne: null },
-      section: { $exists: true, $ne: '', $ne: null },
-      positionType: { $exists: true, $ne: '', $ne: null }
+      $and: [
+        { name: { $exists: true, $ne: '', $ne: null } },
+        { code: { $exists: true, $ne: '', $ne: null } },
+        { category: { $exists: true, $ne: '', $ne: null } },
+        { section: { $exists: true, $ne: '', $ne: null } },
+        { positionType: { $exists: true, $ne: '', $ne: null } }
+      ]
     }).toArray();
     
     return NextResponse.json(programmes);

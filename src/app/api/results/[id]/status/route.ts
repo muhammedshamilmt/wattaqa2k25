@@ -54,7 +54,7 @@ export async function PATCH(
     
     return NextResponse.json({ 
       success: true, 
-      message: `Result status updated to ${status}${status === ResultStatus.PUBLISHED && syncResultToSheets ? ' and synced to Google Sheets' : ''}` 
+      message: `Result status updated to ${status}${status === ResultStatus.PUBLISHED && typeof syncResultToSheets === 'function' ? ' and synced to Google Sheets' : ''}` 
     });
   } catch (error) {
     console.error('Error updating result status:', error);
