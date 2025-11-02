@@ -18,10 +18,15 @@ export default function CheckListPage() {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'pending' | 'checked' | 'published' | 'summary'>('pending');
   
-  // Search and filter states
+  // Search and filter states for pending
   const [searchTerm, setSearchTerm] = useState('');
   const [filterSection, setFilterSection] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
+  
+  // Search and filter states for checked
+  const [checkedSearchTerm, setCheckedSearchTerm] = useState('');
+  const [checkedFilterSection, setCheckedFilterSection] = useState('');
+  const [checkedFilterCategory, setCheckedFilterCategory] = useState('');
 
   useEffect(() => {
     fetchData();
@@ -158,6 +163,22 @@ export default function CheckListPage() {
     });
   };
 
+  // Filter function for checked results
+  const getFilteredCheckedResults = (results: EnhancedResult[]) => {
+    return results.filter(result => {
+      const programmeName = getProgrammeName(result).toLowerCase();
+      const matchesSearch = checkedSearchTerm === '' || 
+        programmeName.includes(checkedSearchTerm.toLowerCase()) ||
+        result.programmeCode?.toLowerCase().includes(checkedSearchTerm.toLowerCase()) ||
+        result.section.toLowerCase().includes(checkedSearchTerm.toLowerCase());
+      
+      const matchesSection = checkedFilterSection === '' || result.section === checkedFilterSection;
+      const matchesCategory = checkedFilterCategory === '' || result.programmeCategory === checkedFilterCategory;
+      
+      return matchesSearch && matchesSection && matchesCategory;
+    });
+  };
+
   // Get unique sections and categories for filters
   const getAvailableSections = () => {
     const sections = [...new Set(pendingResults.map(r => r.section))];
@@ -166,6 +187,17 @@ export default function CheckListPage() {
 
   const getAvailableCategories = () => {
     const categories = [...new Set(pendingResults.map(r => r.programmeCategory).filter(Boolean))];
+    return categories.sort();
+  };
+
+  // Get unique sections and categories for checked results filters
+  const getAvailableCheckedSections = () => {
+    const sections = [...new Set(checkedResults.map(r => r.section))];
+    return sections.sort();
+  };
+
+  const getAvailableCheckedCategories = () => {
+    const categories = [...new Set(checkedResults.map(r => r.programmeCategory).filter(Boolean))];
     return categories.sort();
   };
 
@@ -375,7 +407,7 @@ export default function CheckListPage() {
         <div>
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-semibold text-gray-900">
-              Checked Results ({checkedResults.length})
+              Checked Results ({getFilteredCheckedResults(checkedResults).length} of {checkedResults.length})
             </h2>
             {checkedResults.length > 0 && (
               <div className="flex space-x-3">
@@ -401,15 +433,94 @@ export default function CheckListPage() {
             )}
           </div>
 
+          {/* Search and Filter Controls for Checked Results */}
+          {checkedResults.length > 0 && (
+            <div className="mb-6 space-y-4">
+              {/* Search Bar */}
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <span className="text-gray-400">🔍</span>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Search checked results by programme name, code, or section..."
+                  value={checkedSearchTerm}
+                  onChange={(e) => setCheckedSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white text-gray-700"
+                />
+                {checkedSearchTerm && (
+                  <button
+                    onClick={() => setCheckedSearchTerm('')}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+
+              {/* Filter Controls */}
+              <div className="flex flex-wrap gap-4">
+                <div className="flex-1 min-w-48">
+                  <select
+                    value={checkedFilterSection}
+                    onChange={(e) => setCheckedFilterSection(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white text-gray-700 text-sm"
+                  >
+                    <option value="">All Sections</option>
+                    {getAvailableCheckedSections().map(section => (
+                      <option key={section} value={section}>
+                        {section.charAt(0).toUpperCase() + section.slice(1).replace('-', ' ')}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex-1 min-w-48">
+                  <select
+                    value={checkedFilterCategory}
+                    onChange={(e) => setCheckedFilterCategory(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white text-gray-700 text-sm"
+                  >
+                    <option value="">All Categories</option>
+                    {getAvailableCheckedCategories().map(category => (
+                      <option key={category} value={category}>
+                        {category ? category.charAt(0).toUpperCase() + category.slice(1) : 'Unknown'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {(checkedSearchTerm || checkedFilterSection || checkedFilterCategory) && (
+                  <button
+                    onClick={() => {
+                      setCheckedSearchTerm('');
+                      setCheckedFilterSection('');
+                      setCheckedFilterCategory('');
+                    }}
+                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm"
+                  >
+                    Clear Filters
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
           {checkedResults.length === 0 ? (
             <div className="text-center py-12">
               <div className="text-gray-400 text-6xl mb-4">✅</div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">No Checked Results</h3>
               <p className="text-gray-500">Results will appear here after being reviewed and checked.</p>
             </div>
+          ) : getFilteredCheckedResults(checkedResults).length === 0 ? (
+            <div className="text-center py-12">
+              <div className="text-gray-400 text-4xl mb-4">🔍</div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No Results Found</h3>
+              <p className="text-gray-500">Try adjusting your search or filter criteria.</p>
+            </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {checkedResults.map((result) => (
+              {getFilteredCheckedResults(checkedResults).map((result) => (
                 <ResultCard
                   key={result._id?.toString()}
                   result={result}

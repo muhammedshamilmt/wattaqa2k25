@@ -641,12 +641,32 @@ export default function ResultsPage() {
     });
   };
 
+  // Check for duplicate results
+  const checkForDuplicate = () => {
+    if (!selectedProgramme || !formData.section) return false;
+    
+    // Check if a result already exists for this programme + section combination
+    const existingResult = results.find(result => 
+      result.programmeId === selectedProgramme._id?.toString() && 
+      result.section === formData.section &&
+      (!isEditMode || result._id?.toString() !== editingResultId) // Exclude current result when editing
+    );
+    
+    return !!existingResult; // Convert to boolean
+  };
+
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.programme || !formData.section || !formData.positionType) {
       alert('Please fill in all required fields');
+      return;
+    }
+
+    // Check for duplicate results (only for new results, not edits)
+    if (!isEditMode && checkForDuplicate()) {
+      alert(`A result already exists for "${formData.programme}" in the "${formData.section}" section. Please edit the existing result instead of creating a new one.`);
       return;
     }
 
@@ -902,35 +922,7 @@ export default function ResultsPage() {
                     </option>
                   ))}
                 </select>
-                {selectedProgramme && (
-                  <div className="mt-2 space-y-2">
-                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                      <div className="text-sm text-blue-800">
-                        <p><strong>Category:</strong> {selectedProgramme.category}</p>
-                        <p><strong>Position Type:</strong> {selectedProgramme.positionType}</p>
-                        <p><strong>Required Participants:</strong> {selectedProgramme.requiredParticipants}</p>
-                      </div>
-                    </div>
-                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <div className="text-sm text-green-800">
-                        <p><strong>📊 Points Structure (Section + Position Type):</strong></p>
-                        <div className="grid grid-cols-2 gap-2 mt-2">
-                          <div>
-                            <p className="font-medium">General Section:</p>
-                            <p>• Individual: 10, 6, 3</p>
-                            <p>• Group: 15, 10, 5</p>
-                          </div>
-                          <div>
-                            <p className="font-medium">Age Sections:</p>
-                            <p>• Individual: 3, 2, 1</p>
-                            <p>• Group: 5, 3, 1</p>
-                          </div>
-                        </div>
-                        <p className="mt-2"><strong>Grades:</strong> A=+5, B=+3, C=+1</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
+
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -955,49 +947,37 @@ export default function ResultsPage() {
                     </option>
                   ))}
                 </select>
-                {selectedProgramme && (
-                  <div className="mt-2 p-3 bg-purple-50 border border-purple-200 rounded-lg">
-                    <div className="text-sm text-purple-800">
-                      <p><strong>Position Type:</strong> {selectedProgramme.positionType.charAt(0).toUpperCase() + selectedProgramme.positionType.slice(1)}</p>
-                      <p><strong>Available Sections:</strong> {getAvailableSections().map(s => s.label).join(', ')}</p>
-                      <p><strong>Filtering Logic:</strong> 
-                        Results section must match programme section ({selectedProgramme.section})
-                      </p>
-                      <p><strong>Note:</strong> Section determines who gets marks (General = Teams, Others = Individuals)</p>
+                
+                {/* Duplicate Warning */}
+                {!isEditMode && selectedProgramme && selectedSection && checkForDuplicate() && (
+                  <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <div className="text-sm text-red-800">
+                      <p><strong>⚠️ Duplicate Result Detected!</strong></p>
+                      <p>A result already exists for "{selectedProgramme.name}" in the "{selectedSection}" section.</p>
+                      <p>Please edit the existing result instead of creating a new one.</p>
                     </div>
                   </div>
                 )}
-                {selectedSection && selectedProgramme && (
-                  <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
-                    <div className="text-sm text-green-800">
-                      <p><strong>Selected Section:</strong> {selectedSection.charAt(0).toUpperCase() + selectedSection.slice(1).replace('-', ' ')}</p>
-                      <p><strong>Points Structure:</strong> 
-                        {selectedSection === 'general' 
-                          ? selectedProgramme.positionType === 'individual' 
-                            ? ' 10, 6, 3 (General + Individual)'
-                            : ' 15, 10, 5 (General + Group)'
-                          : selectedProgramme.positionType === 'individual'
-                            ? ' 3, 2, 1 (Age-based + Individual)'
-                            : ' 5, 3, 1 (Age-based + Group)'
-                        }
-                      </p>
-                      <p><strong>Marks Assignment:</strong> 
-                        {selectedSection === 'general' 
-                          ? ' Teams (team-based competition)'
-                          : ' Individuals (individual participants)'
-                        }
-                      </p>
-                      {showParticipants && selectedSection !== 'general' && (
-                        <p><strong>Registered Participants:</strong> {filteredParticipants.length}</p>
-                      )}
-                      {showParticipants && selectedSection === 'general' && (
-                        <p><strong>Registered Teams:</strong> {filteredTeams.length}</p>
-                      )}
-                    </div>
-                  </div>
-                )}
+                
+
+
               </div>
             </div>
+
+            {/* Minimal Information Display */}
+            {selectedProgramme && selectedSection && (
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+                <div className="text-center">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    📝 Applying marks for {selectedProgramme.name}
+                  </h3>
+                  <div className="flex justify-center space-x-6 text-sm text-gray-600">
+                    <span><strong>Section:</strong> {selectedSection.charAt(0).toUpperCase() + selectedSection.slice(1).replace('-', ' ')}</span>
+                    <span><strong>Position Type:</strong> {selectedProgramme.positionType.charAt(0).toUpperCase() + selectedProgramme.positionType.slice(1)}</span>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Registered Teams Display (for general section) */}
             {showParticipants && selectedSection === 'general' && filteredTeams.length > 0 && (
@@ -1006,11 +986,7 @@ export default function ResultsPage() {
                   <span className="mr-2">🏆</span>
                   Registered Teams - General Section ({filteredTeams.length})
                 </h3>
-                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-sm text-blue-800">
-                    <strong>General Section:</strong> Marks are assigned to teams. Points: {selectedProgramme?.positionType === 'individual' ? '10, 6, 3' : '15, 10, 5'} + Grade bonuses (A=+5, B=+3, C=+1)
-                  </p>
-                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                   {filteredTeams.map((teamEntry, index) => {
                     const isAssigned = isTeamAssigned(teamEntry.teamCode);
@@ -1159,11 +1135,7 @@ export default function ResultsPage() {
                   <span className="mr-2">👥</span>
                   Registered Participants - {selectedSection.charAt(0).toUpperCase() + selectedSection.slice(1).replace('-', ' ')} Section ({filteredParticipants.length})
                 </h3>
-                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-sm text-blue-800">
-                    <strong>Age-based Section:</strong> Marks are assigned to individuals. Points: {selectedProgramme?.positionType === 'individual' ? '3, 2, 1' : '5, 3, 1'} + Grade bonuses (A=+5, B=+3, C=+1)
-                  </p>
-                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                   {filteredParticipants.map((participant, index) => {
                     const isAssigned = isParticipantAssigned(participant.chestNumber);
@@ -1322,30 +1294,7 @@ export default function ResultsPage() {
               </div>
             )}
 
-            {/* Static Points Display */}
-            {selectedProgramme && (
-              <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-4">
-                <h3 className="font-semibold text-green-800 mb-3">📊 Points System (Static)</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                  <div className="bg-white rounded-lg p-3 border border-green-200">
-                    <div className="font-bold text-yellow-600">🥇 First Place</div>
-                    <div className="text-2xl font-bold text-gray-900">{formData.firstPoints}</div>
-                    <div className="text-xs text-gray-500">points each</div>
-                  </div>
-                  <div className="bg-white rounded-lg p-3 border border-green-200">
-                    <div className="font-bold text-gray-600">🥈 Second Place</div>
-                    <div className="text-2xl font-bold text-gray-900">{formData.secondPoints}</div>
-                    <div className="text-xs text-gray-500">points each</div>
-                  </div>
-                  <div className="bg-white rounded-lg p-3 border border-green-200">
-                    <div className="font-bold text-orange-600">🥉 Third Place</div>
-                    <div className="text-2xl font-bold text-gray-900">{formData.thirdPoints}</div>
-                    <div className="text-xs text-gray-500">points each</div>
-                  </div>
 
-                </div>
-              </div>
-            )}
 
             {/* Winners Summary */}
             {(formData.firstPlace.length > 0 || formData.secondPlace.length > 0 || formData.thirdPlace.length > 0 ||
@@ -1441,24 +1390,12 @@ export default function ResultsPage() {
                 </div>
               )}
 
-            {/* Notes */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Notes
-              </label>
-              <textarea
-                value={formData.notes}
-                onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                rows={3}
-                placeholder="Enter any additional notes"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-700"
-              />
-            </div>
+
 
             <div className="flex space-x-4">
               <button
                 type="submit"
-                disabled={submitting || !showParticipants}
+                disabled={submitting || !showParticipants || (!isEditMode && checkForDuplicate())}
                 className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-2 rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-200 shadow-lg disabled:opacity-50"
               >
                 {submitting
