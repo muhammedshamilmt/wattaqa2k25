@@ -20,7 +20,7 @@ export default function TeamResultsPage() {
   const fetchData = async () => {
     try {
       const [resultsRes, candidatesRes, programmesRes] = await Promise.all([
-        fetch('/api/results'),
+        fetch('/api/results?teamView=true'),
         fetch(`/api/candidates?team=${teamCode}`),
         fetch('/api/programmes')
       ]);

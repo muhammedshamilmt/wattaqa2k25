@@ -57,7 +57,7 @@ export default function ResultsPage() {
       setLoading(true);
       const [teamsRes, resultsRes, candidatesRes, programmesRes] = await Promise.all([
         fetch('/api/teams'),
-        fetch('/api/results/status?status=published'), // Only fetch published results
+        fetch('/api/results?teamView=true'), // Only fetch published results
         fetch('/api/candidates'),
         fetch('/api/programmes')
       ]);

@@ -5,12 +5,18 @@ import { ObjectId } from 'mongodb';
 import { syncResultToSheets } from '@/lib/googleSheets';
 
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const teamView = searchParams.get('teamView');
+    
     const db = await getDatabase();
     const collection = db.collection<Result>('results');
     
-    const results = await collection.find({}).toArray();
+    // If this is a team view request, only return published results
+    const filter = teamView === 'true' ? { status: 'published' } : {};
+    
+    const results = await collection.find(filter).toArray();
     
     return NextResponse.json(results);
   } catch (error) {

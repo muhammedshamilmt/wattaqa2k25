@@ -25,7 +25,7 @@ export default function ProfilesPage() {
       const [candidatesRes, teamsRes, resultsRes] = await Promise.all([
         fetch('/api/candidates'),
         fetch('/api/teams'),
-        fetch('/api/results')
+        fetch('/api/results?teamView=true')
       ]);
 
       if (!candidatesRes.ok || !teamsRes.ok || !resultsRes.ok) {

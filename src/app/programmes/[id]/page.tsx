@@ -44,7 +44,7 @@ export default function ProgrammeDetailPage() {
         fetch(`/api/programme-participants?programmeId=${programmeId}`),
         fetch('/api/teams'),
         fetch('/api/candidates'),
-        fetch('/api/results')
+        fetch('/api/results?teamView=true')
       ]);
 
       const [participantsData, teamsData, candidatesData, resultsData] = await Promise.all([

@@ -29,7 +29,7 @@ export default function TeamsPage() {
         fetch('/api/candidates'),
         fetch('/api/programme-participants'),
         fetch('/api/programmes'),
-        fetch('/api/results')
+        fetch('/api/results?teamView=true')
       ]);
 
       const [teamsData, candidatesData, participantsData, programmesData, resultsData] = await Promise.all([

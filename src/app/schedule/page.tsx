@@ -33,7 +33,7 @@ export default function SchedulePage() {
         fetch('/api/programme-participants'),
         fetch('/api/teams'),
         fetch('/api/candidates'),
-        fetch('/api/results')
+        fetch('/api/results?teamView=true')
       ]);
 
       const [schedulesData, programmesData, participantsData, teamsData, candidatesData, resultsData] = await Promise.all([

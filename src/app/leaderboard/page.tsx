@@ -96,7 +96,7 @@ export default function DynamicLeaderboardPage() {
                 fetch('/api/teams'),
                 fetch('/api/candidates'),
                 fetch('/api/programmes'),
-                fetch('/api/results')
+                fetch('/api/results?teamView=true')
             ]);
 
             const [teamsData, candidatesData, programmesData, resultsData] = await Promise.all([

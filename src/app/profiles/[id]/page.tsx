@@ -30,7 +30,7 @@ export default function ProfileDetailPage() {
       const [candidatesRes, teamsRes, resultsRes, programmesRes] = await Promise.all([
         fetch('/api/candidates'),
         fetch('/api/teams'),
-        fetch('/api/results'),
+        fetch('/api/results?teamView=true'),
         fetch('/api/programmes')
       ]);
 

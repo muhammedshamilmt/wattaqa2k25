@@ -22,7 +22,7 @@ export default function TeamRankingsPage() {
       const [teamsRes, candidatesRes, resultsRes] = await Promise.all([
         fetch('/api/teams'),
         fetch(`/api/candidates?team=${teamCode}`),
-        fetch('/api/results')
+        fetch('/api/results?teamView=true')
       ]);
 
       const [teamsData, candidatesData, resultsData] = await Promise.all([
