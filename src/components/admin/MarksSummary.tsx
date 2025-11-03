@@ -26,15 +26,18 @@ interface TeamMarks {
 interface MarksSummaryProps {
   results: EnhancedResult[];
   showDailyProgress?: boolean;
+  categoryFilter?: 'arts-total' | 'arts-stage' | 'arts-non-stage' | 'sports' | null;
+  allResults?: EnhancedResult[]; // For showing complete team performance context
 }
 
-export default function MarksSummary({ results, showDailyProgress = false }: MarksSummaryProps) {
+export default function MarksSummary({ results, showDailyProgress = false, categoryFilter = null, allResults }: MarksSummaryProps) {
   const [teams, setTeams] = useState<Team[]>([]);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [programmes, setProgrammes] = useState<any[]>([]);
   const [teamMarks, setTeamMarks] = useState<TeamMarks[]>([]);
   // Removed loading state for faster rendering
   const [selectedView, setSelectedView] = useState<'summary' | 'detailed' | 'daily' | 'programmes' | 'breakdown'>('summary');
+  const [showFullTeamPerformance, setShowFullTeamPerformance] = useState(false);
   
   // Filter states for Programme Breakdown
   const [breakdownSearchTerm, setBreakdownSearchTerm] = useState('');
@@ -51,7 +54,7 @@ export default function MarksSummary({ results, showDailyProgress = false }: Mar
     if (teams.length > 0 && candidates.length > 0 && programmes.length > 0) {
       calculateTeamMarks();
     }
-  }, [results, teams, candidates, programmes]);
+  }, [results, teams, candidates, programmes, showFullTeamPerformance]);
 
   const fetchAllData = async () => {
     try {
@@ -160,22 +163,28 @@ export default function MarksSummary({ results, showDailyProgress = false }: Mar
       };
     });
 
-    console.log('Processing', results.length, 'results for', Object.keys(teamMarksMap).length, 'teams');
-    console.log('Available programmes:', programmes.length);
+    // Determine which results to use for calculation
+    const resultsToProcess = (showFullTeamPerformance && allResults) ? allResults : results;
     
-    if (results.length === 0) {
+    console.log('Processing', resultsToProcess.length, 'results for', Object.keys(teamMarksMap).length, 'teams');
+    console.log('Available programmes:', programmes.length);
+    console.log('Show full performance:', showFullTeamPerformance);
+    console.log('Category filter:', categoryFilter);
+    
+    if (resultsToProcess.length === 0) {
       console.log('⚠️ No results to process - this explains why all teams show 0 points');
+      setTeamMarks(Object.values(teamMarksMap).sort((a, b) => b.total - a.total));
       return;
     }
 
     // Debug: Check first few results for programme data
-    results.slice(0, 3).forEach((result, idx) => {
+    resultsToProcess.slice(0, 3).forEach((result, idx) => {
       const programmeDetails = getProgrammeDetails(result);
       console.log(`Result ${idx + 1}: "${programmeDetails.name}" (ID: ${result.programmeId})`);
     });
 
     // Calculate marks from results
-    results.forEach(result => {
+    resultsToProcess.forEach(result => {
       const programmeDetails = getProgrammeDetails(result);
       const programmeName = programmeDetails.name;
       const programmeCategory = programmeDetails.category;
@@ -356,7 +365,22 @@ export default function MarksSummary({ results, showDailyProgress = false }: Mar
     <div className="space-y-6">
       {/* Header with Stats */}
       <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg p-6 text-white">
-        <h2 className="text-2xl font-bold mb-4">📊 Marks Summary Dashboard</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-2xl font-bold">📊 Marks Summary Dashboard</h2>
+          {categoryFilter && (
+            <div className="bg-white bg-opacity-20 rounded-lg px-4 py-2">
+              <div className="text-sm opacity-90 mb-1">Filtered View</div>
+              <div className="font-bold text-lg">
+                {categoryFilter === 'arts-total' && '🎨 Arts Total'}
+                {categoryFilter === 'arts-stage' && '🎭 Arts Stage'}
+                {categoryFilter === 'arts-non-stage' && '📝 Arts Non-Stage'}
+                {categoryFilter === 'sports' && '🏃 Sports'}
+              </div>
+            </div>
+          )}
+        </div>
+        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           <div className="bg-white bg-opacity-20 rounded-lg p-4">
             <div className="text-2xl font-bold">{teamMarks.length}</div>

@@ -86,6 +86,7 @@ export interface EnhancedResult extends Result {
   programmeCode?: string;
   programmeCategory?: string;
   programmeSection?: string;
+  programmeSubcategory?: string;
 }
 
 export interface FestivalInfo {

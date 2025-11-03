@@ -44,16 +44,17 @@ export default function PublishPage() {
       // Enrich results with programme information
       const enrichResults = (results: EnhancedResult[]) => {
         return results.map(result => {
-          const programme = programmesData.find((p: Programme) => 
+          const programme = programmesData.find((p: Programme) =>
             p._id?.toString() === result.programmeId?.toString()
           );
-          
+
           return {
             ...result,
             programmeName: programme?.name,
             programmeCode: programme?.code,
             programmeCategory: programme?.category,
-            programmeSection: programme?.section
+            programmeSection: programme?.section,
+            programmeSubcategory: programme?.subcategory
           };
         });
       };
@@ -93,7 +94,7 @@ export default function PublishPage() {
 
   const handleBulkPublish = async () => {
     if (checkedResults.length === 0) return;
-    
+
     if (!confirm(`Are you sure you want to publish ${checkedResults.length} results? This will make them visible to the public.`)) {
       return;
     }
@@ -131,23 +132,82 @@ export default function PublishPage() {
     return programme ? `${programme.name} (${programme.code})` : 'Unknown Programme';
   };
 
-  const calculateTotalPoints = () => {
-    return publishedResults.reduce((total, result) => {
-      let resultTotal = 0;
-      if (result.firstPlace) resultTotal += result.firstPlace.length * result.firstPoints;
-      if (result.secondPlace) resultTotal += result.secondPlace.length * result.secondPoints;
-      if (result.thirdPlace) resultTotal += result.thirdPlace.length * result.thirdPoints;
+  const calculateCategoryStats = (category: string, subcategory?: string) => {
+    const filteredResults = publishedResults.filter(result => {
+      if (subcategory) {
+        return result.programmeCategory === category && result.programmeSubcategory === subcategory;
+      }
+      return result.programmeCategory === category;
+    });
+
+    const stats = {
+      resultCount: filteredResults.length,
+      totalPoints: 0,
+      uniqueWinners: new Set(),
+      programmes: filteredResults.length
+    };
+
+    filteredResults.forEach(result => {
+      // Calculate individual winners
+      if (result.firstPlace) {
+        result.firstPlace.forEach(winner => {
+          stats.totalPoints += result.firstPoints;
+          stats.uniqueWinners.add(winner.chestNumber);
+        });
+      }
+      if (result.secondPlace) {
+        result.secondPlace.forEach(winner => {
+          stats.totalPoints += result.secondPoints;
+          stats.uniqueWinners.add(winner.chestNumber);
+        });
+      }
+      if (result.thirdPlace) {
+        result.thirdPlace.forEach(winner => {
+          stats.totalPoints += result.thirdPoints;
+          stats.uniqueWinners.add(winner.chestNumber);
+        });
+      }
+      
+      // Calculate team winners
+      if (result.firstPlaceTeams) {
+        result.firstPlaceTeams.forEach(() => {
+          stats.totalPoints += result.firstPoints;
+        });
+      }
+      if (result.secondPlaceTeams) {
+        result.secondPlaceTeams.forEach(() => {
+          stats.totalPoints += result.secondPoints;
+        });
+      }
+      if (result.thirdPlaceTeams) {
+        result.thirdPlaceTeams.forEach(() => {
+          stats.totalPoints += result.thirdPoints;
+        });
+      }
+
+      // Calculate participation points
       if (result.participationGrades) {
-        resultTotal += result.participationGrades.reduce((sum, pg) => sum + pg.points, 0);
+        result.participationGrades.forEach(pg => {
+          stats.totalPoints += pg.points;
+          stats.uniqueWinners.add(pg.chestNumber);
+        });
       }
-      if (result.firstPlaceTeams) resultTotal += result.firstPlaceTeams.length * result.firstPoints;
-      if (result.secondPlaceTeams) resultTotal += result.secondPlaceTeams.length * result.secondPoints;
-      if (result.thirdPlaceTeams) resultTotal += result.thirdPlaceTeams.length * result.thirdPoints;
       if (result.participationTeamGrades) {
-        resultTotal += result.participationTeamGrades.reduce((sum, pg) => sum + pg.points, 0);
+        result.participationTeamGrades.forEach(pg => {
+          stats.totalPoints += pg.points;
+        });
       }
-      return total + resultTotal;
-    }, 0);
+    });
+
+    return {
+      ...stats,
+      uniqueWinners: stats.uniqueWinners.size
+    };
+  };
+
+  const calculateTotalPoints = () => {
+    const allStats = calculateCategoryStats('', ''); // Get all results
+    return allStats.totalPoints;
   };
 
   if (loading) {
@@ -170,45 +230,166 @@ export default function PublishPage() {
         </p>
       </div>
 
-      {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <div className="flex items-center">
-            <div className="text-blue-600 text-2xl mr-3">🚀</div>
-            <div>
-              <div className="text-2xl font-bold text-blue-900">{publishedResults.length}</div>
-              <div className="text-sm text-blue-600">Published Results</div>
+      {/* Category-Specific Stats Overview */}
+      <div className="space-y-6 mb-8">
+        {/* Overall Summary */}
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <span className="mr-2">📊</span>
+            Overall Summary
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-gray-900">{publishedResults.length}</div>
+              <div className="text-sm text-gray-600">Published Results</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-700">{checkedResults.length}</div>
+              <div className="text-sm text-gray-600">Ready to Publish</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-purple-700">{calculateTotalPoints()}</div>
+              <div className="text-sm text-gray-600">Total Points</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-700">{programmes.length}</div>
+              <div className="text-sm text-gray-600">Total Programmes</div>
             </div>
           </div>
         </div>
-        
-        <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-          <div className="flex items-center">
-            <div className="text-green-600 text-2xl mr-3">✅</div>
-            <div>
-              <div className="text-2xl font-bold text-green-900">{checkedResults.length}</div>
-              <div className="text-sm text-green-600">Ready to Publish</div>
+
+        {/* Category-Specific Statistics */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6">
+          {/* Arts Stage */}
+          <div className="bg-purple-50 border border-purple-200 rounded-lg p-6">
+            <div className="flex items-center mb-4">
+              <div className="text-purple-600 text-2xl mr-3">🎭</div>
+              <div>
+                <h3 className="font-semibold text-purple-900">Arts Stage</h3>
+                <p className="text-sm text-purple-600">Performance Results</p>
+              </div>
             </div>
+            {(() => {
+              const stats = calculateCategoryStats('arts', 'stage');
+              return (
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-purple-700">Results:</span>
+                    <span className="font-bold text-purple-900">{stats.resultCount}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-purple-700">Points:</span>
+                    <span className="font-bold text-purple-900">{stats.totalPoints}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-purple-700">Winners:</span>
+                    <span className="font-bold text-purple-900">{stats.uniqueWinners}</span>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
-        </div>
-        
-        <div className="bg-purple-50 border border-purple-200 rounded-lg p-6">
-          <div className="flex items-center">
-            <div className="text-purple-600 text-2xl mr-3">🏆</div>
-            <div>
-              <div className="text-2xl font-bold text-purple-900">{calculateTotalPoints()}</div>
-              <div className="text-sm text-purple-600">Total Points Awarded</div>
+
+          {/* Arts Non-Stage */}
+          <div className="bg-pink-50 border border-pink-200 rounded-lg p-6">
+            <div className="flex items-center mb-4">
+              <div className="text-pink-600 text-2xl mr-3">📝</div>
+              <div>
+                <h3 className="font-semibold text-pink-900">Arts Non-Stage</h3>
+                <p className="text-sm text-pink-600">Written Work Results</p>
+              </div>
             </div>
+            {(() => {
+              const stats = calculateCategoryStats('arts', 'non-stage');
+              return (
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-pink-700">Results:</span>
+                    <span className="font-bold text-pink-900">{stats.resultCount}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-pink-700">Points:</span>
+                    <span className="font-bold text-pink-900">{stats.totalPoints}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-pink-700">Winners:</span>
+                    <span className="font-bold text-pink-900">{stats.uniqueWinners}</span>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
-        </div>
-        
-        <div className="bg-orange-50 border border-orange-200 rounded-lg p-6">
-          <div className="flex items-center">
-            <div className="text-orange-600 text-2xl mr-3">📊</div>
-            <div>
-              <div className="text-2xl font-bold text-orange-900">{programmes.length}</div>
-              <div className="text-sm text-orange-600">Total Programmes</div>
+
+          {/* Sports */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+            <div className="flex items-center mb-4">
+              <div className="text-blue-600 text-2xl mr-3">🏃</div>
+              <div>
+                <h3 className="font-semibold text-blue-900">Sports</h3>
+                <p className="text-sm text-blue-600">Competition Results</p>
+              </div>
             </div>
+            {(() => {
+              const stats = calculateCategoryStats('sports');
+              return (
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-blue-700">Results:</span>
+                    <span className="font-bold text-blue-900">{stats.resultCount}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-blue-700">Points:</span>
+                    <span className="font-bold text-blue-900">{stats.totalPoints}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-blue-700">Winners:</span>
+                    <span className="font-bold text-blue-900">{stats.uniqueWinners}</span>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+
+          {/* Arts Total (Combined) */}
+          <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-6">
+            <div className="flex items-center mb-4">
+              <div className="text-indigo-600 text-2xl mr-3">🎨</div>
+              <div>
+                <h3 className="font-semibold text-indigo-900">Arts Total</h3>
+                <p className="text-sm text-indigo-600">Combined Arts Results</p>
+              </div>
+            </div>
+            {(() => {
+              const stageStats = calculateCategoryStats('arts', 'stage');
+              const nonStageStats = calculateCategoryStats('arts', 'non-stage');
+              const combinedStats = {
+                resultCount: stageStats.resultCount + nonStageStats.resultCount,
+                totalPoints: stageStats.totalPoints + nonStageStats.totalPoints,
+                uniqueWinners: stageStats.uniqueWinners + nonStageStats.uniqueWinners
+              };
+              return (
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-indigo-700">Results:</span>
+                    <span className="font-bold text-indigo-900">{combinedStats.resultCount}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-indigo-700">Points:</span>
+                    <span className="font-bold text-indigo-900">{combinedStats.totalPoints}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-indigo-700">Winners:</span>
+                    <span className="font-bold text-indigo-900">{combinedStats.uniqueWinners}</span>
+                  </div>
+                  <div className="mt-3 pt-2 border-t border-indigo-200">
+                    <div className="text-xs text-indigo-600 space-y-1">
+                      <div>Stage: {stageStats.resultCount} results, {stageStats.totalPoints} pts</div>
+                      <div>Non-Stage: {nonStageStats.resultCount} results, {nonStageStats.totalPoints} pts</div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </div>
       </div>
@@ -281,7 +462,7 @@ export default function PublishPage() {
                   key={result._id?.toString()}
                   result={result}
                   programmeName={getProgrammeName(result)}
-                  onReview={() => {}}
+                  onReview={() => { }}
                   onStatusUpdate={handleStatusUpdate}
                   showActions={false}
                   teams={teams}
@@ -337,7 +518,7 @@ export default function PublishPage() {
                   <div>
                     <h3 className="text-green-800 font-medium">Ready for Publication</h3>
                     <p className="text-green-700 text-sm">
-                      These {checkedResults.length} results have been reviewed and are ready to be published. 
+                      These {checkedResults.length} results have been reviewed and are ready to be published.
                       Once published, they will be visible to all users on the public results page.
                     </p>
                   </div>
@@ -350,7 +531,7 @@ export default function PublishPage() {
                     key={result._id?.toString()}
                     result={result}
                     programmeName={getProgrammeName(result)}
-                    onReview={() => {}}
+                    onReview={() => { }}
                     onStatusUpdate={handleStatusUpdate}
                     showActions={true}
                     teams={teams}

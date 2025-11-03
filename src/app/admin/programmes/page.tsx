@@ -670,6 +670,156 @@ export default function ProgrammesPage() {
               </div>
             )}
 
+            {/* Programme Status Section - Priority Attention */}
+            <ShowcaseSection title="Programme Status - Requires Attention">
+              <div className="space-y-4">
+                {/* Critical Alert for Unregistered Programmes */}
+                {(() => {
+                  const unregisteredProgrammes = programmeRegistrations.filter(p => p.registrations.length === 0);
+                  return unregisteredProgrammes.length > 0 && (
+                    <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4">
+                      <div className="flex items-center mb-3">
+                        <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center mr-3">
+                          <span className="text-white text-sm font-bold">!</span>
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-bold text-red-900">🚨 Critical: Programmes with No Registrations</h3>
+                          <p className="text-red-700 text-sm">These programmes need immediate attention - no teams have registered</p>
+                        </div>
+                        <div className="ml-auto">
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-red-200 text-red-900">
+                            {unregisteredProgrammes.length} programme{unregisteredProgrammes.length !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                        {unregisteredProgrammes.map((programme) => (
+                          <div key={programme._id?.toString()} className="bg-white border-2 border-red-300 rounded-lg p-3 shadow-sm">
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex-1">
+                                <h4 className="font-bold text-gray-900 text-sm mb-1">{programme.name}</h4>
+                                <p className="text-xs text-gray-600 font-mono">{programme.code}</p>
+                              </div>
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-red-200 text-red-900">
+                                0 Teams
+                              </span>
+                            </div>
+                            <div className="text-xs text-gray-600 mb-2">
+                              <span className="capitalize">{programme.category}{programme.subcategory ? ` • ${programme.subcategory}` : ''}</span>
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {programme.section} • {programme.positionType}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Warning for Incomplete Registrations */}
+                {(() => {
+                  const incompleteRegistrations = programmeRegistrations.filter(p => 
+                    p.registrations.length > 0 && p.registrations.length < teams.length
+                  );
+                  return incompleteRegistrations.length > 0 && (
+                    <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-4">
+                      <div className="flex items-center mb-3">
+                        <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center mr-3">
+                          <span className="text-white text-sm font-bold">⚠</span>
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-bold text-yellow-900">⚡ Warning: Incomplete Registrations</h3>
+                          <p className="text-yellow-700 text-sm">Some teams are missing from these programmes</p>
+                        </div>
+                        <div className="ml-auto">
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-yellow-200 text-yellow-900">
+                            {incompleteRegistrations.length} programme{incompleteRegistrations.length !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {incompleteRegistrations.map((programme) => {
+                          const registeredTeamCodes = programme.registrations.map(r => r.teamCode);
+                          const unregisteredTeams = teams.filter(team => !registeredTeamCodes.includes(team.code));
+                          
+                          return (
+                            <div key={programme._id?.toString()} className="bg-white border-2 border-yellow-300 rounded-lg p-3 shadow-sm">
+                              <div className="flex items-start justify-between mb-2">
+                                <div className="flex-1">
+                                  <h4 className="font-bold text-gray-900 text-sm mb-1">{programme.name}</h4>
+                                  <p className="text-xs text-gray-600 font-mono">{programme.code}</p>
+                                </div>
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-yellow-200 text-yellow-900">
+                                  {programme.registrations.length}/{teams.length}
+                                </span>
+                              </div>
+                              <div className="text-xs text-gray-600 mb-2">
+                                <span className="capitalize">{programme.category}{programme.subcategory ? ` • ${programme.subcategory}` : ''}</span>
+                              </div>
+                              
+                              {/* Missing Teams - Compact Display */}
+                              <div className="mb-1">
+                                <p className="text-xs font-bold text-red-700">Missing:</p>
+                                <div className="flex flex-wrap gap-1">
+                                  {unregisteredTeams.slice(0, 3).map((team) => (
+                                    <span
+                                      key={team.code}
+                                      className="inline-flex items-center px-1 py-0.5 rounded text-xs font-bold bg-red-200 text-red-900"
+                                    >
+                                      {team.code}
+                                    </span>
+                                  ))}
+                                  {unregisteredTeams.length > 3 && (
+                                    <span className="text-xs text-red-700 font-bold">
+                                      +{unregisteredTeams.length - 3} more
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Success Message for Complete Registrations */}
+                {(() => {
+                  const unregisteredCount = programmeRegistrations.filter(p => p.registrations.length === 0).length;
+                  const incompleteCount = programmeRegistrations.filter(p => 
+                    p.registrations.length > 0 && p.registrations.length < teams.length
+                  ).length;
+                  
+                  return (unregisteredCount === 0 && incompleteCount === 0 && programmeRegistrations.length > 0) && (
+                    <div className="bg-green-50 border-2 border-green-300 rounded-lg p-4">
+                      <div className="flex items-center">
+                        <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center mr-3">
+                          <span className="text-white text-sm font-bold">✓</span>
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-bold text-green-900">🎉 Excellent! All Programmes Have Registrations</h3>
+                          <p className="text-green-700 text-sm">All programmes have been registered by teams - ready for competition!</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* No Programmes Message */}
+                {programmeRegistrations.length === 0 && (
+                  <div className="bg-gray-50 border-2 border-gray-300 rounded-lg p-6 text-center">
+                    <div className="text-4xl mb-3">📋</div>
+                    <h3 className="text-lg font-bold text-gray-700 mb-2">No Programmes Created Yet</h3>
+                    <p className="text-gray-600 text-sm">Create programmes using the form above to see registration status</p>
+                  </div>
+                )}
+              </div>
+            </ShowcaseSection>
+
             {/* Programmes List */}
             <ShowcaseSection title="Programmes List">
               {loading ? (
@@ -864,6 +1014,228 @@ export default function ProgrammesPage() {
                   </p>
                   <p className="text-sm text-orange-600">Registrations</p>
                 </div>
+              </div>
+            </ShowcaseSection>
+
+            {/* Programme Status Section */}
+            <ShowcaseSection title="Programme Status">
+              <div className="space-y-6">
+                {/* Programmes with No Registrations */}
+                {(() => {
+                  const unregisteredProgrammes = programmeRegistrations.filter(p => p.registrations.length === 0);
+                  return unregisteredProgrammes.length > 0 && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+                      <div className="flex items-center mb-4">
+                        <div className="w-10 h-10 bg-red-500 rounded-lg flex items-center justify-center mr-3">
+                          <span className="text-white text-lg">⚠️</span>
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-semibold text-red-900">Programmes with No Registrations</h3>
+                          <p className="text-red-700 text-sm">These programmes have not been registered by any team</p>
+                        </div>
+                        <div className="ml-auto">
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
+                            {unregisteredProgrammes.length} programme{unregisteredProgrammes.length !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {unregisteredProgrammes.map((programme) => (
+                          <div key={programme._id?.toString()} className="bg-white border border-red-200 rounded-lg p-4">
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex-1">
+                                <h4 className="font-medium text-gray-900 mb-1">{programme.name}</h4>
+                                <p className="text-sm text-gray-600">Code: {programme.code}</p>
+                              </div>
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                No Teams
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between text-xs text-gray-600">
+                              <span className="capitalize">{programme.category} • {programme.subcategory}</span>
+                              <span className="capitalize">{programme.section} • {programme.positionType}</span>
+                            </div>
+                            <div className="mt-2 text-xs text-gray-500">
+                              Required: {programme.requiredParticipants} participant{programme.requiredParticipants !== 1 ? 's' : ''}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Programmes with Incomplete Registrations */}
+                {(() => {
+                  const incompleteRegistrations = programmeRegistrations.filter(p => 
+                    p.registrations.length > 0 && p.registrations.length < teams.length
+                  );
+                  return incompleteRegistrations.length > 0 && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+                      <div className="flex items-center mb-4">
+                        <div className="w-10 h-10 bg-yellow-500 rounded-lg flex items-center justify-center mr-3">
+                          <span className="text-white text-lg">⚡</span>
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-semibold text-yellow-900">Programmes with Incomplete Registrations</h3>
+                          <p className="text-yellow-700 text-sm">Some teams have not registered for these programmes</p>
+                        </div>
+                        <div className="ml-auto">
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
+                            {incompleteRegistrations.length} programme{incompleteRegistrations.length !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {incompleteRegistrations.map((programme) => {
+                          const registeredTeamCodes = programme.registrations.map(r => r.teamCode);
+                          const unregisteredTeams = teams.filter(team => !registeredTeamCodes.includes(team.code));
+                          
+                          return (
+                            <div key={programme._id?.toString()} className="bg-white border border-yellow-200 rounded-lg p-4">
+                              <div className="flex items-start justify-between mb-2">
+                                <div className="flex-1">
+                                  <h4 className="font-medium text-gray-900 mb-1">{programme.name}</h4>
+                                  <p className="text-sm text-gray-600">Code: {programme.code}</p>
+                                </div>
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                  {programme.registrations.length}/{teams.length} Teams
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between text-xs text-gray-600 mb-2">
+                                <span className="capitalize">{programme.category} • {programme.subcategory}</span>
+                                <span className="capitalize">{programme.section} • {programme.positionType}</span>
+                              </div>
+                              
+                              {/* Registered Teams */}
+                              <div className="mb-2">
+                                <p className="text-xs font-medium text-green-700 mb-1">Registered Teams:</p>
+                                <div className="flex flex-wrap gap-1">
+                                  {programme.registrations.map((registration) => {
+                                    const team = teams.find(t => t.code === registration.teamCode);
+                                    return (
+                                      <span
+                                        key={registration.teamCode}
+                                        className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800"
+                                        style={{ backgroundColor: team?.color + '20', color: team?.color }}
+                                      >
+                                        {registration.teamCode}
+                                      </span>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                              
+                              {/* Unregistered Teams */}
+                              <div>
+                                <p className="text-xs font-medium text-red-700 mb-1">Missing Teams:</p>
+                                <div className="flex flex-wrap gap-1">
+                                  {unregisteredTeams.map((team) => (
+                                    <span
+                                      key={team.code}
+                                      className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-800"
+                                    >
+                                      {team.code}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Programmes with Full Registrations */}
+                {(() => {
+                  const fullyRegisteredProgrammes = programmeRegistrations.filter(p => 
+                    p.registrations.length === teams.length && p.registrations.length > 0
+                  );
+                  return fullyRegisteredProgrammes.length > 0 && (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+                      <div className="flex items-center mb-4">
+                        <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center mr-3">
+                          <span className="text-white text-lg">✅</span>
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-semibold text-green-900">Programmes with Full Registrations</h3>
+                          <p className="text-green-700 text-sm">All teams have registered for these programmes</p>
+                        </div>
+                        <div className="ml-auto">
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                            {fullyRegisteredProgrammes.length} programme{fullyRegisteredProgrammes.length !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {fullyRegisteredProgrammes.map((programme) => (
+                          <div key={programme._id?.toString()} className="bg-white border border-green-200 rounded-lg p-4">
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex-1">
+                                <h4 className="font-medium text-gray-900 mb-1">{programme.name}</h4>
+                                <p className="text-sm text-gray-600">Code: {programme.code}</p>
+                              </div>
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                All Teams
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between text-xs text-gray-600 mb-2">
+                              <span className="capitalize">{programme.category} • {programme.subcategory}</span>
+                              <span className="capitalize">{programme.section} • {programme.positionType}</span>
+                            </div>
+                            
+                            {/* All Registered Teams */}
+                            <div>
+                              <p className="text-xs font-medium text-green-700 mb-1">All Teams Registered:</p>
+                              <div className="flex flex-wrap gap-1">
+                                {programme.registrations.map((registration) => {
+                                  const team = teams.find(t => t.code === registration.teamCode);
+                                  return (
+                                    <span
+                                      key={registration.teamCode}
+                                      className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800"
+                                      style={{ backgroundColor: team?.color + '20', color: team?.color }}
+                                    >
+                                      {registration.teamCode}
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Summary Message */}
+                {programmeRegistrations.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="text-gray-400 text-6xl mb-4">📋</div>
+                    <h3 className="text-lg font-semibold text-gray-700 mb-2">No Programmes Available</h3>
+                    <p className="text-gray-500">Create programmes in the Manage tab to see registration status</p>
+                  </div>
+                ) : (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex items-center">
+                      <span className="text-2xl mr-3">📊</span>
+                      <div>
+                        <h4 className="font-medium text-blue-900">Registration Summary</h4>
+                        <p className="text-blue-700 text-sm">
+                          {programmeRegistrations.filter(p => p.registrations.length === teams.length).length} programmes fully registered • {' '}
+                          {programmeRegistrations.filter(p => p.registrations.length > 0 && p.registrations.length < teams.length).length} programmes partially registered • {' '}
+                          {programmeRegistrations.filter(p => p.registrations.length === 0).length} programmes unregistered
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </ShowcaseSection>
 

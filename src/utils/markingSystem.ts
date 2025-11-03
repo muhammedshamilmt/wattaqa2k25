@@ -30,13 +30,27 @@ export const GRADE_POINTS: GradePoints = {
 };
 
 /**
- * Calculate position points based on programme section and position type
+ * Calculate position points based on programme section, position type, and category
  */
-export function getPositionPoints(section: string, positionType: string): PositionPoints {
+export function getPositionPoints(section: string, positionType: string, category?: string): PositionPoints {
   // Normalize inputs
   const normalizedSection = section.toLowerCase();
   const normalizedPositionType = positionType.toLowerCase();
+  const normalizedCategory = category?.toLowerCase();
 
+  // Sports programmes have different marking system
+  if (normalizedCategory === 'sports') {
+    // Sports marking system: Individual 3,2,1 | Groups (all sections) 5,3,1 | General 15,10,5
+    if (normalizedSection === 'general') {
+      return { first: 15, second: 10, third: 5 };
+    } else if (normalizedPositionType === 'individual') {
+      return { first: 3, second: 2, third: 1 };
+    } else if (normalizedPositionType === 'group') {
+      return { first: 5, second: 3, third: 1 };
+    }
+  }
+
+  // Arts programmes (original marking system)
   // General section programmes
   if (normalizedSection === 'general') {
     if (normalizedPositionType === 'individual') {
@@ -75,9 +89,10 @@ export function calculateTotalPoints(
   section: string,
   positionType: string,
   position: 'first' | 'second' | 'third',
-  grade?: string
+  grade?: string,
+  category?: string
 ): number {
-  const positionPoints = getPositionPoints(section, positionType);
+  const positionPoints = getPositionPoints(section, positionType, category);
   const gradePoints = grade ? getGradePoints(grade) : 0;
   
   let basePoints = 0;
@@ -99,9 +114,23 @@ export function calculateTotalPoints(
 /**
  * Get marking rules summary for display
  */
-export function getMarkingRulesSummary(): string {
+export function getMarkingRulesSummary(category?: string): string {
+  if (category?.toLowerCase() === 'sports') {
+    return `
+📊 SPORTS MARKING SYSTEM RULES:
+
+Position Points (No Grades for Sports):
+• Individual (all sections): 1st=3, 2nd=2, 3rd=1
+• Groups (all sections): 1st=5, 2nd=3, 3rd=1
+• General: 1st=15, 2nd=10, 3rd=5
+
+Note: Sports programmes do not use performance grades.
+Total Points = Position Points only
+    `.trim();
+  }
+
   return `
-📊 MARKING SYSTEM RULES:
+📊 ARTS MARKING SYSTEM RULES:
 
 Position Points:
 • Senior/Junior/Sub-Junior Individual: 1st=3, 2nd=2, 3rd=1
@@ -132,8 +161,8 @@ export function validateProgrammeMarking(programme: { section: string; positionT
 /**
  * Get all possible point combinations for a programme
  */
-export function getProgrammePointCombinations(section: string, positionType: string) {
-  const positionPoints = getPositionPoints(section, positionType);
+export function getProgrammePointCombinations(section: string, positionType: string, category?: string) {
+  const positionPoints = getPositionPoints(section, positionType, category);
   const grades = Object.keys(GRADE_POINTS);
   
   const combinations: Array<{
@@ -147,7 +176,7 @@ export function getProgrammePointCombinations(section: string, positionType: str
   ['first', 'second', 'third'].forEach(position => {
     const basePoints = positionPoints[position as keyof PositionPoints];
     
-    // Without grade
+    // Without grade (always include this)
     combinations.push({
       position,
       grade: 'None',
@@ -156,17 +185,19 @@ export function getProgrammePointCombinations(section: string, positionType: str
       totalPoints: basePoints
     });
     
-    // With each grade
-    grades.forEach(grade => {
-      const gradePoints = GRADE_POINTS[grade as keyof GradePoints];
-      combinations.push({
-        position,
-        grade,
-        positionPoints: basePoints,
-        gradePoints,
-        totalPoints: basePoints + gradePoints
+    // With each grade (only for arts programmes)
+    if (category?.toLowerCase() !== 'sports') {
+      grades.forEach(grade => {
+        const gradePoints = GRADE_POINTS[grade as keyof GradePoints];
+        combinations.push({
+          position,
+          grade,
+          positionPoints: basePoints,
+          gradePoints,
+          totalPoints: basePoints + gradePoints
+        });
       });
-    });
+    }
   });
   
   return combinations;

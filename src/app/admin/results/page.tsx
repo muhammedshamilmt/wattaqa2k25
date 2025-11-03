@@ -128,7 +128,7 @@ export default function ResultsPage() {
   // Dynamic points calculation using centralized marking system
   const getDynamicPoints = (programme: Programme | null) => {
     if (!programme) return { first: 3, second: 2, third: 1 };
-    return getPositionPoints(programme.section, programme.positionType);
+    return getPositionPoints(programme.section, programme.positionType, programme.category);
   };
 
 
@@ -999,9 +999,15 @@ export default function ResultsPage() {
                     📝 Applying marks for {selectedProgramme.name}
                   </h3>
                   <div className="flex justify-center space-x-6 text-sm text-gray-600">
+                    <span><strong>Category:</strong> {selectedProgramme.category.charAt(0).toUpperCase() + selectedProgramme.category.slice(1)}</span>
                     <span><strong>Section:</strong> {selectedSection.charAt(0).toUpperCase() + selectedSection.slice(1).replace('-', ' ')}</span>
                     <span><strong>Position Type:</strong> {selectedProgramme.positionType.charAt(0).toUpperCase() + selectedProgramme.positionType.slice(1)}</span>
                   </div>
+                  {selectedProgramme.category === 'sports' && (
+                    <div className="mt-2 inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                      🏃‍♂️ Sports Programme - No Performance Grades Required
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -1080,73 +1086,84 @@ export default function ResultsPage() {
                           </button>
                         </div>
 
-                        {/* Grade Selection for All Teams */}
-                        <div className="mt-2">
-                          <label className="block text-xs font-medium text-gray-700 mb-1">
-                            🎓 Performance Grade
-                          </label>
-                          <select
-                            value={
-                              isFirst ? getTeamGrade('firstPlaceTeams', teamEntry.teamCode) :
-                                isSecond ? getTeamGrade('secondPlaceTeams', teamEntry.teamCode) :
-                                  isThird ? getTeamGrade('thirdPlaceTeams', teamEntry.teamCode) :
-                                    getParticipationTeamGrade(teamEntry.teamCode)
-                            }
-                            onChange={(e) => {
-                              if (isFirst) {
-                                updateTeamGrade('firstPlaceTeams', teamEntry.teamCode, e.target.value);
-                              } else if (isSecond) {
-                                updateTeamGrade('secondPlaceTeams', teamEntry.teamCode, e.target.value);
-                              } else if (isThird) {
-                                updateTeamGrade('thirdPlaceTeams', teamEntry.teamCode, e.target.value);
-                              } else {
-                                updateParticipationTeamGrade(teamEntry.teamCode, e.target.value);
+                        {/* Grade Selection for All Teams (Arts only) */}
+                        {selectedProgramme?.category !== 'sports' && (
+                          <div className="mt-2">
+                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                              🎓 Performance Grade
+                            </label>
+                            <select
+                              value={
+                                isFirst ? getTeamGrade('firstPlaceTeams', teamEntry.teamCode) :
+                                  isSecond ? getTeamGrade('secondPlaceTeams', teamEntry.teamCode) :
+                                    isThird ? getTeamGrade('thirdPlaceTeams', teamEntry.teamCode) :
+                                      getParticipationTeamGrade(teamEntry.teamCode)
                               }
-                            }}
-                            className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                          >
-                            <option value="">Select Grade</option>
-                            <option value="A">A (5 pts)</option>
-                            <option value="B">B (3 pts)</option>
-                            <option value="C">C (1 pt)</option>
-                          </select>
-                          {/* Total Marks Display */}
-                          {(() => {
-                            let currentGrade = '';
-                            let positionPoints = 0;
+                              onChange={(e) => {
+                                if (isFirst) {
+                                  updateTeamGrade('firstPlaceTeams', teamEntry.teamCode, e.target.value);
+                                } else if (isSecond) {
+                                  updateTeamGrade('secondPlaceTeams', teamEntry.teamCode, e.target.value);
+                                } else if (isThird) {
+                                  updateTeamGrade('thirdPlaceTeams', teamEntry.teamCode, e.target.value);
+                                } else {
+                                  updateParticipationTeamGrade(teamEntry.teamCode, e.target.value);
+                                }
+                              }}
+                              className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                            >
+                              <option value="">Select Grade</option>
+                              <option value="A">A (5 pts)</option>
+                              <option value="B">B (3 pts)</option>
+                              <option value="C">C (1 pt)</option>
+                            </select>
+                          </div>
+                        )}
 
-                            if (isFirst) {
-                              currentGrade = getTeamGrade('firstPlaceTeams', teamEntry.teamCode);
-                              positionPoints = formData.firstPoints;
-                            } else if (isSecond) {
-                              currentGrade = getTeamGrade('secondPlaceTeams', teamEntry.teamCode);
-                              positionPoints = formData.secondPoints;
-                            } else if (isThird) {
-                              currentGrade = getTeamGrade('thirdPlaceTeams', teamEntry.teamCode);
-                              positionPoints = formData.thirdPoints;
-                            } else {
-                              currentGrade = getParticipationTeamGrade(teamEntry.teamCode);
-                              positionPoints = 0;
-                            }
+                        {/* Total Marks Display */}
+                        {(() => {
+                          let currentGrade = '';
+                          let positionPoints = 0;
 
-                            const gradePoints = getGradePoints(currentGrade);
-                            const totalMarks = positionPoints + gradePoints;
+                          if (isFirst) {
+                            currentGrade = selectedProgramme?.category === 'sports' ? '' : getTeamGrade('firstPlaceTeams', teamEntry.teamCode);
+                            positionPoints = formData.firstPoints;
+                          } else if (isSecond) {
+                            currentGrade = selectedProgramme?.category === 'sports' ? '' : getTeamGrade('secondPlaceTeams', teamEntry.teamCode);
+                            positionPoints = formData.secondPoints;
+                          } else if (isThird) {
+                            currentGrade = selectedProgramme?.category === 'sports' ? '' : getTeamGrade('thirdPlaceTeams', teamEntry.teamCode);
+                            positionPoints = formData.thirdPoints;
+                          } else {
+                            currentGrade = selectedProgramme?.category === 'sports' ? '' : getParticipationTeamGrade(teamEntry.teamCode);
+                            positionPoints = 0;
+                          }
 
-                            if (currentGrade) {
-                              return (
-                                <div className="mt-1 text-xs">
-                                  <span className="font-medium text-purple-600">
-                                    Total: {totalMarks} marks
-                                  </span>
+                          const gradePoints = getGradePoints(currentGrade);
+                          const totalMarks = positionPoints + gradePoints;
+
+                          // Show total marks if there's a position or grade
+                          if (positionPoints > 0 || currentGrade) {
+                            return (
+                              <div className="mt-1 text-xs">
+                                <span className="font-medium text-purple-600">
+                                  Total: {totalMarks} marks
+                                </span>
+                                {selectedProgramme?.category !== 'sports' && currentGrade && (
                                   <span className="text-gray-500 ml-2">
                                     ({positionPoints} pos + {gradePoints} grade)
                                   </span>
-                                </div>
-                              );
-                            }
-                            return null;
-                          })()}
-                        </div>
+                                )}
+                                {selectedProgramme?.category === 'sports' && positionPoints > 0 && (
+                                  <span className="text-gray-500 ml-2">
+                                    (position points only)
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
 
                       </div>
                     );
@@ -1226,73 +1243,84 @@ export default function ResultsPage() {
                           </button>
                         </div>
 
-                        {/* Grade Selection for All Participants */}
-                        <div className="mt-2">
-                          <label className="block text-xs font-medium text-gray-700 mb-1">
-                            🎓 Performance Grade
-                          </label>
-                          <select
-                            value={
-                              isFirst ? getParticipantGrade('firstPlace', participant.chestNumber) :
-                                isSecond ? getParticipantGrade('secondPlace', participant.chestNumber) :
-                                  isThird ? getParticipantGrade('thirdPlace', participant.chestNumber) :
-                                    getParticipationGrade(participant.chestNumber)
-                            }
-                            onChange={(e) => {
-                              if (isFirst) {
-                                updateParticipantGrade('firstPlace', participant.chestNumber, e.target.value);
-                              } else if (isSecond) {
-                                updateParticipantGrade('secondPlace', participant.chestNumber, e.target.value);
-                              } else if (isThird) {
-                                updateParticipantGrade('thirdPlace', participant.chestNumber, e.target.value);
-                              } else {
-                                updateParticipationGrade(participant.chestNumber, e.target.value);
+                        {/* Grade Selection for All Participants (Arts only) */}
+                        {selectedProgramme?.category !== 'sports' && (
+                          <div className="mt-2">
+                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                              🎓 Performance Grade
+                            </label>
+                            <select
+                              value={
+                                isFirst ? getParticipantGrade('firstPlace', participant.chestNumber) :
+                                  isSecond ? getParticipantGrade('secondPlace', participant.chestNumber) :
+                                    isThird ? getParticipantGrade('thirdPlace', participant.chestNumber) :
+                                      getParticipationGrade(participant.chestNumber)
                               }
-                            }}
-                            className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                          >
-                            <option value="">Select Grade</option>
-                            <option value="A">A (5 pts)</option>
-                            <option value="B">B (3 pts)</option>
-                            <option value="C">C (1 pt)</option>
-                          </select>
-                          {/* Total Marks Display */}
-                          {(() => {
-                            let currentGrade = '';
-                            let positionPoints = 0;
+                              onChange={(e) => {
+                                if (isFirst) {
+                                  updateParticipantGrade('firstPlace', participant.chestNumber, e.target.value);
+                                } else if (isSecond) {
+                                  updateParticipantGrade('secondPlace', participant.chestNumber, e.target.value);
+                                } else if (isThird) {
+                                  updateParticipantGrade('thirdPlace', participant.chestNumber, e.target.value);
+                                } else {
+                                  updateParticipationGrade(participant.chestNumber, e.target.value);
+                                }
+                              }}
+                              className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                            >
+                              <option value="">Select Grade</option>
+                              <option value="A">A (5 pts)</option>
+                              <option value="B">B (3 pts)</option>
+                              <option value="C">C (1 pt)</option>
+                            </select>
+                          </div>
+                        )}
 
-                            if (isFirst) {
-                              currentGrade = getParticipantGrade('firstPlace', participant.chestNumber);
-                              positionPoints = formData.firstPoints;
-                            } else if (isSecond) {
-                              currentGrade = getParticipantGrade('secondPlace', participant.chestNumber);
-                              positionPoints = formData.secondPoints;
-                            } else if (isThird) {
-                              currentGrade = getParticipantGrade('thirdPlace', participant.chestNumber);
-                              positionPoints = formData.thirdPoints;
-                            } else {
-                              currentGrade = getParticipationGrade(participant.chestNumber);
-                              positionPoints = 0;
-                            }
+                        {/* Total Marks Display */}
+                        {(() => {
+                          let currentGrade = '';
+                          let positionPoints = 0;
 
-                            const gradePoints = getGradePoints(currentGrade);
-                            const totalMarks = positionPoints + gradePoints;
+                          if (isFirst) {
+                            currentGrade = selectedProgramme?.category === 'sports' ? '' : getParticipantGrade('firstPlace', participant.chestNumber);
+                            positionPoints = formData.firstPoints;
+                          } else if (isSecond) {
+                            currentGrade = selectedProgramme?.category === 'sports' ? '' : getParticipantGrade('secondPlace', participant.chestNumber);
+                            positionPoints = formData.secondPoints;
+                          } else if (isThird) {
+                            currentGrade = selectedProgramme?.category === 'sports' ? '' : getParticipantGrade('thirdPlace', participant.chestNumber);
+                            positionPoints = formData.thirdPoints;
+                          } else {
+                            currentGrade = selectedProgramme?.category === 'sports' ? '' : getParticipationGrade(participant.chestNumber);
+                            positionPoints = 0;
+                          }
 
-                            if (currentGrade) {
-                              return (
-                                <div className="mt-1 text-xs">
-                                  <span className="font-medium text-purple-600">
-                                    Total: {totalMarks} marks
-                                  </span>
+                          const gradePoints = getGradePoints(currentGrade);
+                          const totalMarks = positionPoints + gradePoints;
+
+                          // Show total marks if there's a position or grade
+                          if (positionPoints > 0 || currentGrade) {
+                            return (
+                              <div className="mt-1 text-xs">
+                                <span className="font-medium text-purple-600">
+                                  Total: {totalMarks} marks
+                                </span>
+                                {selectedProgramme?.category !== 'sports' && currentGrade && (
                                   <span className="text-gray-500 ml-2">
                                     ({positionPoints} pos + {gradePoints} grade)
                                   </span>
-                                </div>
-                              );
-                            }
-                            return null;
-                          })()}
-                        </div>
+                                )}
+                                {selectedProgramme?.category === 'sports' && positionPoints > 0 && (
+                                  <span className="text-gray-500 ml-2">
+                                    (position points only)
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
 
                       </div>
                     );
@@ -1343,15 +1371,20 @@ export default function ResultsPage() {
                         {[...formData.firstPlace, ...formData.firstPlaceTeams].map((winner, index) => {
                           const isTeam = 'teamCode' in winner;
                           const identifier = isTeam ? winner.teamCode : winner.chestNumber;
-                          const grade = winner.grade || '';
+                          const grade = selectedProgramme?.category === 'sports' ? '' : (winner.grade || '');
                           const totalMarks = formData.firstPoints + getGradePoints(grade);
 
                           return (
                             <div key={index} className="text-xs mb-2 p-2 bg-yellow-50 rounded">
                               <div className="font-bold">{identifier}</div>
-                              {grade && (
+                              {grade && selectedProgramme?.category !== 'sports' && (
                                 <div className="text-purple-600">
                                   Grade: {grade} (+{getGradePoints(grade)} pts) = <span className="font-bold">{totalMarks} total</span>
+                                </div>
+                              )}
+                              {selectedProgramme?.category === 'sports' && (
+                                <div className="text-blue-600">
+                                  <span className="font-bold">{formData.firstPoints} points</span> (position only)
                                 </div>
                               )}
                             </div>
@@ -1370,15 +1403,20 @@ export default function ResultsPage() {
                         {[...formData.secondPlace, ...formData.secondPlaceTeams].map((winner, index) => {
                           const isTeam = 'teamCode' in winner;
                           const identifier = isTeam ? winner.teamCode : winner.chestNumber;
-                          const grade = winner.grade || '';
+                          const grade = selectedProgramme?.category === 'sports' ? '' : (winner.grade || '');
                           const totalMarks = formData.secondPoints + getGradePoints(grade);
 
                           return (
                             <div key={index} className="text-xs mb-2 p-2 bg-gray-50 rounded">
                               <div className="font-bold">{identifier}</div>
-                              {grade && (
+                              {grade && selectedProgramme?.category !== 'sports' && (
                                 <div className="text-purple-600">
                                   Grade: {grade} (+{getGradePoints(grade)} pts) = <span className="font-bold">{totalMarks} total</span>
+                                </div>
+                              )}
+                              {selectedProgramme?.category === 'sports' && (
+                                <div className="text-blue-600">
+                                  <span className="font-bold">{formData.secondPoints} points</span> (position only)
                                 </div>
                               )}
                             </div>
@@ -1397,15 +1435,20 @@ export default function ResultsPage() {
                         {[...formData.thirdPlace, ...formData.thirdPlaceTeams].map((winner, index) => {
                           const isTeam = 'teamCode' in winner;
                           const identifier = isTeam ? winner.teamCode : winner.chestNumber;
-                          const grade = winner.grade || '';
+                          const grade = selectedProgramme?.category === 'sports' ? '' : (winner.grade || '');
                           const totalMarks = formData.thirdPoints + getGradePoints(grade);
 
                           return (
                             <div key={index} className="text-xs mb-2 p-2 bg-orange-50 rounded">
                               <div className="font-bold">{identifier}</div>
-                              {grade && (
+                              {grade && selectedProgramme?.category !== 'sports' && (
                                 <div className="text-purple-600">
                                   Grade: {grade} (+{getGradePoints(grade)} pts) = <span className="font-bold">{totalMarks} total</span>
+                                </div>
+                              )}
+                              {selectedProgramme?.category === 'sports' && (
+                                <div className="text-blue-600">
+                                  <span className="font-bold">{formData.thirdPoints} points</span> (position only)
                                 </div>
                               )}
                             </div>

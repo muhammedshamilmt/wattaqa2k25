@@ -25,6 +25,7 @@ export default function CheckListPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterSection, setFilterSection] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<'arts-total' | 'arts-stage' | 'arts-non-stage' | 'sports'>('arts-total');
   
   const [checkedSearchTerm, setCheckedSearchTerm] = useState('');
   const [checkedFilterSection, setCheckedFilterSection] = useState('');
@@ -80,7 +81,8 @@ export default function CheckListPage() {
             programmeName: programme?.name,
             programmeCode: programme?.code,
             programmeCategory: programme?.category,
-            programmeSection: programme?.section
+            programmeSection: programme?.section,
+            programmeSubcategory: programme?.subcategory
           };
         });
       };
@@ -167,7 +169,19 @@ export default function CheckListPage() {
       const matchesSection = filterSection === '' || result.section === filterSection;
       const matchesCategory = filterCategory === '' || result.programmeCategory === filterCategory;
       
-      return matchesSearch && matchesSection && matchesCategory;
+      // Category filter logic
+      let matchesCategoryFilter = true;
+      if (categoryFilter === 'arts-total') {
+        matchesCategoryFilter = result.programmeCategory === 'arts';
+      } else if (categoryFilter === 'arts-stage') {
+        matchesCategoryFilter = result.programmeCategory === 'arts' && result.programmeSubcategory === 'stage';
+      } else if (categoryFilter === 'arts-non-stage') {
+        matchesCategoryFilter = result.programmeCategory === 'arts' && result.programmeSubcategory === 'non-stage';
+      } else if (categoryFilter === 'sports') {
+        matchesCategoryFilter = result.programmeCategory === 'sports';
+      }
+      
+      return matchesSearch && matchesSection && matchesCategory && matchesCategoryFilter;
     });
   };
 
@@ -182,7 +196,37 @@ export default function CheckListPage() {
       const matchesSection = checkedFilterSection === '' || result.section === checkedFilterSection;
       const matchesCategory = checkedFilterCategory === '' || result.programmeCategory === checkedFilterCategory;
       
-      return matchesSearch && matchesSection && matchesCategory;
+      // Category filter logic for checked results
+      let matchesCategoryFilter = true;
+      if (categoryFilter === 'arts-total') {
+        matchesCategoryFilter = result.programmeCategory === 'arts';
+      } else if (categoryFilter === 'arts-stage') {
+        matchesCategoryFilter = result.programmeCategory === 'arts' && result.programmeSubcategory === 'stage';
+      } else if (categoryFilter === 'arts-non-stage') {
+        matchesCategoryFilter = result.programmeCategory === 'arts' && result.programmeSubcategory === 'non-stage';
+      } else if (categoryFilter === 'sports') {
+        matchesCategoryFilter = result.programmeCategory === 'sports';
+      }
+      
+      return matchesSearch && matchesSection && matchesCategory && matchesCategoryFilter;
+    });
+  };
+
+  const getFilteredPublishedResults = (results: EnhancedResult[]) => {
+    return results.filter(result => {
+      // Category filter logic for published results
+      let matchesCategoryFilter = true;
+      if (categoryFilter === 'arts-total') {
+        matchesCategoryFilter = result.programmeCategory === 'arts';
+      } else if (categoryFilter === 'arts-stage') {
+        matchesCategoryFilter = result.programmeCategory === 'arts' && result.programmeSubcategory === 'stage';
+      } else if (categoryFilter === 'arts-non-stage') {
+        matchesCategoryFilter = result.programmeCategory === 'arts' && result.programmeSubcategory === 'non-stage';
+      } else if (categoryFilter === 'sports') {
+        matchesCategoryFilter = result.programmeCategory === 'sports';
+      }
+      
+      return matchesCategoryFilter;
     });
   };
 
@@ -431,6 +475,22 @@ export default function CheckListPage() {
     return '';
   };
 
+  // Helper function to get participant name from chest number
+  const getParticipantName = (chestNumber: string) => {
+    if (!chestNumber) return 'Unknown Participant';
+    
+    const candidate = candidates.find(c => c.chestNumber === chestNumber);
+    return candidate ? candidate.name : 'Unknown Participant';
+  };
+
+  // Helper function to get team name from team code
+  const getTeamName = (teamCode: string) => {
+    if (!teamCode) return 'Unknown Team';
+    
+    const team = teams.find(t => t.code?.toUpperCase() === teamCode.toUpperCase());
+    return team ? team.name : teamCode;
+  };
+
   return (
     <div className="container mx-auto px-4 py-8 relative">
       <div className="mb-8">
@@ -441,6 +501,50 @@ export default function CheckListPage() {
         <p className="text-gray-600">
           Review and verify competition results before publication
         </p>
+        
+        {/* Category Filter Buttons */}
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button
+            onClick={() => setCategoryFilter('arts-total')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              categoryFilter === 'arts-total'
+                ? 'bg-purple-600 text-white'
+                : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+            }`}
+          >
+            🎨 Arts Total
+          </button>
+          <button
+            onClick={() => setCategoryFilter('arts-stage')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              categoryFilter === 'arts-stage'
+                ? 'bg-pink-600 text-white'
+                : 'bg-pink-100 text-pink-700 hover:bg-pink-200'
+            }`}
+          >
+            🎭 Arts Stage
+          </button>
+          <button
+            onClick={() => setCategoryFilter('arts-non-stage')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              categoryFilter === 'arts-non-stage'
+                ? 'bg-indigo-600 text-white'
+                : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'
+            }`}
+          >
+            📝 Arts Non-Stage
+          </button>
+          <button
+            onClick={() => setCategoryFilter('sports')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              categoryFilter === 'sports'
+                ? 'bg-blue-600 text-white'
+                : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+            }`}
+          >
+            🏃 Sports
+          </button>
+        </div>
       </div>
 
       {/* Tab Navigation */}
@@ -532,21 +636,33 @@ export default function CheckListPage() {
               <div className="flex space-x-3">
                 <button
                   onClick={() => {
-                    const resultIds = checkedResults.map(r => r._id!.toString());
+                    const filteredResults = getFilteredCheckedResults(checkedResults);
+                    const resultIds = filteredResults.map(r => r._id!.toString());
                     handleBulkStatusUpdate(resultIds, ResultStatus.PUBLISHED);
                   }}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
-                  🚀 Publish All
+                  🚀 Publish All {
+                    categoryFilter === 'arts-total' ? '(Arts Total)' :
+                    categoryFilter === 'arts-stage' ? '(Arts Stage)' :
+                    categoryFilter === 'arts-non-stage' ? '(Arts Non-Stage)' :
+                    categoryFilter === 'sports' ? '(Sports)' : ''
+                  }
                 </button>
                 <button
                   onClick={() => {
-                    const resultIds = checkedResults.map(r => r._id!.toString());
+                    const filteredResults = getFilteredCheckedResults(checkedResults);
+                    const resultIds = filteredResults.map(r => r._id!.toString());
                     handleBulkStatusUpdate(resultIds, ResultStatus.PENDING);
                   }}
                   className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
                 >
-                  ↩️ Move to Pending
+                  ↩️ Move to Pending {
+                    categoryFilter === 'arts-total' ? '(Arts Total)' :
+                    categoryFilter === 'arts-stage' ? '(Arts Stage)' :
+                    categoryFilter === 'arts-non-stage' ? '(Arts Non-Stage)' :
+                    categoryFilter === 'sports' ? '(Sports)' : ''
+                  }
                 </button>
               </div>
             )}
@@ -568,7 +684,7 @@ export default function CheckListPage() {
                   onReview={() => handleReviewResult(result)}
                   onStatusUpdate={handleStatusUpdate}
                   showActions={true}
-                  actionMode="checkOnly"
+                  actionMode="full"
                   teams={teams}
                   candidates={candidates}
                 />
@@ -604,7 +720,7 @@ export default function CheckListPage() {
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                 <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
                   <h3 className="font-semibold text-orange-900 mb-2">📊 Checked Results</h3>
-                  <div className="text-2xl font-bold text-orange-700">{checkedResults.length}</div>
+                  <div className="text-2xl font-bold text-orange-700">{getFilteredCheckedResults(checkedResults).length}</div>
                   <p className="text-sm text-orange-600">Total programmes</p>
                 </div>
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4">
@@ -617,7 +733,7 @@ export default function CheckListPage() {
                   <div className="text-2xl font-bold text-purple-700">
                     {(() => {
                       let totalPoints = 0;
-                      checkedResults.forEach(result => {
+                      getFilteredCheckedResults(checkedResults).forEach(result => {
                         // Calculate individual winners with grade points
                         if (result.firstPlace) {
                           result.firstPlace.forEach(winner => {
@@ -668,7 +784,7 @@ export default function CheckListPage() {
                   <div className="text-2xl font-bold text-blue-700">
                     {(() => {
                       const uniqueParticipants = new Set();
-                      checkedResults.forEach(result => {
+                      getFilteredCheckedResults(checkedResults).forEach(result => {
                         result.firstPlace?.forEach(winner => uniqueParticipants.add(winner.chestNumber));
                         result.secondPlace?.forEach(winner => uniqueParticipants.add(winner.chestNumber));
                         result.thirdPlace?.forEach(winner => uniqueParticipants.add(winner.chestNumber));
@@ -681,7 +797,12 @@ export default function CheckListPage() {
               </div>
 
               {/* Enhanced Marks Summary Dashboard for Checked Results */}
-              <MarksSummary results={checkedResults} showDailyProgress={true} />
+              <MarksSummary 
+                results={getFilteredCheckedResults(checkedResults)} 
+                showDailyProgress={true}
+                categoryFilter={categoryFilter}
+                allResults={checkedResults}
+              />
             </div>
           )}
         </div>
@@ -713,7 +834,7 @@ export default function CheckListPage() {
               </div>
               
               <div className="space-y-3 max-h-96 overflow-y-auto">
-                {checkedResults.map((result) => (
+                {getFilteredCheckedResults(checkedResults).map((result) => (
                   <div
                     key={result._id?.toString()}
                     className="p-3 bg-gray-50 rounded-lg border border-gray-200 cursor-move hover:bg-gray-100 transition-colors"
@@ -724,19 +845,117 @@ export default function CheckListPage() {
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
-                        <h4 className="font-medium text-gray-900 text-sm">
+                        <h4 className="font-medium text-gray-900 text-sm mb-1">
                           {getProgrammeName(result)}
                         </h4>
-                        <div className="flex items-center space-x-2 text-xs text-gray-600 mt-1">
+                        <div className="flex items-center space-x-2 text-xs text-gray-600 mb-2">
                           <span className="capitalize">{result.section.replace('-', ' ')}</span>
                           <span>•</span>
                           <span className="capitalize">{result.positionType}</span>
+                          <span>•</span>
+                          <span className="capitalize font-medium">{result.programmeCategory}</span>
+                          {result.programmeSubcategory && (
+                            <>
+                              <span>•</span>
+                              <span className="capitalize">{result.programmeSubcategory}</span>
+                            </>
+                          )}
+                        </div>
+                        
+                        {/* Results Summary with Names */}
+                        <div className="text-xs text-gray-700 space-y-1">
+                          {(() => {
+                            const winnerDetails = [];
+                            
+                            // Individual winners
+                            if (result.firstPlace && result.firstPlace.length > 0) {
+                              const winners = result.firstPlace.map(w => `${w.chestNumber} (${getParticipantName(w.chestNumber)})`).join(', ');
+                              winnerDetails.push(`🥇 1st: ${winners}`);
+                            }
+                            if (result.secondPlace && result.secondPlace.length > 0) {
+                              const winners = result.secondPlace.map(w => `${w.chestNumber} (${getParticipantName(w.chestNumber)})`).join(', ');
+                              winnerDetails.push(`🥈 2nd: ${winners}`);
+                            }
+                            if (result.thirdPlace && result.thirdPlace.length > 0) {
+                              const winners = result.thirdPlace.map(w => `${w.chestNumber} (${getParticipantName(w.chestNumber)})`).join(', ');
+                              winnerDetails.push(`🥉 3rd: ${winners}`);
+                            }
+                            
+                            // Team winners
+                            if (result.firstPlaceTeams && result.firstPlaceTeams.length > 0) {
+                              const winners = result.firstPlaceTeams.map(w => `${w.teamCode} (${getTeamName(w.teamCode)})`).join(', ');
+                              winnerDetails.push(`🥇 Teams: ${winners}`);
+                            }
+                            if (result.secondPlaceTeams && result.secondPlaceTeams.length > 0) {
+                              const winners = result.secondPlaceTeams.map(w => `${w.teamCode} (${getTeamName(w.teamCode)})`).join(', ');
+                              winnerDetails.push(`🥈 Teams: ${winners}`);
+                            }
+                            if (result.thirdPlaceTeams && result.thirdPlaceTeams.length > 0) {
+                              const winners = result.thirdPlaceTeams.map(w => `${w.teamCode} (${getTeamName(w.teamCode)})`).join(', ');
+                              winnerDetails.push(`🥉 Teams: ${winners}`);
+                            }
+                            
+                            return winnerDetails.length > 0 ? (
+                              <div className="space-y-1">
+                                {winnerDetails.map((detail, index) => (
+                                  <div key={index} className="text-xs text-gray-700">
+                                    {detail}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="text-xs text-gray-500">No winners recorded</div>
+                            );
+                          })()}
                         </div>
                       </div>
-                      <div className="flex items-center space-x-2">
+                      <div className="flex flex-col items-end space-y-1">
                         <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
                           Drag →
                         </span>
+                        <div className="text-xs text-gray-500">
+                          {(() => {
+                            let totalPoints = 0;
+                            // Calculate total points for this result
+                            if (result.firstPlace) {
+                              result.firstPlace.forEach(winner => {
+                                const gradePoints = getGradePoints(winner.grade || '');
+                                totalPoints += result.firstPoints + gradePoints;
+                              });
+                            }
+                            if (result.secondPlace) {
+                              result.secondPlace.forEach(winner => {
+                                const gradePoints = getGradePoints(winner.grade || '');
+                                totalPoints += result.secondPoints + gradePoints;
+                              });
+                            }
+                            if (result.thirdPlace) {
+                              result.thirdPlace.forEach(winner => {
+                                const gradePoints = getGradePoints(winner.grade || '');
+                                totalPoints += result.thirdPoints + gradePoints;
+                              });
+                            }
+                            if (result.firstPlaceTeams) {
+                              result.firstPlaceTeams.forEach(winner => {
+                                const gradePoints = getGradePoints(winner.grade || '');
+                                totalPoints += result.firstPoints + gradePoints;
+                              });
+                            }
+                            if (result.secondPlaceTeams) {
+                              result.secondPlaceTeams.forEach(winner => {
+                                const gradePoints = getGradePoints(winner.grade || '');
+                                totalPoints += result.secondPoints + gradePoints;
+                              });
+                            }
+                            if (result.thirdPlaceTeams) {
+                              result.thirdPlaceTeams.forEach(winner => {
+                                const gradePoints = getGradePoints(winner.grade || '');
+                                totalPoints += result.thirdPoints + gradePoints;
+                              });
+                            }
+                            return `${Math.round(totalPoints)} pts`;
+                          })()}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -753,12 +972,13 @@ export default function CheckListPage() {
                 </h3>
                 <button 
                   onClick={() => {
-                    setCalculationResults(checkedResults);
-                    updateGrandMarksPreview(checkedResults);
+                    const filteredResults = getFilteredCheckedResults(checkedResults);
+                    setCalculationResults(filteredResults);
+                    updateGrandMarksPreview(filteredResults);
                   }}
                   className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition-colors"
                 >
-                  📊 Calculate All
+                  📊 Calculate All {categoryFilter === 'arts-total' ? '(Arts Total)' : categoryFilter === 'arts-stage' ? '(Arts Stage)' : categoryFilter === 'arts-non-stage' ? '(Arts Non-Stage)' : categoryFilter === 'sports' ? '(Sports)' : ''}
                 </button>
               </div>
 
@@ -823,23 +1043,123 @@ export default function CheckListPage() {
                         key={result._id?.toString()}
                         className="p-3 bg-green-50 border border-green-200 rounded-lg"
                       >
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between mb-2">
                           <div className="flex-1">
-                            <h5 className="font-medium text-gray-900 text-sm">
+                            <h5 className="font-medium text-gray-900 text-sm mb-1">
                               {getProgrammeName(result)}
                             </h5>
-                            <div className="flex items-center space-x-2 text-xs text-gray-600 mt-1">
+                            <div className="flex items-center space-x-2 text-xs text-gray-600 mb-1">
                               <span className="capitalize">{result.section.replace('-', ' ')}</span>
                               <span>•</span>
                               <span className="capitalize">{result.positionType}</span>
+                              <span>•</span>
+                              <span className="capitalize font-medium">{result.programmeCategory}</span>
+                              {result.programmeSubcategory && (
+                                <>
+                                  <span>•</span>
+                                  <span className="capitalize">{result.programmeSubcategory}</span>
+                                </>
+                              )}
+                            </div>
+                            
+                            {/* Results Summary with Names */}
+                            <div className="text-xs text-gray-700 space-y-1">
+                              {(() => {
+                                const winnerDetails = [];
+                                
+                                // Individual winners
+                                if (result.firstPlace && result.firstPlace.length > 0) {
+                                  const winners = result.firstPlace.map(w => `${w.chestNumber} (${getParticipantName(w.chestNumber)})`).join(', ');
+                                  winnerDetails.push(`🥇 1st: ${winners}`);
+                                }
+                                if (result.secondPlace && result.secondPlace.length > 0) {
+                                  const winners = result.secondPlace.map(w => `${w.chestNumber} (${getParticipantName(w.chestNumber)})`).join(', ');
+                                  winnerDetails.push(`🥈 2nd: ${winners}`);
+                                }
+                                if (result.thirdPlace && result.thirdPlace.length > 0) {
+                                  const winners = result.thirdPlace.map(w => `${w.chestNumber} (${getParticipantName(w.chestNumber)})`).join(', ');
+                                  winnerDetails.push(`🥉 3rd: ${winners}`);
+                                }
+                                
+                                // Team winners
+                                if (result.firstPlaceTeams && result.firstPlaceTeams.length > 0) {
+                                  const winners = result.firstPlaceTeams.map(w => `${w.teamCode} (${getTeamName(w.teamCode)})`).join(', ');
+                                  winnerDetails.push(`🥇 Teams: ${winners}`);
+                                }
+                                if (result.secondPlaceTeams && result.secondPlaceTeams.length > 0) {
+                                  const winners = result.secondPlaceTeams.map(w => `${w.teamCode} (${getTeamName(w.teamCode)})`).join(', ');
+                                  winnerDetails.push(`🥈 Teams: ${winners}`);
+                                }
+                                if (result.thirdPlaceTeams && result.thirdPlaceTeams.length > 0) {
+                                  const winners = result.thirdPlaceTeams.map(w => `${w.teamCode} (${getTeamName(w.teamCode)})`).join(', ');
+                                  winnerDetails.push(`🥉 Teams: ${winners}`);
+                                }
+                                
+                                return winnerDetails.length > 0 ? (
+                                  <div className="space-y-1">
+                                    {winnerDetails.map((detail, index) => (
+                                      <div key={index} className="text-xs text-gray-700">
+                                        {detail}
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <div className="text-xs text-gray-500">No winners recorded</div>
+                                );
+                              })()}
                             </div>
                           </div>
-                          <button
-                            onClick={() => handleRemoveFromCalculation(result._id!.toString())}
-                            className="text-red-600 hover:text-red-700 text-sm"
-                          >
-                            Remove
-                          </button>
+                          <div className="flex flex-col items-end space-y-2">
+                            <div className="text-xs text-green-700 font-medium">
+                              {(() => {
+                                let totalPoints = 0;
+                                // Calculate total points for this result
+                                if (result.firstPlace) {
+                                  result.firstPlace.forEach(winner => {
+                                    const gradePoints = getGradePoints(winner.grade || '');
+                                    totalPoints += result.firstPoints + gradePoints;
+                                  });
+                                }
+                                if (result.secondPlace) {
+                                  result.secondPlace.forEach(winner => {
+                                    const gradePoints = getGradePoints(winner.grade || '');
+                                    totalPoints += result.secondPoints + gradePoints;
+                                  });
+                                }
+                                if (result.thirdPlace) {
+                                  result.thirdPlace.forEach(winner => {
+                                    const gradePoints = getGradePoints(winner.grade || '');
+                                    totalPoints += result.thirdPoints + gradePoints;
+                                  });
+                                }
+                                if (result.firstPlaceTeams) {
+                                  result.firstPlaceTeams.forEach(winner => {
+                                    const gradePoints = getGradePoints(winner.grade || '');
+                                    totalPoints += result.firstPoints + gradePoints;
+                                  });
+                                }
+                                if (result.secondPlaceTeams) {
+                                  result.secondPlaceTeams.forEach(winner => {
+                                    const gradePoints = getGradePoints(winner.grade || '');
+                                    totalPoints += result.secondPoints + gradePoints;
+                                  });
+                                }
+                                if (result.thirdPlaceTeams) {
+                                  result.thirdPlaceTeams.forEach(winner => {
+                                    const gradePoints = getGradePoints(winner.grade || '');
+                                    totalPoints += result.thirdPoints + gradePoints;
+                                  });
+                                }
+                                return `${Math.round(totalPoints)} pts`;
+                              })()}
+                            </div>
+                            <button
+                              onClick={() => handleRemoveFromCalculation(result._id!.toString())}
+                              className="text-red-600 hover:text-red-700 text-xs px-2 py-1 bg-red-100 rounded"
+                            >
+                              Remove
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -979,7 +1299,7 @@ export default function CheckListPage() {
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <h3 className="font-semibold text-blue-900 mb-2">📊 Published Results</h3>
-                  <div className="text-2xl font-bold text-blue-700">{publishedResults.length}</div>
+                  <div className="text-2xl font-bold text-blue-700">{getFilteredPublishedResults(publishedResults).length}</div>
                   <p className="text-sm text-blue-600">Total programmes</p>
                 </div>
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4">
@@ -992,7 +1312,7 @@ export default function CheckListPage() {
                   <div className="text-2xl font-bold text-purple-700">
                     {(() => {
                       let totalPoints = 0;
-                      publishedResults.forEach(result => {
+                      getFilteredPublishedResults(publishedResults).forEach(result => {
                         // Calculate individual winners with grade points
                         if (result.firstPlace) {
                           result.firstPlace.forEach(winner => {
@@ -1043,7 +1363,7 @@ export default function CheckListPage() {
                   <div className="text-2xl font-bold text-orange-700">
                     {(() => {
                       const uniqueWinners = new Set();
-                      publishedResults.forEach(result => {
+                      getFilteredPublishedResults(publishedResults).forEach(result => {
                         result.firstPlace?.forEach(winner => uniqueWinners.add(winner.chestNumber));
                         result.secondPlace?.forEach(winner => uniqueWinners.add(winner.chestNumber));
                         result.thirdPlace?.forEach(winner => uniqueWinners.add(winner.chestNumber));
@@ -1055,8 +1375,111 @@ export default function CheckListPage() {
                 </div>
               </div>
 
+              {/* Recently Published Results List */}
+              <div className="bg-white rounded-lg border border-gray-200 p-6 mb-8">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                    <span className="mr-2">📋</span>
+                    Recently Published Results
+                  </h3>
+                  <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
+                    {getFilteredPublishedResults(publishedResults).length} Results
+                  </span>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
+                  {getFilteredPublishedResults(publishedResults).map((result) => (
+                    <div
+                      key={result._id?.toString()}
+                      className="p-4 bg-blue-50 rounded-lg border border-blue-200 hover:bg-blue-100 transition-colors"
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex-1">
+                          <h4 className="font-medium text-gray-900 text-sm mb-1">
+                            {getProgrammeName(result)}
+                          </h4>
+                          <div className="flex items-center space-x-2 text-xs text-gray-600">
+                            <span className="capitalize">{result.section.replace('-', ' ')}</span>
+                            <span>•</span>
+                            <span className="capitalize">{result.positionType}</span>
+                            <span>•</span>
+                            <span className="capitalize">{result.programmeCategory}</span>
+                            {result.programmeSubcategory && (
+                              <>
+                                <span>•</span>
+                                <span className="capitalize">{result.programmeSubcategory}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end space-y-1">
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                            🚀 Published
+                          </span>
+                          <div className="text-xs text-gray-500">
+                            {new Date(result.updatedAt || result.createdAt || '').toLocaleDateString()}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Winners Summary */}
+                      <div className="mb-3">
+                        <div className="text-xs text-gray-600 mb-1">Winners:</div>
+                        <div className="space-y-1">
+                          {result.firstPlace && result.firstPlace.length > 0 && (
+                            <div className="text-xs">
+                              <span className="font-medium text-yellow-700">🥇 1st:</span> {result.firstPlace.map(w => w.chestNumber).join(', ')}
+                            </div>
+                          )}
+                          {result.secondPlace && result.secondPlace.length > 0 && (
+                            <div className="text-xs">
+                              <span className="font-medium text-gray-700">🥈 2nd:</span> {result.secondPlace.map(w => w.chestNumber).join(', ')}
+                            </div>
+                          )}
+                          {result.thirdPlace && result.thirdPlace.length > 0 && (
+                            <div className="text-xs">
+                              <span className="font-medium text-orange-700">🥉 3rd:</span> {result.thirdPlace.map(w => w.chestNumber).join(', ')}
+                            </div>
+                          )}
+                          {result.firstPlaceTeams && result.firstPlaceTeams.length > 0 && (
+                            <div className="text-xs">
+                              <span className="font-medium text-yellow-700">🥇 Teams:</span> {result.firstPlaceTeams.map(w => w.teamCode).join(', ')}
+                            </div>
+                          )}
+                          {result.secondPlaceTeams && result.secondPlaceTeams.length > 0 && (
+                            <div className="text-xs">
+                              <span className="font-medium text-gray-700">🥈 Teams:</span> {result.secondPlaceTeams.map(w => w.teamCode).join(', ')}
+                            </div>
+                          )}
+                          {result.thirdPlaceTeams && result.thirdPlaceTeams.length > 0 && (
+                            <div className="text-xs">
+                              <span className="font-medium text-orange-700">🥉 Teams:</span> {result.thirdPlaceTeams.map(w => w.teamCode).join(', ')}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* Unpublish Button */}
+                      <div className="flex justify-end">
+                        <button
+                          onClick={() => handleStatusUpdate(result._id!.toString(), ResultStatus.CHECKED)}
+                          className="px-3 py-1 bg-orange-600 text-white text-xs rounded hover:bg-orange-700 transition-colors"
+                        >
+                          ↩️ Unpublish
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               {/* Enhanced Marks Summary Dashboard with Team Earnings Integration */}
-              <MarksSummary results={publishedResults} showDailyProgress={true} />
+              <MarksSummary 
+                results={getFilteredPublishedResults(publishedResults)} 
+                showDailyProgress={true}
+                categoryFilter={categoryFilter}
+                allResults={publishedResults}
+              />
             </div>
           )}
         </div>
