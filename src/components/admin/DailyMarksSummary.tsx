@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { EnhancedResult, Team } from '@/types';
+import { getGradePoints } from '@/utils/markingSystem';
 
 interface DailyMarks {
   date: string;
@@ -54,8 +55,13 @@ export default function DailyMarksSummary({ results }: DailyMarksSummaryProps) {
     const dailyData: { [date: string]: DailyMarks } = {};
 
     // Group results by date
+    console.log('📅 Processing results for daily progress:', results.length);
+    
     results.forEach(result => {
-      const date = new Date(result.createdAt || '').toDateString();
+      const createdAt = result.createdAt || result.updatedAt || new Date().toISOString();
+      const date = new Date(createdAt).toDateString();
+      
+      console.log(`Processing result: ${result.programmeName || 'Unknown'} - Date: ${date}`);
       
       if (!dailyData[date]) {
         dailyData[date] = {
@@ -79,28 +85,75 @@ export default function DailyMarksSummary({ results }: DailyMarksSummaryProps) {
 
       dailyData[date].totalProgrammes += 1;
 
-      // Calculate points for this result
-      let resultPoints = 0;
-      
-      // Individual/Group results
+      // Helper function to get team code from chest number
+      const getTeamCodeFromChestNumber = (chestNumber: string) => {
+        if (!chestNumber) return '';
+        const upperChestNumber = chestNumber.toUpperCase();
+        const threeLetterMatch = upperChestNumber.match(/^([A-Z]{3})/);
+        if (threeLetterMatch) return threeLetterMatch[1];
+        const twoLetterMatch = upperChestNumber.match(/^([A-Z]{2})/);
+        if (twoLetterMatch) {
+          const teamCode = twoLetterMatch[1];
+          if (teamCode === 'SM') return 'SMD';
+          if (teamCode === 'IN') return 'INT';
+          if (teamCode === 'AQ') return 'AQS';
+          return teamCode;
+        }
+        if (upperChestNumber.match(/^[A-Z]/)) return upperChestNumber.charAt(0);
+        const num = parseInt(chestNumber);
+        if (!isNaN(num)) {
+          if (num >= 600 && num < 700) return 'AQS';
+          else if (num >= 400 && num < 500) return 'INT';
+          else if (num >= 200 && num < 300) return 'SMD';
+          else if (num >= 100 && num < 200) return 'A';
+          else return chestNumber.charAt(0);
+        }
+        return '';
+      };
+
+      // Process individual winners (assign points to their teams)
       if (result.firstPlace) {
-        resultPoints += result.firstPlace.length * result.firstPoints;
+        result.firstPlace.forEach(winner => {
+          const teamCode = getTeamCodeFromChestNumber(winner.chestNumber);
+          if (teamCode && dailyData[date].teams[teamCode]) {
+            // Add grade points if available
+            const gradePoints = winner.grade ? getGradePoints(winner.grade) : 0;
+            const totalPoints = result.firstPoints + gradePoints;
+            dailyData[date].teams[teamCode].dailyPoints += totalPoints;
+            dailyData[date].teams[teamCode].programmes += 1;
+          }
+        });
       }
       if (result.secondPlace) {
-        resultPoints += result.secondPlace.length * result.secondPoints;
+        result.secondPlace.forEach(winner => {
+          const teamCode = getTeamCodeFromChestNumber(winner.chestNumber);
+          if (teamCode && dailyData[date].teams[teamCode]) {
+            const gradePoints = winner.grade ? getGradePoints(winner.grade) : 0;
+            const totalPoints = result.secondPoints + gradePoints;
+            dailyData[date].teams[teamCode].dailyPoints += totalPoints;
+            dailyData[date].teams[teamCode].programmes += 1;
+          }
+        });
       }
       if (result.thirdPlace) {
-        resultPoints += result.thirdPlace.length * result.thirdPoints;
-      }
-      if (result.participationGrades) {
-        resultPoints += result.participationGrades.reduce((sum, pg) => sum + pg.points, 0);
+        result.thirdPlace.forEach(winner => {
+          const teamCode = getTeamCodeFromChestNumber(winner.chestNumber);
+          if (teamCode && dailyData[date].teams[teamCode]) {
+            const gradePoints = winner.grade ? getGradePoints(winner.grade) : 0;
+            const totalPoints = result.thirdPoints + gradePoints;
+            dailyData[date].teams[teamCode].dailyPoints += totalPoints;
+            dailyData[date].teams[teamCode].programmes += 1;
+          }
+        });
       }
 
-      // Team results
+      // Process team winners
       if (result.firstPlaceTeams) {
         result.firstPlaceTeams.forEach(team => {
           if (dailyData[date].teams[team.teamCode]) {
-            dailyData[date].teams[team.teamCode].dailyPoints += result.firstPoints;
+            const gradePoints = team.grade ? getGradePoints(team.grade) : 0;
+            const totalPoints = result.firstPoints + gradePoints;
+            dailyData[date].teams[team.teamCode].dailyPoints += totalPoints;
             dailyData[date].teams[team.teamCode].programmes += 1;
           }
         });
@@ -108,7 +161,9 @@ export default function DailyMarksSummary({ results }: DailyMarksSummaryProps) {
       if (result.secondPlaceTeams) {
         result.secondPlaceTeams.forEach(team => {
           if (dailyData[date].teams[team.teamCode]) {
-            dailyData[date].teams[team.teamCode].dailyPoints += result.secondPoints;
+            const gradePoints = team.grade ? getGradePoints(team.grade) : 0;
+            const totalPoints = result.secondPoints + gradePoints;
+            dailyData[date].teams[team.teamCode].dailyPoints += totalPoints;
             dailyData[date].teams[team.teamCode].programmes += 1;
           }
         });
@@ -116,21 +171,20 @@ export default function DailyMarksSummary({ results }: DailyMarksSummaryProps) {
       if (result.thirdPlaceTeams) {
         result.thirdPlaceTeams.forEach(team => {
           if (dailyData[date].teams[team.teamCode]) {
-            dailyData[date].teams[team.teamCode].dailyPoints += result.thirdPoints;
+            const gradePoints = team.grade ? getGradePoints(team.grade) : 0;
+            const totalPoints = result.thirdPoints + gradePoints;
+            dailyData[date].teams[team.teamCode].dailyPoints += totalPoints;
             dailyData[date].teams[team.teamCode].programmes += 1;
           }
         });
       }
-      if (result.participationTeamGrades) {
-        result.participationTeamGrades.forEach(pg => {
-          if (dailyData[date].teams[pg.teamCode]) {
-            dailyData[date].teams[pg.teamCode].dailyPoints += pg.points;
-            dailyData[date].teams[pg.teamCode].programmes += 1;
-          }
-        });
-      }
 
-      dailyData[date].totalPoints += resultPoints;
+      // Calculate total points for this date
+      let dateTotal = 0;
+      Object.values(dailyData[date].teams).forEach(team => {
+        dateTotal += team.dailyPoints;
+      });
+      dailyData[date].totalPoints = dateTotal;
     });
 
     // Calculate cumulative totals
@@ -149,6 +203,9 @@ export default function DailyMarksSummary({ results }: DailyMarksSummaryProps) {
     });
 
     const dailyMarksArray = sortedDates.map(date => dailyData[date]);
+    console.log('📊 Daily marks calculated:', dailyMarksArray.length, 'days');
+    console.log('Daily marks data:', dailyMarksArray);
+    
     setDailyMarks(dailyMarksArray);
     
     if (dailyMarksArray.length > 0 && !selectedDate) {
@@ -169,24 +226,43 @@ export default function DailyMarksSummary({ results }: DailyMarksSummaryProps) {
       {/* Date Selector */}
       <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">📅 Daily Progress Tracker</h3>
-        <div className="flex flex-wrap gap-2">
-          {dailyMarks.map((day, index) => (
-            <button
-              key={day.date}
-              onClick={() => setSelectedDate(day.date)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                selectedDate === day.date
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              Day {index + 1}
-              <div className="text-xs opacity-75">
-                {new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+        
+        {dailyMarks.length === 0 ? (
+          <div className="text-center py-8">
+            <div className="text-gray-400 text-4xl mb-4">📅</div>
+            <h4 className="text-lg font-medium text-gray-900 mb-2">No Daily Data Available</h4>
+            <p className="text-gray-500 text-sm mb-4">
+              Daily progress will appear here once results are processed with valid dates.
+            </p>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-left">
+              <h5 className="font-medium text-blue-900 mb-2">Debug Information:</h5>
+              <div className="text-sm text-blue-700 space-y-1">
+                <div>• Total Results: {results.length}</div>
+                <div>• Teams Available: {teams.length}</div>
+                <div>• Daily Marks Calculated: {dailyMarks.length}</div>
               </div>
-            </button>
-          ))}
-        </div>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {dailyMarks.map((day, index) => (
+              <button
+                key={day.date}
+                onClick={() => setSelectedDate(day.date)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  selectedDate === day.date
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                Day {index + 1}
+                <div className="text-xs opacity-75">
+                  {new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Selected Day Summary */}
