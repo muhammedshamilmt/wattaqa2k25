@@ -67,7 +67,7 @@ function TeamProgrammesContent() {
 
       // Debug: Log sample data for analysis
       console.log('🔍 Sample participants data:', participantsData?.slice(0, 2));
-      console.log('🔍 Sample programmes data:', programmesData?.slice(0, 2).map(p => ({
+      console.log('🔍 Sample programmes data:', programmesData?.slice(0, 2).map((p: Programme) => ({
         id: p._id?.toString(),
         name: p.name,
         code: p.code
@@ -387,7 +387,7 @@ function ProgrammeCard({
     } : 'No participants'
   });
 
-  const existingParticipant = participants.find(p => {
+  const existingParticipant = participants.find((p: ProgrammeParticipant) => {
     const match = p.programmeId === programme._id?.toString();
     if (match) {
       console.log('✅ Found matching participant:', {
@@ -443,6 +443,18 @@ function ProgrammeCard({
     candidate.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Calculate participation requirements
+  const minRequired = Number(programme.requiredParticipants) || 1;
+  const maxAllowed = Number(programme.maxParticipants) || minRequired;
+  const currentCount = selectedParticipants.length;
+  
+  // Check if minimum requirement is met
+  const hasMinimumParticipants = currentCount >= minRequired;
+  // Check if we can add more participants
+  const canAddMore = currentCount < maxAllowed;
+  // Check if registration is valid (meets minimum requirement)
+  const canRegister = hasMinimumParticipants;
+
   const handleParticipantToggle = (chestNumber: string) => {
     setSelectedParticipants(prev => {
       const isCurrentlySelected = prev.includes(chestNumber);
@@ -451,11 +463,11 @@ function ProgrammeCard({
         // Remove from selection
         return prev.filter(p => p !== chestNumber);
       } else {
-        // Check if we can add more
-        if (prev.length < Number(programme.requiredParticipants)) {
+        // Check if we can add more (up to maximum allowed)
+        if (prev.length < maxAllowed) {
           return [...prev, chestNumber];
         } else {
-          alert(`Maximum ${programme.requiredParticipants} participants allowed. Please deselect someone first.`);
+          alert(`Maximum ${maxAllowed} participants allowed. Please deselect someone first.`);
           return prev;
         }
       }
@@ -463,8 +475,8 @@ function ProgrammeCard({
   };
 
   const handleRegister = async () => {
-    if (selectedParticipants.length !== Number(programme.requiredParticipants)) {
-      alert(`Please select exactly ${programme.requiredParticipants} participant(s)`);
+    if (!canRegister) {
+      alert(`Please select at least ${minRequired} participant(s). You can select up to ${maxAllowed} participants.`);
       return;
     }
 
@@ -500,8 +512,8 @@ function ProgrammeCard({
   };
 
   const handleUpdate = async () => {
-    if (selectedParticipants.length !== Number(programme.requiredParticipants)) {
-      alert(`Please select exactly ${programme.requiredParticipants} participant(s)`);
+    if (!canRegister) {
+      alert(`Please select at least ${minRequired} participant(s). You can select up to ${maxAllowed} participants.`);
       return;
     }
 
@@ -568,7 +580,12 @@ function ProgrammeCard({
           </div>
           <div className="flex items-center text-sm text-gray-600">
             <span className="w-2 h-2 bg-orange-500 rounded-full mr-2"></span>
-            <span className="font-medium">{programme.requiredParticipants} Participant{programme.requiredParticipants > 1 ? 's' : ''} Required</span>
+            <span className="font-medium">
+              {maxAllowed > minRequired 
+                ? `${minRequired}-${maxAllowed} Participants (${minRequired} required, ${maxAllowed - minRequired} optional)`
+                : `${minRequired} Participant${minRequired > 1 ? 's' : ''} Required`
+              }
+            </span>
           </div>
         </div>
         
@@ -638,7 +655,20 @@ function ProgrammeCard({
                   <div>
                     <h4 className="font-semibold text-blue-900">Registration Requirements</h4>
                     <p className="text-blue-700 text-sm">
-                      Select exactly <strong>{programme.requiredParticipants}</strong> participant{programme.requiredParticipants > 1 ? 's' : ''} from your team
+                      {maxAllowed > minRequired ? (
+                        <>
+                          Select <strong>{minRequired} to {maxAllowed}</strong> participants from your team
+                          <br />
+                          <span className="text-xs">
+                            • <strong>{minRequired}</strong> participants required (minimum)
+                            • Up to <strong>{maxAllowed - minRequired}</strong> additional participants optional
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          Select exactly <strong>{minRequired}</strong> participant{minRequired > 1 ? 's' : ''} from your team
+                        </>
+                      )}
                     </p>
                   </div>
                 </div>
@@ -696,7 +726,7 @@ function ProgrammeCard({
                       ) : (
                         filteredCandidates.map((candidate) => {
                           const isSelected = selectedParticipants.includes(candidate.chestNumber);
-                          const isDisabled = !isSelected && selectedParticipants.length >= Number(programme.requiredParticipants);
+                          const isDisabled = !isSelected && selectedParticipants.length >= maxAllowed;
                           
                           return (
                             <div
@@ -744,7 +774,7 @@ function ProgrammeCard({
 
                   {/* Selection Summary */}
                   <div className={`border-2 rounded-lg p-4 mb-4 ${
-                    selectedParticipants.length === Number(programme.requiredParticipants) 
+                    canRegister && selectedParticipants.length <= maxAllowed
                       ? 'bg-green-50 border-green-300' 
                       : selectedParticipants.length > 0 
                       ? 'bg-yellow-50 border-yellow-300' 
@@ -752,26 +782,29 @@ function ProgrammeCard({
                   }`}>
                     <div className="flex items-center justify-between mb-2">
                       <h5 className={`font-semibold flex items-center ${
-                        selectedParticipants.length === Number(programme.requiredParticipants) 
+                        canRegister && selectedParticipants.length <= maxAllowed
                           ? 'text-green-800' 
                           : selectedParticipants.length > 0 
                           ? 'text-yellow-800' 
                           : 'text-gray-800'
                       }`}>
                         <span className="text-lg mr-2">
-                          {selectedParticipants.length === Number(programme.requiredParticipants) ? '✅' : 
+                          {canRegister ? '✅' : 
                            selectedParticipants.length > 0 ? '⏳' : '⭕'}
                         </span>
                         Selected Participants
                       </h5>
                       <div className={`px-3 py-1 rounded-full font-bold text-lg ${
-                        selectedParticipants.length === Number(programme.requiredParticipants) 
+                        canRegister && selectedParticipants.length <= maxAllowed
                           ? 'bg-green-200 text-green-800' 
                           : selectedParticipants.length > 0 
                           ? 'bg-yellow-200 text-yellow-800' 
                           : 'bg-gray-200 text-gray-800'
                       }`}>
-                        {selectedParticipants.length} / {programme.requiredParticipants}
+                        {selectedParticipants.length} / {maxAllowed}
+                        {maxAllowed > minRequired && (
+                          <span className="text-xs ml-1">(min: {minRequired})</span>
+                        )}
                       </div>
                     </div>
                     
@@ -801,12 +834,22 @@ function ProgrammeCard({
                             );
                           })}
                         </div>
-                        {selectedParticipants.length < Number(programme.requiredParticipants) && (
+                        {!canRegister && (
                           <p className="text-yellow-700 text-sm font-medium">
-                            ⚠️ Need {Number(programme.requiredParticipants) - selectedParticipants.length} more participant{Number(programme.requiredParticipants) - selectedParticipants.length > 1 ? 's' : ''} to register
+                            ⚠️ Need {minRequired - selectedParticipants.length} more participant{minRequired - selectedParticipants.length > 1 ? 's' : ''} to register (minimum: {minRequired})
                           </p>
                         )}
-                        {selectedParticipants.length === Number(programme.requiredParticipants) && (
+                        {canRegister && selectedParticipants.length === minRequired && maxAllowed > minRequired && (
+                          <p className="text-green-700 text-sm font-medium">
+                            ✅ Minimum met! You can add {maxAllowed - selectedParticipants.length} more optional participant{maxAllowed - selectedParticipants.length > 1 ? 's' : ''}.
+                          </p>
+                        )}
+                        {canRegister && selectedParticipants.length > minRequired && (
+                          <p className="text-green-700 text-sm font-medium">
+                            🎉 Perfect! {selectedParticipants.length - minRequired} optional participant{selectedParticipants.length - minRequired > 1 ? 's' : ''} added. You can register your team.
+                          </p>
+                        )}
+                        {canRegister && selectedParticipants.length === minRequired && maxAllowed === minRequired && (
                           <p className="text-green-700 text-sm font-medium">
                             🎉 Perfect! You can now register your team.
                           </p>
@@ -834,9 +877,9 @@ function ProgrammeCard({
                 
                 <button
                   onClick={handleRegister}
-                  disabled={selectedParticipants.length !== Number(programme.requiredParticipants) || isSubmitting}
+                  disabled={!canRegister || isSubmitting}
                   className={`flex-1 px-6 py-3 font-bold text-lg rounded-lg transition-all duration-200 border-2 ${
-                    selectedParticipants.length === Number(programme.requiredParticipants) && !isSubmitting
+                    canRegister && !isSubmitting
                       ? 'bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105 border-green-600 hover:border-green-700'
                       : 'bg-gray-400 text-white cursor-not-allowed opacity-75 border-gray-400'
                   }`}
@@ -846,7 +889,7 @@ function ProgrammeCard({
                       <span className="animate-spin mr-2">⏳</span>
                       Registering...
                     </span>
-                  ) : selectedParticipants.length === Number(programme.requiredParticipants) ? (
+                  ) : canRegister ? (
                     <span className="flex items-center justify-center">
                       <span className="mr-2">🎉</span>
                       REGISTER TEAM
@@ -855,8 +898,8 @@ function ProgrammeCard({
                     <span className="flex items-center justify-center">
                       <span className="mr-2">⚠️</span>
                       {selectedParticipants.length === 0 
-                        ? `SELECT ${programme.requiredParticipants} PARTICIPANTS`
-                        : `NEED ${Number(programme.requiredParticipants) - selectedParticipants.length} MORE`
+                        ? `SELECT ${maxAllowed > minRequired ? `${minRequired}-${maxAllowed}` : minRequired} PARTICIPANTS`
+                        : `NEED ${minRequired - selectedParticipants.length} MORE (MIN ${minRequired})`
                       }
                     </span>
                   )}
@@ -899,7 +942,20 @@ function ProgrammeCard({
                   <div>
                     <h4 className="font-semibold text-orange-900">Edit Registration</h4>
                     <p className="text-orange-700 text-sm">
-                      Update your team's participants for this programme. Select exactly <strong>{programme.requiredParticipants}</strong> participant{programme.requiredParticipants > 1 ? 's' : ''}
+                      {maxAllowed > minRequired ? (
+                        <>
+                          Update your team's participants for this programme. Select <strong>{minRequired} to {maxAllowed}</strong> participants
+                          <br />
+                          <span className="text-xs">
+                            • <strong>{minRequired}</strong> participants required (minimum)
+                            • Up to <strong>{maxAllowed - minRequired}</strong> additional participants optional
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          Update your team's participants for this programme. Select exactly <strong>{minRequired}</strong> participant{minRequired > 1 ? 's' : ''}
+                        </>
+                      )}
                     </p>
                   </div>
                 </div>
@@ -969,7 +1025,7 @@ function ProgrammeCard({
                       ) : (
                         filteredCandidates.map((candidate) => {
                           const isSelected = selectedParticipants.includes(candidate.chestNumber);
-                          const isDisabled = !isSelected && selectedParticipants.length >= Number(programme.requiredParticipants);
+                          const isDisabled = !isSelected && selectedParticipants.length >= maxAllowed;
                           
                           return (
                             <div
@@ -1017,7 +1073,7 @@ function ProgrammeCard({
 
                   {/* Selection Summary */}
                   <div className={`border-2 rounded-lg p-4 mb-4 ${
-                    selectedParticipants.length === Number(programme.requiredParticipants) 
+                    canRegister && selectedParticipants.length <= maxAllowed
                       ? 'bg-green-50 border-green-300' 
                       : selectedParticipants.length > 0 
                       ? 'bg-yellow-50 border-yellow-300' 
@@ -1025,26 +1081,29 @@ function ProgrammeCard({
                   }`}>
                     <div className="flex items-center justify-between mb-2">
                       <h5 className={`font-semibold flex items-center ${
-                        selectedParticipants.length === Number(programme.requiredParticipants) 
+                        canRegister && selectedParticipants.length <= maxAllowed
                           ? 'text-green-800' 
                           : selectedParticipants.length > 0 
                           ? 'text-yellow-800' 
                           : 'text-gray-800'
                       }`}>
                         <span className="text-lg mr-2">
-                          {selectedParticipants.length === Number(programme.requiredParticipants) ? '✅' : 
+                          {canRegister ? '✅' : 
                            selectedParticipants.length > 0 ? '⏳' : '⭕'}
                         </span>
                         New Selection
                       </h5>
                       <div className={`px-3 py-1 rounded-full font-bold text-lg ${
-                        selectedParticipants.length === Number(programme.requiredParticipants) 
+                        canRegister && selectedParticipants.length <= maxAllowed
                           ? 'bg-green-200 text-green-800' 
                           : selectedParticipants.length > 0 
                           ? 'bg-yellow-200 text-yellow-800' 
                           : 'bg-gray-200 text-gray-800'
                       }`}>
-                        {selectedParticipants.length} / {programme.requiredParticipants}
+                        {selectedParticipants.length} / {maxAllowed}
+                        {maxAllowed > minRequired && (
+                          <span className="text-xs ml-1">(min: {minRequired})</span>
+                        )}
                       </div>
                     </div>
                     
@@ -1074,12 +1133,22 @@ function ProgrammeCard({
                             );
                           })}
                         </div>
-                        {selectedParticipants.length < Number(programme.requiredParticipants) && (
+                        {!canRegister && (
                           <p className="text-yellow-700 text-sm font-medium">
-                            ⚠️ Need {Number(programme.requiredParticipants) - selectedParticipants.length} more participant{Number(programme.requiredParticipants) - selectedParticipants.length > 1 ? 's' : ''} to update
+                            ⚠️ Need {minRequired - selectedParticipants.length} more participant{minRequired - selectedParticipants.length > 1 ? 's' : ''} to update (minimum: {minRequired})
                           </p>
                         )}
-                        {selectedParticipants.length === Number(programme.requiredParticipants) && (
+                        {canRegister && selectedParticipants.length === minRequired && maxAllowed > minRequired && (
+                          <p className="text-green-700 text-sm font-medium">
+                            ✅ Minimum met! You can add {maxAllowed - selectedParticipants.length} more optional participant{maxAllowed - selectedParticipants.length > 1 ? 's' : ''}.
+                          </p>
+                        )}
+                        {canRegister && selectedParticipants.length > minRequired && (
+                          <p className="text-green-700 text-sm font-medium">
+                            🎉 Perfect! {selectedParticipants.length - minRequired} optional participant{selectedParticipants.length - minRequired > 1 ? 's' : ''} added. You can update your registration.
+                          </p>
+                        )}
+                        {canRegister && selectedParticipants.length === minRequired && maxAllowed === minRequired && (
                           <p className="text-green-700 text-sm font-medium">
                             🎉 Perfect! You can now update your team registration.
                           </p>
@@ -1107,9 +1176,9 @@ function ProgrammeCard({
                 
                 <button
                   onClick={handleUpdate}
-                  disabled={selectedParticipants.length !== Number(programme.requiredParticipants) || isSubmitting}
+                  disabled={!canRegister || isSubmitting}
                   className={`flex-1 px-6 py-3 font-bold text-lg rounded-lg transition-all duration-200 border-2 ${
-                    selectedParticipants.length === Number(programme.requiredParticipants) && !isSubmitting
+                    canRegister && !isSubmitting
                       ? 'bg-orange-600 hover:bg-orange-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105 border-orange-600 hover:border-orange-700'
                       : 'bg-gray-400 text-white cursor-not-allowed opacity-75 border-gray-400'
                   }`}
@@ -1119,7 +1188,7 @@ function ProgrammeCard({
                       <span className="animate-spin mr-2">⏳</span>
                       Updating...
                     </span>
-                  ) : selectedParticipants.length === Number(programme.requiredParticipants) ? (
+                  ) : canRegister ? (
                     <span className="flex items-center justify-center">
                       <span className="mr-2">✏️</span>
                       UPDATE PARTICIPANTS
@@ -1128,8 +1197,8 @@ function ProgrammeCard({
                     <span className="flex items-center justify-center">
                       <span className="mr-2">⚠️</span>
                       {selectedParticipants.length === 0 
-                        ? `SELECT ${programme.requiredParticipants} PARTICIPANTS`
-                        : `NEED ${Number(programme.requiredParticipants) - selectedParticipants.length} MORE`
+                        ? `SELECT ${maxAllowed > minRequired ? `${minRequired}-${maxAllowed}` : minRequired} PARTICIPANTS`
+                        : `NEED ${minRequired - selectedParticipants.length} MORE (MIN ${minRequired})`
                       }
                     </span>
                   )}
