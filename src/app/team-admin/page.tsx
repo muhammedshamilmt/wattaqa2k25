@@ -169,6 +169,9 @@ export default function TeamDashboard() {
            result.participationGrades?.some(p => teamCandidateChests.includes(p.chestNumber));
   });
 
+  // Get all published results for comparison
+  const allPublishedResults = (results || []).filter(result => result.status === 'published');
+
   // Calculate team performance metrics
   const totalWins = teamResults.filter(result => {
     if (result.positionType === 'general') {
@@ -455,10 +458,15 @@ export default function TeamDashboard() {
       {teamResults.length > 0 && (
         <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100/50 overflow-hidden">
           <div className="p-6 border-b border-gray-100/50">
-            <h2 className="text-xl font-semibold text-gray-900 flex items-center">
-              <span className="mr-2">🏆</span>
-              Recent Results
-            </h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-gray-900 flex items-center">
+                <span className="mr-2">🏆</span>
+                Recent Results
+              </h2>
+              <div className="text-sm text-gray-600">
+                {teamResults.length} of {allPublishedResults.length} total results
+              </div>
+            </div>
           </div>
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

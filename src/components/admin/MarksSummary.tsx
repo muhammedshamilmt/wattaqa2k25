@@ -28,9 +28,11 @@ interface MarksSummaryProps {
   showDailyProgress?: boolean;
   categoryFilter?: 'arts-total' | 'arts-stage' | 'arts-non-stage' | 'sports' | null;
   allResults?: EnhancedResult[]; // For showing complete team performance context
+  teamCode?: string; // For team highlighting
+  highlightTeam?: boolean; // Whether to highlight the specific team
 }
 
-export default function MarksSummary({ results, showDailyProgress = false, categoryFilter = null, allResults }: MarksSummaryProps) {
+export default function MarksSummary({ results, showDailyProgress = false, categoryFilter = null, allResults, teamCode, highlightTeam = false }: MarksSummaryProps) {
   const [teams, setTeams] = useState<Team[]>([]);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [programmes, setProgrammes] = useState<any[]>([]);

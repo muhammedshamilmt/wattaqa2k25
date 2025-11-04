@@ -147,7 +147,7 @@ export default function TeamResultsPage() {
       results = results.filter(result => result.section === filterSection);
     }
     
-    return results;
+    return results.sort((a, b) => new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime());
   };
   
   const displayResults = getFilteredResults();
@@ -636,6 +636,8 @@ export default function TeamResultsPage() {
             <MarksSummary 
               results={allResults.filter(r => r.status === 'published')} 
               showDailyProgress={true}
+              teamCode={teamCode || undefined}
+              highlightTeam={true}
             />
           </div>
         )}     
