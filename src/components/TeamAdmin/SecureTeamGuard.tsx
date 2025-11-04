@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useFirebaseTeamAuth } from '@/contexts/FirebaseTeamAuthContext';
 
@@ -8,7 +8,7 @@ interface SecureTeamGuardProps {
   children: React.ReactNode;
 }
 
-export function SecureTeamGuard({ children }: SecureTeamGuardProps) {
+function SecureTeamGuardContent({ children }: SecureTeamGuardProps) {
   const { user, loading, signInWithGoogleAuth, checkTeamAccess, findUserTeam, authorizedTeamCode } = useFirebaseTeamAuth();
   const [teamAccessLoading, setTeamAccessLoading] = useState(false);
   const [accessDenied, setAccessDenied] = useState(false);
@@ -244,4 +244,16 @@ export function SecureTeamGuard({ children }: SecureTeamGuardProps) {
 
   // User is authenticated and has access to the requested team
   return <>{children}</>;
+}
+
+export function SecureTeamGuard({ children }: SecureTeamGuardProps) {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    }>
+      <SecureTeamGuardContent>{children}</SecureTeamGuardContent>
+    </Suspense>
+  );
 }

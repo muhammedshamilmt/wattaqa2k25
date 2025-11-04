@@ -235,10 +235,10 @@ export default function TeamRankingsPage() {
   const displayTeamCode = teamCode || 'Loading...';
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
       <ShowcaseSection title="Team Rankings">
-        {/* Header */}
-        <div className="relative overflow-hidden rounded-2xl p-8 text-white mb-6"
+        {/* Header - Mobile Responsive */}
+        <div className="relative overflow-hidden rounded-2xl p-4 sm:p-6 lg:p-8 text-white mb-4 sm:mb-6"
              style={{ 
                background: `linear-gradient(135deg, ${currentTeam?.color || '#6366f1'} 0%, ${currentTeam?.color || '#6366f1'}dd 50%, ${currentTeam?.color || '#6366f1'}bb 100%)` 
              }}>
@@ -251,25 +251,29 @@ export default function TeamRankingsPage() {
             backgroundSize: '30px 30px'
           }}></div>
           <div className="relative z-10">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold mb-2">Team Rankings</h1>
-                <p className="text-white/90 text-lg">Live standings based on all published results</p>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0">
+              <div className="flex-1 min-w-0">
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-2 break-words">
+                  Team Rankings
+                </h1>
+                <p className="text-white/90 text-sm sm:text-base lg:text-lg leading-relaxed">
+                  Live standings based on all published results
+                </p>
               </div>
-              <div className="hidden md:block">
-                <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
-                  <span className="text-4xl">📈</span>
+              <div className="flex-shrink-0 self-center sm:self-auto">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                  <span className="text-2xl sm:text-3xl lg:text-4xl">📈</span>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Category Filter */}
-        <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg mb-6">
+        {/* Category Filter - Mobile Responsive */}
+        <div className="flex flex-col sm:flex-row space-y-1 sm:space-y-0 sm:space-x-1 bg-gray-100 p-1 rounded-lg mb-4 sm:mb-6">
           <button
             onClick={() => setActiveCategory('all')}
-            className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+            className={`flex-1 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-md transition-colors ${
               activeCategory === 'all'
                 ? 'text-white shadow-sm'
                 : 'text-gray-600 hover:text-gray-900'
@@ -278,11 +282,12 @@ export default function TeamRankingsPage() {
               backgroundColor: activeCategory === 'all' ? currentTeam?.color || '#6366f1' : 'transparent'
             }}
           >
-            🏆 Overall Rankings
+            <span className="hidden sm:inline">🏆 Overall Rankings</span>
+            <span className="sm:hidden">🏆 Overall</span>
           </button>
           <button
             onClick={() => setActiveCategory('arts')}
-            className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+            className={`flex-1 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-md transition-colors ${
               activeCategory === 'arts'
                 ? 'text-white shadow-sm'
                 : 'text-gray-600 hover:text-gray-900'
@@ -291,11 +296,12 @@ export default function TeamRankingsPage() {
               backgroundColor: activeCategory === 'arts' ? currentTeam?.color || '#6366f1' : 'transparent'
             }}
           >
-            🎨 Arts Rankings
+            <span className="hidden sm:inline">🎨 Arts Rankings</span>
+            <span className="sm:hidden">🎨 Arts</span>
           </button>
           <button
             onClick={() => setActiveCategory('sports')}
-            className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+            className={`flex-1 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-md transition-colors ${
               activeCategory === 'sports'
                 ? 'text-white shadow-sm'
                 : 'text-gray-600 hover:text-gray-900'
@@ -304,7 +310,8 @@ export default function TeamRankingsPage() {
               backgroundColor: activeCategory === 'sports' ? currentTeam?.color || '#6366f1' : 'transparent'
             }}
           >
-            🏃 Sports Rankings
+            <span className="hidden sm:inline">🏃 Sports Rankings</span>
+            <span className="sm:hidden">🏃 Sports</span>
           </button>
         </div>
 

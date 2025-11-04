@@ -1,14 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 
 import { Candidate } from '@/types';
+
+// Disable static generation for this page
+export const dynamic = 'force-dynamic';
 import { ImageUpload } from '@/components/ui/ImageUpload';
 import { useTeamAdmin } from '@/contexts/TeamAdminContext';
 import { SimpleAccessCheck } from '@/components/TeamAdmin/SimpleAccessCheck';
 
-
-export default function TeamCandidatesPage() {
+function TeamCandidatesContent() {
   // Use simplified team admin context
   const { teamCode, loading: accessLoading, accessDenied, userEmail, isAdminAccess } = useTeamAdmin();
   
@@ -468,5 +470,17 @@ export default function TeamCandidatesPage() {
       </div>
     </div>
     </SimpleAccessCheck>
+  );
+}
+
+export default function TeamCandidatesPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    }>
+      <TeamCandidatesContent />
+    </Suspense>
   );
 }

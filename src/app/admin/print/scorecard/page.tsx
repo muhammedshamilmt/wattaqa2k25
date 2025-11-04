@@ -3,6 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 
+// Disable static generation for this page
+export const dynamic = 'force-dynamic';
+
 export default function ScorecardPrintPage() {
   const searchParams = useSearchParams();
   const [data, setData] = useState({

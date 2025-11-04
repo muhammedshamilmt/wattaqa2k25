@@ -292,8 +292,8 @@ export default function TeamResultsPage() {
     <div className="space-y-2 relative">
       {/* Team Results - Exact Admin Design */}
       <ShowcaseSection title="Team Results Dashboard">
-        {/* Header with Team Colors */}
-        <div className="relative overflow-hidden rounded-2xl p-8 text-white mb-6"
+        {/* Header with Team Colors - Enhanced Mobile Layout */}
+        <div className="relative overflow-hidden rounded-2xl p-4 sm:p-6 lg:p-8 text-white mb-4 sm:mb-6"
              style={{ 
                background: `linear-gradient(135deg, ${currentTeam?.color || '#6366f1'} 0%, ${currentTeam?.color || '#6366f1'}dd 50%, ${currentTeam?.color || '#6366f1'}bb 100%)` 
              }}>
@@ -306,25 +306,29 @@ export default function TeamResultsPage() {
             backgroundSize: '30px 30px'
           }}></div>
           <div className="relative z-10">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold mb-2">Team {displayTeamCode} Results</h1>
-                <p className="text-white/90 text-lg">Track all published results and your team's performance</p>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0">
+              <div className="flex-1 min-w-0">
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-2 break-words">
+                  Team {displayTeamCode} Results
+                </h1>
+                <p className="text-white/90 text-sm sm:text-base lg:text-lg leading-relaxed">
+                  Track all published results and your team's performance
+                </p>
               </div>
-              <div className="hidden md:block">
-                <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
-                  <span className="text-4xl">🏆</span>
+              <div className="flex-shrink-0 self-center sm:self-auto">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                  <span className="text-2xl sm:text-3xl lg:text-4xl">🏆</span>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg mb-6">
+        {/* Tab Navigation - Mobile Responsive */}
+        <div className="flex flex-col sm:flex-row space-y-1 sm:space-y-0 sm:space-x-1 bg-gray-100 p-1 rounded-lg mb-4 sm:mb-6">
           <button
             onClick={() => setActiveTab('team')}
-            className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+            className={`flex-1 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-md transition-colors ${
               activeTab === 'team'
                 ? 'text-white shadow-sm'
                 : 'text-gray-600 hover:text-gray-900'
@@ -333,11 +337,12 @@ export default function TeamResultsPage() {
               backgroundColor: activeTab === 'team' ? currentTeam?.color || '#6366f1' : 'transparent'
             }}
           >
-            🏅 Team Results ({totalResults})
+            <span className="hidden sm:inline">🏅 Team Results ({totalResults})</span>
+            <span className="sm:hidden">🏅 Team ({totalResults})</span>
           </button>
           <button
             onClick={() => setActiveTab('all')}
-            className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+            className={`flex-1 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-md transition-colors ${
               activeTab === 'all'
                 ? 'text-white shadow-sm'
                 : 'text-gray-600 hover:text-gray-900'
@@ -346,11 +351,12 @@ export default function TeamResultsPage() {
               backgroundColor: activeTab === 'all' ? currentTeam?.color || '#6366f1' : 'transparent'
             }}
           >
-            📊 All Published Results ({allPublishedResults})
+            <span className="hidden sm:inline">📊 All Published Results ({allPublishedResults})</span>
+            <span className="sm:hidden">📊 All ({allPublishedResults})</span>
           </button>
           <button
             onClick={() => setActiveTab('summary')}
-            className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+            className={`flex-1 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-md transition-colors ${
               activeTab === 'summary'
                 ? 'text-white shadow-sm'
                 : 'text-gray-600 hover:text-gray-900'
@@ -359,57 +365,62 @@ export default function TeamResultsPage() {
               backgroundColor: activeTab === 'summary' ? currentTeam?.color || '#6366f1' : 'transparent'
             }}
           >
-            📈 Marks Summary
+            <span className="hidden sm:inline">📈 Marks Summary</span>
+            <span className="sm:hidden">📈 Summary</span>
           </button>
         </div>      
-  {/* Filter Controls */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
-          <div className="flex flex-wrap items-center gap-4">
+  {/* Filter Controls - Mobile Responsive */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 sm:p-4 mb-4 sm:mb-6">
+          <div className="space-y-3 sm:space-y-0 sm:flex sm:flex-wrap sm:items-center sm:gap-4">
             <div className="flex items-center space-x-2">
-              <span className="text-sm font-medium text-gray-700">🔍 Filters:</span>
+              <span className="text-xs sm:text-sm font-medium text-gray-700">🔍 Filters:</span>
             </div>
             
-            <div className="flex items-center space-x-2">
-              <label className="text-sm font-medium text-gray-600">Category:</label>
-              <select
-                value={filterCategory}
-                onChange={(e) => setFilterCategory(e.target.value as 'all' | 'arts' | 'sports')}
-                className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:border-blue-500"
-              >
-                <option value="all">All Categories</option>
-                <option value="arts">🎨 Arts</option>
-                <option value="sports">🏃 Sports</option>
-              </select>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:items-center gap-3 sm:gap-4">
+              <div className="flex items-center space-x-2">
+                <label className="text-xs sm:text-sm font-medium text-gray-600 whitespace-nowrap">Category:</label>
+                <select
+                  value={filterCategory}
+                  onChange={(e) => setFilterCategory(e.target.value as 'all' | 'arts' | 'sports')}
+                  className="flex-1 sm:flex-none px-2 sm:px-3 py-1 border border-gray-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:border-blue-500"
+                >
+                  <option value="all">All Categories</option>
+                  <option value="arts">🎨 Arts</option>
+                  <option value="sports">🏃 Sports</option>
+                </select>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <label className="text-xs sm:text-sm font-medium text-gray-600 whitespace-nowrap">Section:</label>
+                <select
+                  value={filterSection}
+                  onChange={(e) => setFilterSection(e.target.value as 'all' | 'senior' | 'junior' | 'sub-junior')}
+                  className="flex-1 sm:flex-none px-2 sm:px-3 py-1 border border-gray-300 rounded-md text-xs sm:text-sm focus:ring-2 focus:border-blue-500"
+                >
+                  <option value="all">All Sections</option>
+                  <option value="senior">Senior</option>
+                  <option value="junior">Junior</option>
+                  <option value="sub-junior">Sub-Junior</option>
+                </select>
+              </div>
+
+              {(filterCategory !== 'all' || filterSection !== 'all') && (
+                <button
+                  onClick={() => {
+                    setFilterCategory('all');
+                    setFilterSection('all');
+                  }}
+                  className="px-3 py-1 bg-gray-200 text-gray-700 rounded-md text-xs sm:text-sm hover:bg-gray-300 transition-colors whitespace-nowrap"
+                >
+                  Clear Filters
+                </button>
+              )}
             </div>
 
-            <div className="flex items-center space-x-2">
-              <label className="text-sm font-medium text-gray-600">Section:</label>
-              <select
-                value={filterSection}
-                onChange={(e) => setFilterSection(e.target.value as 'all' | 'senior' | 'junior' | 'sub-junior')}
-                className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:border-blue-500"
-              >
-                <option value="all">All Sections</option>
-                <option value="senior">Senior</option>
-                <option value="junior">Junior</option>
-                <option value="sub-junior">Sub-Junior</option>
-              </select>
-            </div>
-
-            {(filterCategory !== 'all' || filterSection !== 'all') && (
-              <button
-                onClick={() => {
-                  setFilterCategory('all');
-                  setFilterSection('all');
-                }}
-                className="px-3 py-1 bg-gray-200 text-gray-700 rounded-md text-sm hover:bg-gray-300 transition-colors"
-              >
-                Clear Filters
-              </button>
-            )}
-
-            <div className="ml-auto text-sm text-gray-600">
-              Showing {displayResults.length} results
+            <div className="flex justify-between items-center sm:ml-auto">
+              <span className="text-xs sm:text-sm text-gray-600">
+                Showing {displayResults.length} results
+              </span>
             </div>
           </div>
         </div> 

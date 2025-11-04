@@ -317,9 +317,9 @@ export default function TeamDashboard() {
   ];
 
   return (
-    <div className="space-y-8">
-      {/* Welcome Section */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700 rounded-2xl p-8 text-white">
+    <div className="space-y-4 sm:space-y-6 lg:space-y-8 px-2 sm:px-0">
+      {/* Welcome Section - Fully Responsive */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700 rounded-2xl p-4 sm:p-6 lg:p-8 text-white">
         <div className="absolute inset-0 bg-black/10"></div>
         {/* Grid overlay */}
         <div className="absolute inset-0 opacity-10" style={{
@@ -330,146 +330,150 @@ export default function TeamDashboard() {
           backgroundSize: '30px 30px'
         }}></div>
         <div className="relative z-10">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold mb-2">Team {displayTeamCode} Dashboard</h1>
-              <p className="text-blue-100 text-lg">Manage your team, track performance, and stay updated with activities</p>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-2 break-words">
+                Team {displayTeamCode} Dashboard
+              </h1>
+              <p className="text-blue-100 text-sm sm:text-base lg:text-lg leading-relaxed">
+                Manage your team, track performance, and stay updated with activities
+              </p>
             </div>
-            <div className="hidden md:block">
-              <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
-                <span className="text-4xl">🏆</span>
+            <div className="flex-shrink-0 self-center sm:self-auto">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                <span className="text-2xl sm:text-3xl lg:text-4xl">🏆</span>
               </div>
             </div>
           </div>
         </div>
-        <div className="absolute -top-4 -right-4 w-32 h-32 bg-white/10 rounded-full"></div>
-        <div className="absolute -bottom-8 -left-8 w-40 h-40 bg-white/5 rounded-full"></div>
+        <div className="absolute -top-4 -right-4 w-24 h-24 sm:w-32 sm:h-32 bg-white/10 rounded-full"></div>
+        <div className="absolute -bottom-6 -left-6 sm:-bottom-8 sm:-left-8 w-32 h-32 sm:w-40 sm:h-40 bg-white/5 rounded-full"></div>
       </div>
 
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
-        <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-all hover:scale-105">
+      {/* Statistics Cards - Enhanced Responsive Grid */}
+      <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 lg:gap-6">
+        <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 hover:shadow-md transition-all hover:scale-105">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Total Candidates</p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">
+            <div className="flex-1 min-w-0">
+              <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Total Candidates</p>
+              <p className="text-2xl sm:text-3xl font-bold text-gray-900 mt-1">
                 {isDataLoading ? (
-                  <div className="animate-pulse bg-gray-200 h-8 w-12 rounded"></div>
+                  <div className="animate-pulse bg-gray-200 h-6 sm:h-8 w-8 sm:w-12 rounded"></div>
                 ) : (
                   totalCandidates
                 )}
               </p>
             </div>
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <span className="text-2xl">👥</span>
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 ml-2">
+              <span className="text-lg sm:text-2xl">👥</span>
             </div>
           </div>
-          <div className="mt-4 flex items-center text-sm">
-            <span className="text-green-600 font-medium">Active members</span>
+          <div className="mt-3 sm:mt-4 flex items-center text-xs sm:text-sm">
+            <span className="text-green-600 font-medium truncate">Active members</span>
           </div>
         </div>
 
-        <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-all hover:scale-105">
+        <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 hover:shadow-md transition-all hover:scale-105">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Registrations</p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">
+            <div className="flex-1 min-w-0">
+              <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Registrations</p>
+              <p className="text-2xl sm:text-3xl font-bold text-gray-900 mt-1">
                 {isDataLoading ? (
-                  <div className="animate-pulse bg-gray-200 h-8 w-12 rounded"></div>
+                  <div className="animate-pulse bg-gray-200 h-6 sm:h-8 w-8 sm:w-12 rounded"></div>
                 ) : (
                   totalParticipations
                 )}
               </p>
             </div>
-            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-              <span className="text-2xl">🎯</span>
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0 ml-2">
+              <span className="text-lg sm:text-2xl">🎯</span>
             </div>
           </div>
-          <div className="mt-4 flex items-center text-sm">
-            <span className="text-green-600 font-medium">Programme entries</span>
+          <div className="mt-3 sm:mt-4 flex items-center text-xs sm:text-sm">
+            <span className="text-green-600 font-medium truncate">Programme entries</span>
           </div>
         </div>
 
-        <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-all hover:scale-105">
+        <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 hover:shadow-md transition-all hover:scale-105">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Total Wins</p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">
+            <div className="flex-1 min-w-0">
+              <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Total Wins</p>
+              <p className="text-2xl sm:text-3xl font-bold text-gray-900 mt-1">
                 {isDataLoading ? (
-                  <div className="animate-pulse bg-gray-200 h-8 w-12 rounded"></div>
+                  <div className="animate-pulse bg-gray-200 h-6 sm:h-8 w-8 sm:w-12 rounded"></div>
                 ) : (
                   totalWins
                 )}
               </p>
             </div>
-            <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-              <span className="text-2xl">🥇</span>
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-yellow-100 rounded-lg flex items-center justify-center flex-shrink-0 ml-2">
+              <span className="text-lg sm:text-2xl">🥇</span>
             </div>
           </div>
-          <div className="mt-4 flex items-center text-sm">
-            <span className="text-yellow-600 font-medium">First places</span>
+          <div className="mt-3 sm:mt-4 flex items-center text-xs sm:text-sm">
+            <span className="text-yellow-600 font-medium truncate">First places</span>
           </div>
         </div>
 
-        <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-all hover:scale-105">
+        <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 hover:shadow-md transition-all hover:scale-105">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Podium Finishes</p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">
+            <div className="flex-1 min-w-0">
+              <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Podium Finishes</p>
+              <p className="text-2xl sm:text-3xl font-bold text-gray-900 mt-1">
                 {isDataLoading ? (
-                  <div className="animate-pulse bg-gray-200 h-8 w-12 rounded"></div>
+                  <div className="animate-pulse bg-gray-200 h-6 sm:h-8 w-8 sm:w-12 rounded"></div>
                 ) : (
                   totalPodiums
                 )}
               </p>
             </div>
-            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-              <span className="text-2xl">🏅</span>
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0 ml-2">
+              <span className="text-lg sm:text-2xl">🏅</span>
             </div>
           </div>
-          <div className="mt-4 flex items-center text-sm">
-            <span className="text-purple-600 font-medium">Top 3 positions</span>
+          <div className="mt-3 sm:mt-4 flex items-center text-xs sm:text-sm">
+            <span className="text-purple-600 font-medium truncate">Top 3 positions</span>
           </div>
         </div>
 
-        <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-all hover:scale-105">
+        <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 hover:shadow-md transition-all hover:scale-105">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Total Points</p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">
+            <div className="flex-1 min-w-0">
+              <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Total Points</p>
+              <p className="text-2xl sm:text-3xl font-bold text-gray-900 mt-1">
                 {isDataLoading ? (
-                  <div className="animate-pulse bg-gray-200 h-8 w-12 rounded"></div>
+                  <div className="animate-pulse bg-gray-200 h-6 sm:h-8 w-8 sm:w-12 rounded"></div>
                 ) : (
                   totalPoints
                 )}
               </p>
             </div>
-            <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center">
-              <span className="text-2xl">🏆</span>
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0 ml-2">
+              <span className="text-lg sm:text-2xl">🏆</span>
             </div>
           </div>
-          <div className="mt-4 flex items-center text-sm">
-            <span className="text-indigo-600 font-medium">Competition points</span>
+          <div className="mt-3 sm:mt-4 flex items-center text-xs sm:text-sm">
+            <span className="text-indigo-600 font-medium truncate">Competition points</span>
           </div>
         </div>
       </div>
 
-      {/* Team Performance Overview */}
+      {/* Team Performance Overview - Enhanced Mobile Layout */}
       {teamResults.length > 0 && (
         <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100/50 overflow-hidden">
-          <div className="p-6 border-b border-gray-100/50">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-gray-900 flex items-center">
+          <div className="p-4 sm:p-6 border-b border-gray-100/50">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-2 sm:space-y-0">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 flex items-center">
                 <span className="mr-2">🏆</span>
                 Recent Results
               </h2>
-              <div className="text-sm text-gray-600">
+              <div className="text-xs sm:text-sm text-gray-600 bg-gray-100 px-3 py-1 rounded-full">
                 {teamResults.length} of {allPublishedResults.length} total results
               </div>
             </div>
           </div>
-          <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="p-4 sm:p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               {recentResults.map((result, index) => {
                 // Find programme by matching _id, id, or code
                 const programme = (programmes || []).find(p => 
@@ -509,22 +513,26 @@ export default function TeamDashboard() {
                 };
                 
                 return (
-                  <div key={index} className="p-4 bg-gray-50/80 backdrop-blur-sm rounded-lg border border-gray-200/50">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-medium text-gray-900 text-sm truncate">{programme?.name || 'Unknown Programme'}</h3>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium border ${
-                        positionColors[teamPosition.position as keyof typeof positionColors] || defaultColor
-                      }`}>
-                        {teamPosition.position === 1 ? '🥇 1st' : 
-                         teamPosition.position === 2 ? '🥈 2nd' : 
-                         teamPosition.position === 3 ? '🥉 3rd' : 
-                         `#${teamPosition.position}`}
-                      </span>
+                  <div key={index} className="p-3 sm:p-4 bg-gray-50/80 backdrop-blur-sm rounded-lg border border-gray-200/50 hover:bg-gray-100/80 transition-colors">
+                    <div className="flex flex-col space-y-2">
+                      <div className="flex items-start justify-between">
+                        <h3 className="font-medium text-gray-900 text-xs sm:text-sm leading-tight flex-1 pr-2">
+                          {programme?.name || 'Unknown Programme'}
+                        </h3>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium border flex-shrink-0 ${
+                          positionColors[teamPosition.position as keyof typeof positionColors] || defaultColor
+                        }`}>
+                          {teamPosition.position === 1 ? '🥇 1st' : 
+                           teamPosition.position === 2 ? '🥈 2nd' : 
+                           teamPosition.position === 3 ? '🥉 3rd' : 
+                           `#${teamPosition.position}`}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-600 leading-tight">{getParticipantNames()}</p>
+                      <p className="text-xs text-gray-500">
+                        {new Date(result.createdAt || '').toLocaleDateString()}
+                      </p>
                     </div>
-                    <p className="text-xs text-gray-600 truncate">{getParticipantNames()}</p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {new Date(result.createdAt || '').toLocaleDateString()}
-                    </p>
                   </div>
                 );
               })}
@@ -533,18 +541,18 @@ export default function TeamDashboard() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-        {/* Candidates by Section */}
-        <div className="xl:col-span-1">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
+        {/* Candidates by Section - Mobile First */}
+        <div className="lg:col-span-1">
           <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100/50 overflow-hidden">
-            <div className="p-6 border-b border-gray-100/50">
-              <h2 className="text-xl font-semibold text-gray-900 flex items-center">
+            <div className="p-4 sm:p-6 border-b border-gray-100/50">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 flex items-center">
                 <span className="mr-2">👥</span>
                 Candidates by Section
               </h2>
             </div>
-            <div className="p-6">
-              <div className="space-y-4">
+            <div className="p-4 sm:p-6">
+              <div className="space-y-3 sm:space-y-4">
                 {Object.entries(candidatesBySection).map(([section, count]) => {
                   const colors = {
                     senior: 'bg-blue-500',
@@ -553,13 +561,13 @@ export default function TeamDashboard() {
                   };
                   return (
                     <div key={section} className="flex items-center justify-between p-3 bg-gray-50/80 backdrop-blur-sm rounded-lg hover:bg-gray-100/80 transition-all">
-                      <div className="flex items-center">
-                        <div className={`w-4 h-4 rounded-full ${colors[section as keyof typeof colors]} mr-3`}></div>
-                        <span className="font-medium text-gray-900 capitalize">
+                      <div className="flex items-center flex-1 min-w-0">
+                        <div className={`w-3 h-3 sm:w-4 sm:h-4 rounded-full ${colors[section as keyof typeof colors]} mr-2 sm:mr-3 flex-shrink-0`}></div>
+                        <span className="font-medium text-gray-900 capitalize text-sm sm:text-base truncate">
                           {section.replace('-', ' ')}
                         </span>
                       </div>
-                      <span className="text-sm font-semibold text-gray-700 bg-white/80 backdrop-blur-sm px-3 py-1 rounded-full">
+                      <span className="text-xs sm:text-sm font-semibold text-gray-700 bg-white/80 backdrop-blur-sm px-2 sm:px-3 py-1 rounded-full flex-shrink-0 ml-2">
                         {count}
                       </span>
                     </div>
@@ -570,32 +578,32 @@ export default function TeamDashboard() {
           </div>
         </div>
 
-        {/* Recent Activities */}
-        <div className="xl:col-span-2">
+        {/* Recent Activities - Enhanced Mobile Layout */}
+        <div className="lg:col-span-2">
           <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100/50 overflow-hidden">
-            <div className="p-6 border-b border-gray-100/50">
-              <h2 className="text-xl font-semibold text-gray-900 flex items-center">
+            <div className="p-4 sm:p-6 border-b border-gray-100/50">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 flex items-center">
                 <span className="mr-2">📋</span>
                 Recent Activities
               </h2>
             </div>
-            <div className="p-6">
-              <div className="space-y-4">
+            <div className="p-4 sm:p-6">
+              <div className="space-y-3 sm:space-y-4">
                 {recentActivities.length > 0 ? recentActivities.map((activity, index) => (
-                  <div key={index} className="flex items-start space-x-4 p-4 bg-gray-50/80 backdrop-blur-sm rounded-lg hover:bg-gray-100/80 transition-all">
-                    <div className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-lg flex items-center justify-center shadow-sm">
-                      <span className="text-lg">{activity.icon}</span>
+                  <div key={index} className="flex items-start space-x-3 sm:space-x-4 p-3 sm:p-4 bg-gray-50/80 backdrop-blur-sm rounded-lg hover:bg-gray-100/80 transition-all">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/90 backdrop-blur-sm rounded-lg flex items-center justify-center shadow-sm flex-shrink-0">
+                      <span className="text-sm sm:text-lg">{activity.icon}</span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900">{activity.message}</p>
+                      <p className="text-xs sm:text-sm font-medium text-gray-900 leading-tight">{activity.message}</p>
                       <p className="text-xs text-gray-500 mt-1">{activity.time}</p>
                     </div>
                   </div>
                 )) : (
-                  <div className="text-center py-8 text-gray-500">
-                    <span className="text-4xl mb-4 block">📋</span>
-                    <p>No recent activities yet</p>
-                    <p className="text-sm mt-1">Activities will appear here as you register for programmes and receive results</p>
+                  <div className="text-center py-6 sm:py-8 text-gray-500">
+                    <span className="text-3xl sm:text-4xl mb-3 sm:mb-4 block">📋</span>
+                    <p className="text-sm sm:text-base">No recent activities yet</p>
+                    <p className="text-xs sm:text-sm mt-1 px-4">Activities will appear here as you register for programmes and receive results</p>
                   </div>
                 )}
               </div>
@@ -604,31 +612,31 @@ export default function TeamDashboard() {
         </div>
       </div>
 
-      {/* Quick Actions */}
+      {/* Quick Actions - Fully Responsive Grid */}
       <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100/50 overflow-hidden">
-        <div className="p-6 border-b border-gray-100/50">
-          <h2 className="text-xl font-semibold text-gray-900 flex items-center">
+        <div className="p-4 sm:p-6 border-b border-gray-100/50">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 flex items-center">
             <span className="mr-2">⚡</span>
             Quick Actions
           </h2>
         </div>
-        <div className="p-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+        <div className="p-4 sm:p-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
             {quickActions.map((action, index) => (
               <Link
                 key={index}
                 href={action.href}
-                className="group relative overflow-hidden bg-gradient-to-br from-gray-50/80 to-gray-100/80 hover:from-white/90 hover:to-gray-50/90 backdrop-blur-sm rounded-xl p-6 border border-gray-200/50 hover:border-gray-300/50 transition-all duration-200 hover:shadow-md hover:-translate-y-1"
+                className="group relative overflow-hidden bg-gradient-to-br from-gray-50/80 to-gray-100/80 hover:from-white/90 hover:to-gray-50/90 backdrop-blur-sm rounded-xl p-3 sm:p-4 lg:p-6 border border-gray-200/50 hover:border-gray-300/50 transition-all duration-200 hover:shadow-md hover:-translate-y-1"
               >
-                <div className="flex flex-col items-center text-center space-y-3">
-                  <div className={`w-14 h-14 ${action.bgColor}/80 backdrop-blur-sm rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-200`}>
-                    <span className="text-2xl">{action.icon}</span>
+                <div className="flex flex-col items-center text-center space-y-2 sm:space-y-3">
+                  <div className={`w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 ${action.bgColor}/80 backdrop-blur-sm rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-200`}>
+                    <span className="text-lg sm:text-xl lg:text-2xl">{action.icon}</span>
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900 group-hover:text-gray-800">
+                  <div className="min-w-0 w-full">
+                    <h3 className="font-semibold text-gray-900 group-hover:text-gray-800 text-xs sm:text-sm lg:text-base leading-tight">
                       {action.title}
                     </h3>
-                    <p className="text-sm text-gray-600 mt-1">
+                    <p className="text-xs sm:text-sm text-gray-600 mt-1 leading-tight hidden sm:block">
                       {action.description}
                     </p>
                   </div>

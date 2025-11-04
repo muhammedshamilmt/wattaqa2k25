@@ -1,143 +1,146 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 
-export default function ScorecardPrint4UpPage() {
-    const searchParams = useSearchParams();
-    const [data, setData] = useState({
-        evaluatorName: '',
-        programCode: '',
-        programName: '',
-        section: '',
-        chestNumbers: [] as string[],
-        candidates: [] as Array<{ chestNumber: string, name: string, team: string }>
+// Disable static generation for this page
+export const dynamic = 'force-dynamic';
+
+function ScorecardPrint4UpContent() {
+  const searchParams = useSearchParams();
+  const [data, setData] = useState({
+    evaluatorName: '',
+    programCode: '',
+    programName: '',
+    section: '',
+    chestNumbers: [] as string[],
+    candidates: [] as Array<{ chestNumber: string, name: string, team: string }>
+  });
+
+  useEffect(() => {
+    // Get data from URL parameters
+    const evaluatorName = searchParams.get('evaluator') || '';
+    const programCode = searchParams.get('code') || '';
+    const programName = searchParams.get('name') || '';
+    const section = searchParams.get('section') || '';
+    const chestNumbers = searchParams.get('participants')?.split(',') || [];
+    const candidateDataStr = searchParams.get('candidateData') || '[]';
+
+    let candidates = [];
+    try {
+      candidates = JSON.parse(candidateDataStr);
+    } catch (e) {
+      console.error('Error parsing candidate data:', e);
+      candidates = [];
+    }
+
+    setData({
+      evaluatorName,
+      programCode,
+      programName,
+      section,
+      chestNumbers,
+      candidates
     });
 
-    useEffect(() => {
-        // Get data from URL parameters
-        const evaluatorName = searchParams.get('evaluator') || '';
-        const programCode = searchParams.get('code') || '';
-        const programName = searchParams.get('name') || '';
-        const section = searchParams.get('section') || '';
-        const chestNumbers = searchParams.get('participants')?.split(',') || [];
-        const candidateDataStr = searchParams.get('candidateData') || '[]';
+    // Auto-print when page loads
+    setTimeout(() => {
+      window.print();
+    }, 500);
+  }, [searchParams]);
 
-        let candidates = [];
-        try {
-            candidates = JSON.parse(candidateDataStr);
-        } catch (e) {
-            console.error('Error parsing candidate data:', e);
-            candidates = [];
-        }
-
-        setData({
-            evaluatorName,
-            programCode,
-            programName,
-            section,
-            chestNumbers,
-            candidates
-        });
-
-        // Auto-print when page loads
-        setTimeout(() => {
-            window.print();
-        }, 500);
-    }, [searchParams]);
-
-    // Create 4 scorecard components
-    const renderScorecard = (cardIndex: number) => (
-        <div key={cardIndex} className="scorecard">
-            {/* HEADER */}
-            <header className="header">
-                <div className="header-title">
-                    <h1>WATTAQA ARTS FEST 2025</h1>
-                    <p>SCORE CARD</p>
-                </div>
-                <div className="logo-section">
-                    <div className="logo">
-                        <img src="/images/festival-logo.png" alt="Festival Logo" style={{ width: '18px', height: '18px', objectFit: 'cover', borderRadius: '2px' }} />
-                    </div>
-                    <p><strong>wattaqa</strong><br />Arts fest 2025</p>
-                </div>
-            </header>
-
-            {/* INFO SECTION */}
-            <section className="info-section">
-                <div className="info-row evaluator">
-                    <div className="label">NAME OF EVALUATOR</div>
-                    <div className="input">{data.evaluatorName || ''}</div>
-                </div>
-                <div className="info-row program">
-                    <div className="label">NAME OF PROGRAM</div>
-                    <div className="program-columns">
-                        <div className="program-col program-left">{data.programName || ''}</div>
-                        <div className="program-col program-right">{data.section ? data.section.toUpperCase() : ''}</div>
-                    </div>
-                </div>
-            </section>
-
-            {/* TABLE SECTION */}
-            <div className="table-wrapper">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>SL NO</th>
-                            <th>Chess no</th>
-                            <th>TEAM CODE</th>
-                            <th>NAME</th>
-                            <th>CODE LETTER</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {data.candidates.length > 0 ? (
-                            data.candidates.map((candidate, index) => (
-                                <tr key={index}>
-                                    <td>{index + 1}</td>
-                                    <td>{candidate.chestNumber}</td>
-                                    <td>{candidate.team ? candidate.team.charAt(0).toUpperCase() : ''}</td>
-                                    <td>{candidate.name}</td>
-                                    <td></td>
-                                </tr>
-                            ))
-                        ) : (
-                            // Show minimum 5 empty rows if no participants
-                            Array.from({ length: 5 }, (_, index) => (
-                                <tr key={index}>
-                                    <td>{index + 1}</td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                </tr>
-                            ))
-                        )}
-                        {/* Add extra empty rows if needed to maintain minimum table height */}
-                        {data.candidates.length > 0 && data.candidates.length < 5 &&
-                            Array.from({ length: 5 - data.candidates.length }, (_, index) => (
-                                <tr key={`extra-${index}`}>
-                                    <td>{data.candidates.length + index + 1}</td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                </tr>
-                            ))
-                        }
-                    </tbody>
-                </table>
-            </div>
+  // Create 4 scorecard components
+  const renderScorecard = (cardIndex: number) => (
+    <div key={cardIndex} className="scorecard">
+      {/* HEADER */}
+      <header className="header">
+        <div className="header-title">
+          <h1>WATTAQA ARTS FEST 2025</h1>
+          <p>SCORE CARD</p>
         </div>
-    );
+        <div className="logo-section">
+          <div className="logo">
+            <img src="/images/festival-logo.png" alt="Festival Logo" style={{ width: '18px', height: '18px', objectFit: 'cover', borderRadius: '2px' }} />
+          </div>
+          <p><strong>wattaqa</strong><br />Arts fest 2025</p>
+        </div>
+      </header>
 
-    return (
-        <html lang="en">
-            <head>
-                <meta charSet="UTF-8" />
-                <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-                <title>WATTAQA ARTS FEST 2025 - SCORE CARD</title>
-                <style>{`
+      {/* INFO SECTION */}
+      <section className="info-section">
+        <div className="info-row evaluator">
+          <div className="label">NAME OF EVALUATOR</div>
+          <div className="input">{data.evaluatorName || ''}</div>
+        </div>
+        <div className="info-row program">
+          <div className="label">NAME OF PROGRAM</div>
+          <div className="program-columns">
+            <div className="program-col program-left">{data.programName || ''}</div>
+            <div className="program-col program-right">{data.section ? data.section.toUpperCase() : ''}</div>
+          </div>
+        </div>
+      </section>
+
+      {/* TABLE SECTION */}
+      <div className="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>SL NO</th>
+              <th>Chess no</th>
+              <th>TEAM CODE</th>
+              <th>NAME</th>
+              <th>CODE LETTER</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.candidates.length > 0 ? (
+              data.candidates.map((candidate, index) => (
+                <tr key={index}>
+                  <td>{index + 1}</td>
+                  <td>{candidate.chestNumber}</td>
+                  <td>{candidate.team ? candidate.team.charAt(0).toUpperCase() : ''}</td>
+                  <td>{candidate.name}</td>
+                  <td></td>
+                </tr>
+              ))
+            ) : (
+              // Show minimum 5 empty rows if no participants
+              Array.from({ length: 5 }, (_, index) => (
+                <tr key={index}>
+                  <td>{index + 1}</td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                </tr>
+              ))
+            )}
+            {/* Add extra empty rows if needed to maintain minimum table height */}
+            {data.candidates.length > 0 && data.candidates.length < 5 &&
+              Array.from({ length: 5 - data.candidates.length }, (_, index) => (
+                <tr key={`extra-${index}`}>
+                  <td>{data.candidates.length + index + 1}</td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                </tr>
+              ))
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+
+  return (
+    <html lang="en">
+      <head>
+        <meta charSet="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>WATTAQA ARTS FEST 2025 - SCORE CARD</title>
+        <style>{`
           /* ---------- RESET ---------- */
           * {
             margin: 0;
@@ -577,12 +580,24 @@ export default function ScorecardPrint4UpPage() {
             }
           }
         `}</style>
-            </head>
-            <body>
-                <div className="print-container">
-                    {Array.from({ length: 4 }, (_, index) => renderScorecard(index))}
-                </div>
-            </body>
-        </html>
-    );
+      </head>
+      <body>
+        <div className="print-container">
+          {Array.from({ length: 4 }, (_, index) => renderScorecard(index))}
+        </div>
+      </body>
+    </html>
+  );
+}
+
+export default function ScorecardPrint4UpPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    }>
+      <ScorecardPrint4UpContent />
+    </Suspense>
+  );
 }

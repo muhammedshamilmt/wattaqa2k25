@@ -1,5 +1,6 @@
 'use client';
 
+import { Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 
@@ -12,7 +13,7 @@ interface TeamBreadcrumbProps {
   };
 }
 
-export default function TeamBreadcrumb({ pageName, teamData }: TeamBreadcrumbProps) {
+function TeamBreadcrumbContent({ pageName, teamData }: TeamBreadcrumbProps) {
   const searchParams = useSearchParams();
   const teamCode = searchParams.get('team') || teamData?.code || '';
 
@@ -38,5 +39,18 @@ export default function TeamBreadcrumb({ pageName, teamData }: TeamBreadcrumbPro
         </ol>
       </nav>
     </div>
+  );
+}
+
+export default function TeamBreadcrumb(props: TeamBreadcrumbProps) {
+  return (
+    <Suspense fallback={
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="animate-pulse bg-gray-200 h-8 w-48 rounded"></div>
+        <div className="animate-pulse bg-gray-200 h-6 w-32 rounded"></div>
+      </div>
+    }>
+      <TeamBreadcrumbContent {...props} />
+    </Suspense>
   );
 }
