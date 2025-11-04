@@ -4,10 +4,13 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
 import { ShowcaseSection } from "@/components/Layouts/showcase-section";
-import { Team } from '@/types';
+import { Team, Result, Candidate } from '@/types';
+import { getGradePoints } from '@/utils/markingSystem';
 
 export default function TeamsPage() {
   const [teams, setTeams] = useState<Team[]>([]);
+  const [allResults, setAllResults] = useState<Result[]>([]);
+  const [allCandidates, setAllCandidates] = useState<Candidate[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
@@ -33,11 +36,23 @@ export default function TeamsPage() {
 
   const fetchTeams = async () => {
     try {
-      const response = await fetch('/api/teams');
-      const data = await response.json();
-      setTeams(data);
+      const [teamsRes, resultsRes, candidatesRes] = await Promise.all([
+        fetch('/api/teams'),
+        fetch('/api/results/status?status=published'), // Only published results
+        fetch('/api/candidates')
+      ]);
+
+      const [teamsData, resultsData, candidatesData] = await Promise.all([
+        teamsRes.json(),
+        resultsRes.json(),
+        candidatesRes.json()
+      ]);
+
+      setTeams(teamsData);
+      setAllResults(resultsData);
+      setAllCandidates(candidatesData);
     } catch (error) {
-      console.error('Error fetching teams:', error);
+      console.error('Error fetching data:', error);
     } finally {
       setLoading(false);
     }
@@ -127,6 +142,45 @@ export default function TeamsPage() {
     }
   };
 
+  const handleAdminTeamAccess = async (team: Team) => {
+    const email = prompt(`Enter your admin email to access ${team.name} (${team.code}) team portal:`);
+    
+    if (!email) return;
+    
+    try {
+      // Verify admin email and create temporary team captain session
+      const response = await fetch('/api/auth/admin-team-access', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          adminEmail: email,
+          teamCode: team.code,
+          teamName: team.name
+        })
+      });
+
+      if (response.ok) {
+        const { tempUser } = await response.json();
+        
+        // Store temporary team captain user in localStorage
+        localStorage.setItem('currentUser', JSON.stringify(tempUser));
+        localStorage.setItem('adminTeamAccess', 'true');
+        localStorage.setItem('originalAdminEmail', email);
+        
+        // Redirect to team admin portal
+        window.open(`/team-admin?team=${team.code}`, '_blank');
+      } else {
+        const error = await response.json();
+        alert(error.error || 'Access denied. Please check your admin email.');
+      }
+    } catch (error) {
+      console.error('Error accessing team portal:', error);
+      alert('Failed to access team portal. Please try again.');
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       code: '',
@@ -187,6 +241,84 @@ export default function TeamsPage() {
     return brightness > 128 ? '#000000' : '#FFFFFF';
   };
 
+  // Calculate team points from published results only
+  const calculateTeamPoints = (team: Team) => {
+    const teamCandidates = allCandidates.filter(c => c.team === team.code);
+    
+    // Filter results that include team members - ONLY PUBLISHED RESULTS
+    const teamResults = allResults.filter(result => {
+      // Only include published results for grand marks calculation
+      if (result.status !== 'published') return false;
+      
+      // Check team results
+      if (result.firstPlaceTeams?.some(t => t.teamCode === team.code) ||
+          result.secondPlaceTeams?.some(t => t.teamCode === team.code) ||
+          result.thirdPlaceTeams?.some(t => t.teamCode === team.code)) {
+        return true;
+      }
+      
+      // Check individual results
+      const teamChestNumbers = teamCandidates.map(c => c.chestNumber);
+      const allWinners = [
+        ...(result.firstPlace || []).map(w => w.chestNumber),
+        ...(result.secondPlace || []).map(w => w.chestNumber),
+        ...(result.thirdPlace || []).map(w => w.chestNumber)
+      ];
+      return allWinners.some(chestNumber => teamChestNumbers.includes(chestNumber));
+    });
+
+    // Calculate total points
+    const totalPoints = teamResults.reduce((sum, result) => {
+      let points = 0;
+      
+      // Team points
+      if (result.firstPlaceTeams?.some(t => t.teamCode === team.code)) {
+        const teamWinner = result.firstPlaceTeams.find(t => t.teamCode === team.code);
+        const gradePoints = getGradePoints(teamWinner?.grade || '');
+        points += result.firstPoints + gradePoints;
+      }
+      if (result.secondPlaceTeams?.some(t => t.teamCode === team.code)) {
+        const teamWinner = result.secondPlaceTeams.find(t => t.teamCode === team.code);
+        const gradePoints = getGradePoints(teamWinner?.grade || '');
+        points += result.secondPoints + gradePoints;
+      }
+      if (result.thirdPlaceTeams?.some(t => t.teamCode === team.code)) {
+        const teamWinner = result.thirdPlaceTeams.find(t => t.teamCode === team.code);
+        const gradePoints = getGradePoints(teamWinner?.grade || '');
+        points += result.thirdPoints + gradePoints;
+      }
+      
+      // Individual points
+      if (result.firstPlace?.some(w => teamCandidates.some(c => c.chestNumber === w.chestNumber))) {
+        result.firstPlace.forEach(winner => {
+          if (teamCandidates.some(c => c.chestNumber === winner.chestNumber)) {
+            const gradePoints = getGradePoints(winner.grade || '');
+            points += result.firstPoints + gradePoints;
+          }
+        });
+      }
+      if (result.secondPlace?.some(w => teamCandidates.some(c => c.chestNumber === w.chestNumber))) {
+        result.secondPlace.forEach(winner => {
+          if (teamCandidates.some(c => c.chestNumber === winner.chestNumber)) {
+            const gradePoints = getGradePoints(winner.grade || '');
+            points += result.secondPoints + gradePoints;
+          }
+        });
+      }
+      if (result.thirdPlace?.some(w => teamCandidates.some(c => c.chestNumber === w.chestNumber))) {
+        result.thirdPlace.forEach(winner => {
+          if (teamCandidates.some(c => c.chestNumber === winner.chestNumber)) {
+            const gradePoints = getGradePoints(winner.grade || '');
+            points += result.thirdPoints + gradePoints;
+          }
+        });
+      }
+      return sum + points;
+    }, 0);
+
+    return totalPoints;
+  };
+
   if (loading) {
     return (
       <>
@@ -213,12 +345,20 @@ export default function TeamsPage() {
             </p>
           </div>
           
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
             <h4 className="text-sm font-medium text-green-800 mb-2">📋 Sync Information</h4>
             <p className="text-sm text-green-700">
               Teams now sync with Google Sheets automatically! When you create, update, or delete teams, 
               the changes are synced to your Google Sheets including the captain's email address. 
               Team member counts and points are calculated from synced data.
+            </p>
+          </div>
+          
+          <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+            <h4 className="text-sm font-medium text-purple-800 mb-2">🏆 Grand Marks Calculation</h4>
+            <p className="text-sm text-purple-700">
+              Grand Marks shown for each team are calculated from <strong>published results only</strong>. 
+              This ensures consistency with the team admin portal and public results display.
             </p>
           </div>
         </ShowcaseSection>
@@ -509,24 +649,38 @@ export default function TeamsPage() {
                       <p className="text-xs text-gray-500">Members</p>
                     </div>
                     <div className="text-center">
-                      <p className="text-lg font-bold text-gray-900">{team.points}</p>
-                      <p className="text-xs text-gray-500">Points</p>
+                      <p className="text-lg font-bold text-gray-900">{calculateTeamPoints(team)}</p>
+                      <p className="text-xs text-gray-500">Grand Marks</p>
                     </div>
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="flex gap-2">
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleEdit(team)}
+                        className="flex-1 bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 transition-colors text-sm"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDelete(team)}
+                        className="flex-1 bg-red-500 text-white px-3 py-2 rounded-lg hover:bg-red-600 transition-colors text-sm"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                    
+                    {/* Admin Team Portal Access */}
                     <button
-                      onClick={() => handleEdit(team)}
-                      className="flex-1 bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 transition-colors text-sm"
+                      onClick={() => handleAdminTeamAccess(team)}
+                      className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 text-white px-3 py-2 rounded-lg hover:from-purple-600 hover:to-indigo-700 transition-all duration-200 text-sm font-medium shadow-md"
+                      style={{ 
+                        background: `linear-gradient(135deg, ${team.color} 0%, ${team.color}CC 100%)`,
+                        boxShadow: `0 4px 12px ${team.color}40`
+                      }}
                     >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(team)}
-                      className="flex-1 bg-red-500 text-white px-3 py-2 rounded-lg hover:bg-red-600 transition-colors text-sm"
-                    >
-                      Delete
+                      🔐 Access Team Portal
                     </button>
                   </div>
                 </div>

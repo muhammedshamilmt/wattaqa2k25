@@ -3,10 +3,13 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Team } from '@/types';
+import { useTeamAdmin } from '@/contexts/TeamAdminContext';
+import { useFirebaseTeamAuth } from '@/contexts/FirebaseTeamAuthContext';
+import { AccessDeniedScreen, TeamAccessLoadingScreen } from '@/hooks/useSecureTeamAccess';
 
 export default function TeamDetailsPage() {
-  const searchParams = useSearchParams();
-  const teamCode = searchParams.get('team') || 'SMD';
+  // Use simplified team admin context
+  const { teamCode, loading: accessLoading, accessDenied, userEmail, isAdminAccess } = useTeamAdmin();
   
   const [team, setTeam] = useState<Team | null>(null);
   const [loading, setLoading] = useState(true);
@@ -20,7 +23,9 @@ export default function TeamDetailsPage() {
   });
 
   useEffect(() => {
-    fetchTeamDetails();
+    if (teamCode && teamCode !== 'Loading...') {
+      fetchTeamDetails();
+    }
   }, [teamCode]);
 
   const fetchTeamDetails = async () => {
@@ -66,6 +71,19 @@ export default function TeamDetailsPage() {
       alert('Error updating team details');
     }
   };
+
+  // Security checks
+  if (accessLoading) {
+    return <TeamAccessLoadingScreen />;
+  }
+
+  if (accessDenied) {
+    return <AccessDeniedScreen />;
+  }
+
+  if (!teamCode) {
+    return <TeamAccessLoadingScreen />;
+  }
 
   if (loading) {
     return (

@@ -5,10 +5,13 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Candidate, Programme, ProgrammeParticipant, Team } from '@/types';
 import TeamBreadcrumb from '@/components/TeamAdmin/TeamBreadcrumb';
+import { useTeamAdmin } from '@/contexts/TeamAdminContext';
+import { useFirebaseTeamAuth } from '@/contexts/FirebaseTeamAuthContext';
+import { AccessDeniedScreen, TeamAccessLoadingScreen } from '@/hooks/useSecureTeamAccess';
 
 export default function TeamProgrammesPage() {
-  const searchParams = useSearchParams();
-  const teamCode = searchParams.get('team') || 'SMD';
+  // Use simplified team admin context
+  const { teamCode, loading: accessLoading, accessDenied, userEmail, isAdminAccess } = useTeamAdmin();
   
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [programmes, setProgrammes] = useState<Programme[]>([]);
@@ -17,31 +20,67 @@ export default function TeamProgrammesPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchData();
+    if (teamCode && teamCode !== 'Loading...') {
+      fetchData();
+    }
   }, [teamCode]);
 
   const fetchData = async () => {
+    if (!teamCode || teamCode === 'Loading...') {
+      console.error('No team code available');
+      return;
+    }
+
     try {
+      console.log('🚀 Fetching programmes data for team:', teamCode);
+      console.log('👤 Access info:', { userEmail, isAdminAccess });
+
       const [candidatesRes, programmesRes, participantsRes, teamsRes] = await Promise.all([
-        fetch(`/api/candidates?team=${teamCode}`),
-        fetch('/api/programmes'),
-        fetch(`/api/programme-participants?team=${teamCode}`),
-        fetch('/api/teams')
+        fetch(`/api/team-admin/candidates?team=${teamCode}`),
+        fetch('/api/programmes'), // Public data
+        fetch(`/api/programme-participants?team=${teamCode}`), // Public data
+        fetch('/api/teams') // Public data
       ]);
+
+      console.log('📊 Programmes API response status:', {
+        candidates: candidatesRes.status,
+        programmes: programmesRes.status,
+        participants: participantsRes.status,
+        teams: teamsRes.status
+      });
 
       const [candidatesData, programmesData, participantsData, teamsData] = await Promise.all([
-        candidatesRes.json(),
-        programmesRes.json(),
-        participantsRes.json(),
-        teamsRes.json()
+        candidatesRes.ok ? candidatesRes.json() : [],
+        programmesRes.ok ? programmesRes.json() : [],
+        participantsRes.ok ? participantsRes.json() : [],
+        teamsRes.ok ? teamsRes.json() : []
       ]);
 
-      setCandidates(candidatesData);
-      setProgrammes(programmesData);
-      setParticipants(participantsData);
+      console.log('✅ Programmes data received:', {
+        candidates: candidatesData?.length || 0,
+        programmes: programmesData?.length || 0,
+        participants: participantsData?.length || 0,
+        teams: teamsData?.length || 0
+      });
+
+      // Debug: Log sample data for analysis
+      console.log('🔍 Sample participants data:', participantsData?.slice(0, 2));
+      console.log('🔍 Sample programmes data:', programmesData?.slice(0, 2).map(p => ({
+        id: p._id?.toString(),
+        name: p.name,
+        code: p.code
+      })));
+
+      setCandidates(Array.isArray(candidatesData) ? candidatesData : []);
+      setProgrammes(Array.isArray(programmesData) ? programmesData : []);
+      setParticipants(Array.isArray(participantsData) ? participantsData : []);
       setTeamData(teamsData.find((t: Team) => t.code === teamCode) || null);
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('💥 Error fetching programmes data:', error);
+      setCandidates([]);
+      setProgrammes([]);
+      setParticipants([]);
+      setTeamData(null);
     } finally {
       setLoading(false);
     }
@@ -51,9 +90,10 @@ export default function TeamProgrammesPage() {
     try {
       const response = await fetch(`/api/programme-participants?team=${teamCode}`);
       const data = await response.json();
-      setParticipants(data);
+      setParticipants(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching participants:', error);
+      setParticipants([]);
     }
   };
 
@@ -84,6 +124,19 @@ export default function TeamProgrammesPage() {
     general: availableProgrammes.filter(p => p.section === 'general')
   };
 
+  // Security checks
+  if (accessLoading) {
+    return <TeamAccessLoadingScreen />;
+  }
+
+  if (accessDenied) {
+    return <AccessDeniedScreen />;
+  }
+
+  if (!teamCode) {
+    return <TeamAccessLoadingScreen />;
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -112,8 +165,6 @@ export default function TeamProgrammesPage() {
           <div className="text-sm opacity-90">Registered Programmes</div>
         </div>
       </div>
-
-
 
       {/* Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -289,30 +340,6 @@ export default function TeamProgrammesPage() {
           </div>
         )}
 
-        {/* General Programmes */}
-        {groupedProgrammes.general.length > 0 && (
-          <div className="bg-white rounded-lg shadow">
-            <div className="p-6 border-b bg-gray-50">
-              <h2 className="text-lg font-semibold text-gray-800">General Programmes</h2>
-              <p className="text-sm text-gray-600">Special events and general competitions</p>
-            </div>
-            <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {groupedProgrammes.general.map((programme) => (
-                  <ProgrammeCard 
-                    key={programme._id?.toString()} 
-                    programme={programme} 
-                    teamCode={teamCode}
-                    candidates={candidates}
-                    participants={participants}
-                    onUpdate={fetchParticipants}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* No Programmes Message */}
         {Object.values(groupedProgrammes).every(group => group.length === 0) && (
           <div className="bg-white rounded-lg shadow p-8 text-center">
@@ -346,8 +373,32 @@ function ProgrammeCard({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const existingParticipant = participants.find(p => p.programmeId === programme._id?.toString());
+  // Debug: Log the matching attempt
+  console.log('🔍 Matching participant for programme:', {
+    programmeName: programme.name,
+    programmeId: programme._id?.toString(),
+    participantsCount: participants.length,
+    sampleParticipant: participants[0] ? {
+      programmeId: participants[0].programmeId,
+      programmeCode: participants[0].programmeCode,
+      programmeName: participants[0].programmeName
+    } : 'No participants'
+  });
+
+  const existingParticipant = participants.find(p => {
+    const match = p.programmeId === programme._id?.toString();
+    if (match) {
+      console.log('✅ Found matching participant:', {
+        programmeId: p.programmeId,
+        participants: p.participants
+      });
+    }
+    return match;
+  });
   const isRegistered = !!existingParticipant;
+  
+  // Debug: Log registration status
+  console.log(`📋 Programme ${programme.name} (${programme._id?.toString()}): ${isRegistered ? 'REGISTERED' : 'NOT REGISTERED'}`);
   
   // Filter candidates based on programme section
   const sectionCandidates = candidates.filter(candidate => {
@@ -391,26 +442,17 @@ function ProgrammeCard({
   );
 
   const handleParticipantToggle = (chestNumber: string) => {
-    console.log('🔄 Toggling participant:', chestNumber);
-    console.log('📊 Current selected:', selectedParticipants);
-    console.log('🎯 Required participants:', programme.requiredParticipants);
-    
     setSelectedParticipants(prev => {
       const isCurrentlySelected = prev.includes(chestNumber);
       
       if (isCurrentlySelected) {
         // Remove from selection
-        const newSelection = prev.filter(p => p !== chestNumber);
-        console.log('➖ Removing, new selection:', newSelection);
-        return newSelection;
+        return prev.filter(p => p !== chestNumber);
       } else {
         // Check if we can add more
         if (prev.length < Number(programme.requiredParticipants)) {
-          const newSelection = [...prev, chestNumber];
-          console.log('➕ Adding, new selection:', newSelection);
-          return newSelection;
+          return [...prev, chestNumber];
         } else {
-          console.log('🚫 Cannot add - limit reached. Current:', prev.length, 'Max:', programme.requiredParticipants);
           alert(`Maximum ${programme.requiredParticipants} participants allowed. Please deselect someone first.`);
           return prev;
         }
@@ -641,51 +683,6 @@ function ProgrammeCard({
                           </button>
                         )}
                       </div>
-                      <div className="flex justify-between items-center mt-2">
-                        <p className="text-xs text-gray-500">
-                          Showing {filteredCandidates.length} of {sectionCandidates.length} eligible candidates
-                        </p>
-                        <button
-                          onClick={() => setSelectedParticipants([])}
-                          className="text-xs text-red-600 hover:text-red-800 font-medium"
-                        >
-                          Clear All Selections
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Quick Add by Chest Number */}
-                    <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                      <h5 className="font-semibold text-yellow-800 mb-2 flex items-center">
-                        <span className="mr-2">⚡</span>
-                        Quick Add by Chest Number
-                      </h5>
-                      <div className="flex space-x-2">
-                        <input
-                          type="text"
-                          placeholder="Type chest number (e.g., SMD001)"
-                          className="flex-1 px-3 py-2 border border-yellow-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 bg-white"
-                          onKeyPress={(e) => {
-                            if (e.key === 'Enter') {
-                              const chestNumber = e.currentTarget.value.toUpperCase();
-                              const candidate = candidates.find(c => c.chestNumber === chestNumber);
-                              if (candidate && !selectedParticipants.includes(chestNumber) && selectedParticipants.length < programme.requiredParticipants) {
-                                handleParticipantToggle(chestNumber);
-                                e.currentTarget.value = '';
-                              } else if (!candidate) {
-                                alert('Chest number not found in your team');
-                              } else if (selectedParticipants.includes(chestNumber)) {
-                                alert('Candidate already selected');
-                              } else {
-                                alert('Maximum participants reached');
-                              }
-                            }
-                          }}
-                        />
-                        <div className="text-xs text-yellow-700 flex items-center">
-                          Press Enter to add
-                        </div>
-                      </div>
                     </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-80 overflow-y-auto">
@@ -710,19 +707,8 @@ function ProgrammeCard({
                                   : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50 cursor-pointer'
                               }`}
                               onClick={() => {
-                                console.log('🖱️ Card clicked for:', candidate.chestNumber);
-                                console.log('🔍 isSelected:', isSelected, 'isDisabled:', isDisabled);
-                                
-                                if (isSelected) {
-                                  // Always allow deselection
-                                  console.log('✅ Allowing deselection');
+                                if (isSelected || !isDisabled) {
                                   handleParticipantToggle(candidate.chestNumber);
-                                } else if (!isDisabled) {
-                                  // Allow selection if not at limit
-                                  console.log('✅ Allowing selection');
-                                  handleParticipantToggle(candidate.chestNumber);
-                                } else {
-                                  console.log('❌ Click ignored - at participant limit');
                                 }
                               }}
                             >
@@ -751,52 +737,6 @@ function ProgrammeCard({
                           );
                         })
                       )}
-                    </div>
-                  </div>
-
-                  {/* Debug Info */}
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-                    <h5 className="font-semibold text-yellow-800 mb-2">Debug Info:</h5>
-                    <div className="text-sm text-yellow-700 space-y-1">
-                      <p><strong>Selected:</strong> {JSON.stringify(selectedParticipants)}</p>
-                      <p><strong>Required:</strong> {programme.requiredParticipants}</p>
-                      <p><strong>Selection Valid:</strong> {selectedParticipants.length === Number(programme.requiredParticipants) ? '✅ YES' : '❌ NO'}</p>
-                      <p><strong>Button Enabled:</strong> {selectedParticipants.length === Number(programme.requiredParticipants) && !isSubmitting ? '✅ YES' : '❌ NO'}</p>
-                      <p><strong>Debug:</strong> Selected={selectedParticipants.length}, Required={programme.requiredParticipants} (type: {typeof programme.requiredParticipants}), Equal={selectedParticipants.length === Number(programme.requiredParticipants)}</p>
-                      <p><strong>Candidates:</strong> {sectionCandidates.length} eligible, {filteredCandidates.length} filtered</p>
-                    </div>
-                    <div className="mt-2 flex gap-2">
-                      <button
-                        onClick={() => setSelectedParticipants([])}
-                        className="px-3 py-1 bg-yellow-200 text-yellow-800 rounded text-sm hover:bg-yellow-300"
-                      >
-                        Clear All
-                      </button>
-                      <button
-                        onClick={() => {
-                          const firstCandidates = candidates.slice(0, programme.requiredParticipants);
-                          setSelectedParticipants(firstCandidates.map(c => c.chestNumber));
-                        }}
-                        className="px-3 py-1 bg-yellow-200 text-yellow-800 rounded text-sm hover:bg-yellow-300"
-                      >
-                        Auto-Select {programme.requiredParticipants}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Test Buttons */}
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-                    <h5 className="font-semibold text-red-800 mb-2">Test Selection:</h5>
-                    <div className="flex gap-2">
-                      {candidates.slice(0, 3).map((candidate) => (
-                        <button
-                          key={candidate.chestNumber}
-                          onClick={() => handleParticipantToggle(candidate.chestNumber)}
-                          className="px-3 py-1 bg-red-100 text-red-800 rounded text-sm hover:bg-red-200"
-                        >
-                          Toggle {candidate.chestNumber}
-                        </button>
-                      ))}
                     </div>
                   </div>
 
@@ -880,21 +820,8 @@ function ProgrammeCard({
               )}
             </div>
 
-            {/* Footer with Always Visible Register Button */}
+            {/* Footer */}
             <div className="bg-white border-t-2 border-gray-200 px-6 py-6">
-              <div className="flex justify-between items-center mb-4">
-                <div className="text-lg font-semibold text-gray-900">
-                  Selected: <span className="text-blue-600">{selectedParticipants.length}</span> / <span className="text-blue-600">{programme.requiredParticipants}</span> Participants
-                </div>
-                <div className={`px-4 py-2 rounded-full text-sm font-bold ${
-                  selectedParticipants.length === Number(programme.requiredParticipants) 
-                    ? 'bg-green-100 text-green-800' 
-                    : 'bg-orange-100 text-orange-800'
-                }`}>
-                  {selectedParticipants.length === Number(programme.requiredParticipants) ? '✅ Ready to Register' : '⏳ Selection Incomplete'}
-                </div>
-              </div>
-              
               <div className="flex space-x-4">
                 <button
                   onClick={closeModal}
@@ -903,38 +830,14 @@ function ProgrammeCard({
                   ❌ Cancel
                 </button>
                 
-                {/* Always Visible Register Button */}
                 <button
-                  onClick={() => {
-                    console.log('🚀 Register button clicked!');
-                    console.log('📋 Selected participants:', selectedParticipants);
-                    console.log('🎯 Required:', programme.requiredParticipants);
-                    console.log('⏳ Is submitting:', isSubmitting);
-                    console.log('✅ Button should be enabled:', selectedParticipants.length === programme.requiredParticipants && !isSubmitting);
-                    
-                    // Force validation check
-                    if (selectedParticipants.length !== Number(programme.requiredParticipants)) {
-                      alert(`❌ Please select exactly ${programme.requiredParticipants} participant(s). Currently selected: ${selectedParticipants.length}`);
-                      return;
-                    }
-                    
-                    if (isSubmitting) {
-                      console.log('⏳ Already submitting, ignoring click');
-                      return;
-                    }
-                    
-                    handleRegister();
-                  }}
-                  disabled={!(selectedParticipants.length === Number(programme.requiredParticipants) && !isSubmitting)}
+                  onClick={handleRegister}
+                  disabled={selectedParticipants.length !== Number(programme.requiredParticipants) || isSubmitting}
                   className={`flex-1 px-6 py-3 font-bold text-lg rounded-lg transition-all duration-200 border-2 ${
                     selectedParticipants.length === Number(programme.requiredParticipants) && !isSubmitting
                       ? 'bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105 border-green-600 hover:border-green-700'
                       : 'bg-gray-400 text-white cursor-not-allowed opacity-75 border-gray-400'
                   }`}
-                  title={selectedParticipants.length !== Number(programme.requiredParticipants) 
-                    ? `Select exactly ${programme.requiredParticipants} participants to enable registration`
-                    : 'Click to register your team for this programme'
-                  }
                 >
                   {isSubmitting ? (
                     <span className="flex items-center justify-center">
@@ -1077,9 +980,7 @@ function ProgrammeCard({
                                   : 'border-gray-200 hover:border-orange-300 hover:bg-orange-50 cursor-pointer'
                               }`}
                               onClick={() => {
-                                if (isSelected) {
-                                  handleParticipantToggle(candidate.chestNumber);
-                                } else if (!isDisabled) {
+                                if (isSelected || !isDisabled) {
                                   handleParticipantToggle(candidate.chestNumber);
                                 }
                               }}
@@ -1194,19 +1095,6 @@ function ProgrammeCard({
 
             {/* Footer */}
             <div className="bg-white border-t-2 border-gray-200 px-6 py-6">
-              <div className="flex justify-between items-center mb-4">
-                <div className="text-lg font-semibold text-gray-900">
-                  Selected: <span className="text-orange-600">{selectedParticipants.length}</span> / <span className="text-orange-600">{programme.requiredParticipants}</span> Participants
-                </div>
-                <div className={`px-4 py-2 rounded-full text-sm font-bold ${
-                  selectedParticipants.length === Number(programme.requiredParticipants) 
-                    ? 'bg-green-100 text-green-800' 
-                    : 'bg-orange-100 text-orange-800'
-                }`}>
-                  {selectedParticipants.length === Number(programme.requiredParticipants) ? '✅ Ready to Update' : '⏳ Selection Incomplete'}
-                </div>
-              </div>
-              
               <div className="flex space-x-4">
                 <button
                   onClick={closeEditModal}
@@ -1217,7 +1105,7 @@ function ProgrammeCard({
                 
                 <button
                   onClick={handleUpdate}
-                  disabled={!(selectedParticipants.length === Number(programme.requiredParticipants) && !isSubmitting)}
+                  disabled={selectedParticipants.length !== Number(programme.requiredParticipants) || isSubmitting}
                   className={`flex-1 px-6 py-3 font-bold text-lg rounded-lg transition-all duration-200 border-2 ${
                     selectedParticipants.length === Number(programme.requiredParticipants) && !isSubmitting
                       ? 'bg-orange-600 hover:bg-orange-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105 border-orange-600 hover:border-orange-700'

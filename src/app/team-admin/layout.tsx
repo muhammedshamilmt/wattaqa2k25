@@ -2,141 +2,166 @@
 
 import { useState, useEffect } from 'react';
 import { Team } from '@/types';
-import TeamSidebar from '@/components/TeamAdmin/TeamSidebar';
-import TeamHeader from '@/components/TeamAdmin/TeamHeader';
-import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { TeamSidebarModern } from '@/components/TeamAdmin/TeamSidebarModern';
+import { Header } from "@/components/Layouts/header";
+
+import { GrandMarksProvider } from "@/contexts/GrandMarksContext";
+import { TeamAdminProvider } from "@/contexts/TeamAdminContext";
+import { FirebaseTeamAuthProvider } from "@/contexts/FirebaseTeamAuthContext";
+import { SecureTeamGuard } from "@/components/TeamAdmin/SecureTeamGuard";
+import { AdminAccessIndicator } from "@/components/TeamAdmin/AdminAccessIndicator";
 
 export default function TeamAdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [selectedTeam, setSelectedTeam] = useState<string>('');
   const [teams, setTeams] = useState<Team[]>([]);
-  const [loading, setLoading] = useState(true);
-
+  const [selectedTeam, setSelectedTeam] = useState<string>('Loading...');
+  
+  // Get team code safely on client side only
   useEffect(() => {
-    fetchTeams();
-    // Check if user is team captain and get their team
-    const storedUser = localStorage.getItem('currentUser');
-    if (storedUser) {
+    const updateSelectedTeam = () => {
+      // Only run on client side
+      if (typeof window === 'undefined') return;
+      
       try {
-        const user = JSON.parse(storedUser);
-        if (user.userType === 'team-captain' && user.team) {
-          setSelectedTeam(user.team.code);
+        // Check URL parameters first
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlTeamCode = urlParams.get('team');
+        
+        if (urlTeamCode && urlTeamCode.length >= 2) {
+          if (selectedTeam !== urlTeamCode) {
+            console.log('🔄 Layout: Team code changed from URL:', selectedTeam, '->', urlTeamCode);
+            setSelectedTeam(urlTeamCode);
+          }
+          return;
+        }
+        
+        // Fallback to localStorage
+        const storedUser = localStorage.getItem('currentUser');
+        if (storedUser) {
+          const user = JSON.parse(storedUser);
+          if (user.userType === 'team-captain' && user.team?.code) {
+            const teamCode = user.team.code;
+            if (teamCode && teamCode !== 'Loading...' && teamCode.length >= 2) {
+              if (selectedTeam !== teamCode) {
+                console.log('🔄 Layout: Team code changed from localStorage:', selectedTeam, '->', teamCode);
+                setSelectedTeam(teamCode);
+              }
+              return;
+            }
+          }
         }
       } catch (error) {
-        console.error('Error parsing user data:', error);
+        console.error('❌ Error getting team code:', error);
       }
-    }
+    };
+
+    // Initial load
+    updateSelectedTeam();
+
+    // Listen for URL changes
+    const handleLocationChange = () => {
+      updateSelectedTeam();
+    };
+
+    window.addEventListener('popstate', handleLocationChange);
+    
+    // Check for URL changes periodically (fallback for programmatic navigation)
+    const intervalId = setInterval(() => {
+      const currentUrlParams = new URLSearchParams(window.location.search);
+      const currentUrlTeamCode = currentUrlParams.get('team');
+      if (currentUrlTeamCode && currentUrlTeamCode !== selectedTeam) {
+        updateSelectedTeam();
+      }
+    }, 500);
+
+    return () => {
+      window.removeEventListener('popstate', handleLocationChange);
+      clearInterval(intervalId);
+    };
+  }, [selectedTeam]); // Add selectedTeam as dependency
+
+  // Fetch teams data in background (non-blocking)
+  useEffect(() => {
+    const fetchTeamsData = async () => {
+      try {
+        const response = await fetch('/api/teams');
+        const teamsData = await response.json();
+        setTeams(teamsData);
+      } catch (error) {
+        console.error('Error fetching teams:', error);
+        // Don't block the UI if teams fetch fails
+      }
+    };
+    
+    fetchTeamsData();
   }, []);
 
-  const fetchTeams = async () => {
+  // Optional: Log access for debugging (non-blocking)
+  useEffect(() => {
+    // Only run on client side
+    if (typeof window === 'undefined') return;
+    
     try {
-      const response = await fetch('/api/teams');
-      const data = await response.json();
-      setTeams(data);
+      const storedUser = localStorage.getItem('currentUser');
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlTeamCode = urlParams.get('team');
+      
+      console.log('🔍 Team Admin Access Debug:', {
+        hasStoredUser: !!storedUser,
+        urlTeamCode,
+        selectedTeam,
+        timestamp: new Date().toISOString()
+      });
+      
+      if (storedUser) {
+        const user = JSON.parse(storedUser);
+        console.log('👤 User Info:', {
+          userType: user.userType,
+          teamCode: user.team?.code,
+          isAdminAccess: user.isAdminAccess,
+          email: user.email || user.originalAdminEmail
+        });
+      }
     } catch (error) {
-      console.error('Error fetching teams:', error);
-    } finally {
-      setLoading(false);
+      console.error('❌ Error logging access info:', error);
     }
-  };
-
-  const handleTeamSelect = (teamCode: string) => {
-    setSelectedTeam(teamCode);
-    localStorage.setItem('selectedTeam', teamCode);
-    // Redirect to dashboard with team parameter
-    window.location.href = `/team-admin?team=${teamCode}`;
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading teams...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!selectedTeam) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="max-w-7xl mx-auto p-6">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Team Admin Portal</h1>
-            <p className="text-gray-600">Select your team to access the admin dashboard</p>
-          </div>
-          
-          <div className="bg-white rounded-lg shadow-lg p-8">
-            <h2 className="text-xl font-semibold mb-6 text-center">Choose Your Team</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {teams.map((team) => (
-                <button
-                  key={team._id?.toString()}
-                  onClick={() => handleTeamSelect(team.code)}
-                  className="group p-6 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:shadow-lg transition-all duration-200 transform hover:scale-105"
-                  style={{ borderColor: team.color + '40' }}
-                >
-                  <div className="text-center">
-                    <div 
-                      className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center text-white text-xl font-bold shadow-lg"
-                      style={{ backgroundColor: team.color }}
-                    >
-                      {team.code}
-                    </div>
-                    <h3 className="text-lg font-bold text-gray-900 mb-2">{team.name}</h3>
-                    <p className="text-sm text-gray-600 mb-2">{team.description}</p>
-                    <div className="flex justify-center items-center space-x-4 text-xs text-gray-500">
-                      <span>👥 {team.members} members</span>
-                      <span>🏆 {team.points} points</span>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  }, [selectedTeam]);
 
   const selectedTeamData = teams.find(t => t.code === selectedTeam);
 
   return (
-    <ProtectedRoute requireTeamCaptain={true}>
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 font-poppins relative">
-        {/* Background Grid */}
-        <div className="absolute inset-0 opacity-[0.02] pointer-events-none">
-          <div className="absolute inset-0" style={{
-            backgroundImage: `
-              linear-gradient(rgba(0,0,0,0.1) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(0,0,0,0.1) 1px, transparent 1px)
-            `,
-            backgroundSize: '20px 20px'
-          }}></div>
-        </div>
-        
-        <div className="flex min-h-screen relative z-10">
-          <TeamSidebar 
-            selectedTeam={selectedTeam} 
-            teamData={selectedTeamData}
-            onSwitchTeam={() => {}}
-          />
-          <div className="flex-1 flex flex-col min-w-0 lg:ml-0">
-            <TeamHeader teamData={selectedTeamData} />
-            <main className="flex-1 p-4 md:p-6 lg:p-8 pb-20 lg:pb-8">
-              <div className="max-w-7xl mx-auto">
-                <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-gray-100/50 p-4 md:p-6 lg:p-8 min-h-[calc(100vh-200px)]">
-                  {children}
-                </div>
+    <FirebaseTeamAuthProvider>
+      <SecureTeamGuard>
+        <GrandMarksProvider>
+          <TeamAdminProvider initialTeamCode={selectedTeam !== 'Loading...' ? selectedTeam : undefined}>
+            <div className="flex min-h-screen bg-gray-50 font-poppins"
+              style={{
+                backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.02) 1px, transparent 1px),
+                                    linear-gradient(90deg, rgba(0, 0, 0, 0.02) 1px, transparent 1px)`,
+                backgroundSize: '40px 40px'
+              }}>
+
+              <TeamSidebarModern 
+                selectedTeam={selectedTeam} 
+                teamData={selectedTeamData}
+                onSwitchTeam={() => {}}
+              />
+              <div className="w-full bg-transparent">
+                <AdminAccessIndicator />
+                <Header />
+                <main className="w-full relative">
+                  <div className="bg-white min-h-[calc(100vh-64px)] relative p-3 overflow-y-auto">
+                    {children}
+                  </div>
+                </main>
               </div>
-            </main>
-          </div>
-        </div>
-      </div>
-    </ProtectedRoute>
+            </div>
+          </TeamAdminProvider>
+        </GrandMarksProvider>
+      </SecureTeamGuard>
+    </FirebaseTeamAuthProvider>
   );
 }

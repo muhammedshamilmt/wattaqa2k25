@@ -23,7 +23,7 @@ console.log('Firebase Config:', {
 
 // Initialize Firebase
 let app;
-let auth;
+let auth: ReturnType<typeof getAuth>;
 
 try {
   app = initializeApp(firebaseConfig);

@@ -27,7 +27,21 @@ export async function GET(request: NextRequest) {
     if (programme) query.programmeId = programme;
     if (programmeId) query.programmeId = programmeId;
 
+    // Debug: Log the query being executed
+    console.log('🔍 Programme participants API query:', {
+      query,
+      team,
+      programme,
+      programmeId
+    });
+
     const participants = await collection.find(query).toArray();
+    
+    // Debug: Log the results
+    console.log('📊 Programme participants API results:', {
+      count: participants.length,
+      sampleData: participants.slice(0, 2)
+    });
     
     return NextResponse.json(participants);
   } catch (error) {

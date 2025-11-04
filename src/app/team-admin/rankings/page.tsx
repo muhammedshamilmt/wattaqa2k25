@@ -3,10 +3,13 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Team, Candidate, Result } from '@/types';
+import { useTeamAdmin } from '@/contexts/TeamAdminContext';
+import { useFirebaseTeamAuth } from '@/contexts/FirebaseTeamAuthContext';
+import { AccessDeniedScreen, TeamAccessLoadingScreen } from '@/hooks/useSecureTeamAccess';
 
 export default function TeamRankingsPage() {
-  const searchParams = useSearchParams();
-  const teamCode = searchParams.get('team') || 'SMD';
+  // Use simplified team admin context
+  const { teamCode, loading: accessLoading, accessDenied, userEmail, isAdminAccess } = useTeamAdmin();
   
   const [teams, setTeams] = useState<Team[]>([]);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
@@ -14,28 +17,53 @@ export default function TeamRankingsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchData();
+    if (teamCode && teamCode !== 'Loading...') {
+      fetchData();
+    }
   }, [teamCode]);
 
   const fetchData = async () => {
+    if (!teamCode || teamCode === 'Loading...') {
+      console.error('No team code available');
+      return;
+    }
+
     try {
+      console.log('🚀 Fetching rankings data for team:', teamCode);
+      console.log('👤 Access info:', { userEmail, isAdminAccess });
+
       const [teamsRes, candidatesRes, resultsRes] = await Promise.all([
-        fetch('/api/teams'),
-        fetch(`/api/candidates?team=${teamCode}`),
-        fetch('/api/results?teamView=true')
+        fetch('/api/teams'), // Public data
+        fetch(`/api/team-admin/candidates?team=${teamCode}`),
+        fetch('/api/team-admin/results?status=published')
       ]);
+
+      console.log('📊 Rankings API response status:', {
+        teams: teamsRes.status,
+        candidates: candidatesRes.status,
+        results: resultsRes.status
+      });
 
       const [teamsData, candidatesData, resultsData] = await Promise.all([
-        teamsRes.json(),
-        candidatesRes.json(),
-        resultsRes.json()
+        teamsRes.ok ? teamsRes.json() : [],
+        candidatesRes.ok ? candidatesRes.json() : [],
+        resultsRes.ok ? resultsRes.json() : []
       ]);
 
-      setTeams(teamsData);
-      setCandidates(candidatesData);
-      setResults(resultsData);
+      console.log('✅ Rankings data received:', {
+        teams: teamsData?.length || 0,
+        candidates: candidatesData?.length || 0,
+        results: resultsData?.length || 0
+      });
+
+      setTeams(Array.isArray(teamsData) ? teamsData : []);
+      setCandidates(Array.isArray(candidatesData) ? candidatesData : []);
+      setResults(Array.isArray(resultsData) ? resultsData : []);
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('💥 Error fetching rankings data:', error);
+      setTeams([]);
+      setCandidates([]);
+      setResults([]);
     } finally {
       setLoading(false);
     }
@@ -112,6 +140,19 @@ export default function TeamRankingsPage() {
     .filter(candidate => candidate.totalWins > 0)
     .sort((a, b) => b.points - a.points)
     .slice(0, 5);
+
+  // Security checks
+  if (accessLoading) {
+    return <TeamAccessLoadingScreen />;
+  }
+
+  if (accessDenied) {
+    return <AccessDeniedScreen />;
+  }
+
+  if (!teamCode) {
+    return <TeamAccessLoadingScreen />;
+  }
 
   if (loading) {
     return (

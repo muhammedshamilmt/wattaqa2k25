@@ -138,7 +138,7 @@ export async function DELETE(request: Request) {
     }
 
     // Delete all programme participants for this programme
-    const participantsCollection = db.collection('programme-participants');
+    const participantsCollection = db.collection('programme_participants');
     const participantsDeletionResult = await participantsCollection.deleteMany({ 
       programmeId: id 
     });

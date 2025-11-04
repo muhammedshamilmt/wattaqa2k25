@@ -1,70 +1,141 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+
 import { Candidate, Programme, ProgrammeParticipant, Result } from '@/types';
 import Link from 'next/link';
+import { useTeamAdmin } from '@/contexts/TeamAdminContext';
+import { useFirebaseTeamAuth } from '@/contexts/FirebaseTeamAuthContext';
+
 
 export default function TeamDashboard() {
-  const searchParams = useSearchParams();
-  const teamCode = searchParams.get('team') || 'SMD';
+  // SECURITY: Use team admin context (validation done in layout)
+  const { teamCode, loading: accessLoading, accessDenied } = useTeamAdmin();
+  const { user, loading: authLoading } = useFirebaseTeamAuth();
   
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [programmes, setProgrammes] = useState<Programme[]>([]);
   const [participants, setParticipants] = useState<ProgrammeParticipant[]>([]);
   const [results, setResults] = useState<Result[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Start as false for immediate display
 
   useEffect(() => {
+    // Start fetching immediately, even with partial data
     fetchDashboardData();
-  }, [teamCode]);
+  }, [teamCode, user]);
 
   const fetchDashboardData = async () => {
+    // Wait for both teamCode and user to be available, and ensure teamCode is valid
+    if (!teamCode || !user || teamCode === 'Loading...') {
+      console.log('🔄 Waiting for valid teamCode and user...', { 
+        teamCode: teamCode || 'null',
+        hasUser: !!user,
+        isValidTeam: teamCode && teamCode !== 'Loading...'
+      });
+      return;
+    }
+
     try {
-      setLoading(true);
+      // Don't set loading to true to avoid blocking UI
+      console.log('🚀 Fetching dashboard data for team:', teamCode);
+      
+      // Create authenticated fetch function (Firebase auth will be handled by middleware)
+      const authenticatedFetch = (url: string, options: RequestInit = {}) => {
+        return fetch(url, {
+          ...options,
+          headers: {
+            ...options.headers,
+            'Content-Type': 'application/json',
+          },
+        });
+      };
+
+      console.log('📡 Making API calls...');
       const [candidatesRes, programmesRes, participantsRes, resultsRes] = await Promise.all([
-        fetch(`/api/candidates?team=${teamCode}`),
-        fetch('/api/programmes'),
-        fetch(`/api/programme-participants?team=${teamCode}`),
-        fetch('/api/results?teamView=true')
+        authenticatedFetch(`/api/team-admin/candidates?team=${teamCode}`),
+        fetch('/api/programmes'), // Public data
+        fetch(`/api/programme-participants?team=${teamCode}`), // Public data
+        authenticatedFetch('/api/team-admin/results?status=published')
       ]);
+
+      // Log response status for debugging
+      console.log('📊 API Response Status:', {
+        candidates: candidatesRes.status,
+        programmes: programmesRes.status,
+        participants: participantsRes.status,
+        results: resultsRes.status
+      });
+
+      // Check for authentication errors
+      if (candidatesRes.status === 401 || resultsRes.status === 401) {
+        console.error('🚫 Authentication failed - redirecting to login');
+        window.location.href = '/login';
+        return;
+      }
+
+      if (candidatesRes.status === 403 || resultsRes.status === 403) {
+        console.error('🚫 Access denied - insufficient permissions');
+        return;
+      }
+
+      // Check for other errors
+      if (!candidatesRes.ok) {
+        console.error('❌ Candidates API error:', candidatesRes.status, candidatesRes.statusText);
+      }
+      if (!programmesRes.ok) {
+        console.error('❌ Programmes API error:', programmesRes.status, programmesRes.statusText);
+      }
+      if (!participantsRes.ok) {
+        console.error('❌ Participants API error:', participantsRes.status, participantsRes.statusText);
+      }
+      if (!resultsRes.ok) {
+        console.error('❌ Results API error:', resultsRes.status, resultsRes.statusText);
+      }
 
       const [candidatesData, programmesData, participantsData, resultsData] = await Promise.all([
-        candidatesRes.json(),
-        programmesRes.json(),
-        participantsRes.json(),
-        resultsRes.json()
+        candidatesRes.ok ? candidatesRes.json() : [],
+        programmesRes.ok ? programmesRes.json() : [],
+        participantsRes.ok ? participantsRes.json() : [],
+        resultsRes.ok ? resultsRes.json() : []
       ]);
 
-      setCandidates(candidatesData);
-      setProgrammes(programmesData);
-      setParticipants(participantsData);
-      setResults(resultsData);
+      console.log('✅ Fetched data counts:', {
+        candidates: candidatesData?.length || 0,
+        programmes: programmesData?.length || 0,
+        participants: participantsData?.length || 0,
+        results: resultsData?.length || 0
+      });
+
+      // Set data with safe fallbacks
+      setCandidates(Array.isArray(candidatesData) ? candidatesData : []);
+      setProgrammes(Array.isArray(programmesData) ? programmesData : []);
+      setParticipants(Array.isArray(participantsData) ? participantsData : []);
+      setResults(Array.isArray(resultsData) ? resultsData : []);
       
       // Debug logging to understand data structure
-      console.log('Team Dashboard Data:', {
+      console.log('📋 Sample data:', {
         candidates: candidatesData?.slice(0, 2),
         programmes: programmesData?.slice(0, 2),
         participants: participantsData?.slice(0, 2),
         results: resultsData?.slice(0, 2)
       });
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
+      console.error('💥 Error fetching dashboard data:', error);
+      // Set empty arrays on error
+      setCandidates([]);
+      setProgrammes([]);
+      setParticipants([]);
+      setResults([]);
     } finally {
-      setLoading(false);
+      // Loading is already false, no need to set it
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading dashboard...</p>
-        </div>
-      </div>
-    );
-  }
+  // Always show the page immediately - no blocking
+  const displayTeamCode = teamCode || 'Loading...';
+
+  // Show content immediately, with loading states for individual components
+  const isDataLoading = loading;
 
   // Calculate statistics with safe fallbacks
   const totalCandidates = candidates?.length || 0;
@@ -198,7 +269,7 @@ export default function TeamDashboard() {
     {
       title: 'Manage Candidates',
       description: 'Add or edit team members',
-      href: `/team-admin/candidates?team=${teamCode}`,
+      href: `/team-admin/candidates?team=${teamCode || ''}`,
       icon: '👥',
       color: 'from-blue-500 to-blue-600',
       bgColor: 'bg-blue-50',
@@ -207,7 +278,7 @@ export default function TeamDashboard() {
     {
       title: 'Register Programmes',
       description: 'Join competitions',
-      href: `/team-admin/programmes?team=${teamCode}`,
+      href: `/team-admin/programmes?team=${teamCode || ''}`,
       icon: '🎯',
       color: 'from-green-500 to-green-600',
       bgColor: 'bg-green-50',
@@ -216,7 +287,7 @@ export default function TeamDashboard() {
     {
       title: 'View Results',
       description: 'Check performance',
-      href: `/team-admin/results?team=${teamCode}`,
+      href: `/team-admin/results?team=${teamCode || ''}`,
       icon: '🏅',
       color: 'from-yellow-500 to-yellow-600',
       bgColor: 'bg-yellow-50',
@@ -225,7 +296,7 @@ export default function TeamDashboard() {
     {
       title: 'Team Rankings',
       description: 'View standings',
-      href: `/team-admin/rankings?team=${teamCode}`,
+      href: `/team-admin/rankings?team=${teamCode || ''}`,
       icon: '📈',
       color: 'from-purple-500 to-purple-600',
       bgColor: 'bg-purple-50',
@@ -234,7 +305,7 @@ export default function TeamDashboard() {
     {
       title: 'Team Details',
       description: 'Update information',
-      href: `/team-admin/details?team=${teamCode}`,
+      href: `/team-admin/details?team=${teamCode || ''}`,
       icon: '🏆',
       color: 'from-indigo-500 to-indigo-600',
       bgColor: 'bg-indigo-50',
@@ -258,7 +329,7 @@ export default function TeamDashboard() {
         <div className="relative z-10">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold mb-2">Team {teamCode} Dashboard</h1>
+              <h1 className="text-3xl font-bold mb-2">Team {displayTeamCode} Dashboard</h1>
               <p className="text-blue-100 text-lg">Manage your team, track performance, and stay updated with activities</p>
             </div>
             <div className="hidden md:block">
@@ -278,7 +349,13 @@ export default function TeamDashboard() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Total Candidates</p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">{totalCandidates}</p>
+              <p className="text-3xl font-bold text-gray-900 mt-1">
+                {isDataLoading ? (
+                  <div className="animate-pulse bg-gray-200 h-8 w-12 rounded"></div>
+                ) : (
+                  totalCandidates
+                )}
+              </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
               <span className="text-2xl">👥</span>
@@ -293,7 +370,13 @@ export default function TeamDashboard() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Registrations</p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">{totalParticipations}</p>
+              <p className="text-3xl font-bold text-gray-900 mt-1">
+                {isDataLoading ? (
+                  <div className="animate-pulse bg-gray-200 h-8 w-12 rounded"></div>
+                ) : (
+                  totalParticipations
+                )}
+              </p>
             </div>
             <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
               <span className="text-2xl">🎯</span>
@@ -308,7 +391,13 @@ export default function TeamDashboard() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Total Wins</p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">{totalWins}</p>
+              <p className="text-3xl font-bold text-gray-900 mt-1">
+                {isDataLoading ? (
+                  <div className="animate-pulse bg-gray-200 h-8 w-12 rounded"></div>
+                ) : (
+                  totalWins
+                )}
+              </p>
             </div>
             <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
               <span className="text-2xl">🥇</span>
@@ -323,7 +412,13 @@ export default function TeamDashboard() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Podium Finishes</p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">{totalPodiums}</p>
+              <p className="text-3xl font-bold text-gray-900 mt-1">
+                {isDataLoading ? (
+                  <div className="animate-pulse bg-gray-200 h-8 w-12 rounded"></div>
+                ) : (
+                  totalPodiums
+                )}
+              </p>
             </div>
             <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
               <span className="text-2xl">🏅</span>
@@ -338,7 +433,13 @@ export default function TeamDashboard() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Total Points</p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">{totalPoints}</p>
+              <p className="text-3xl font-bold text-gray-900 mt-1">
+                {isDataLoading ? (
+                  <div className="animate-pulse bg-gray-200 h-8 w-12 rounded"></div>
+                ) : (
+                  totalPoints
+                )}
+              </p>
             </div>
             <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center">
               <span className="text-2xl">🏆</span>

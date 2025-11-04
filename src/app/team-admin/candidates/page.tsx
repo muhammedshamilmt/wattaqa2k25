@@ -1,16 +1,19 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+
 import { Candidate } from '@/types';
 import { ImageUpload } from '@/components/ui/ImageUpload';
+import { useTeamAdmin } from '@/contexts/TeamAdminContext';
+import { SimpleAccessCheck } from '@/components/TeamAdmin/SimpleAccessCheck';
+
 
 export default function TeamCandidatesPage() {
-  const searchParams = useSearchParams();
-  const teamCode = searchParams.get('team') || 'SMD';
+  // Use simplified team admin context
+  const { teamCode, loading: accessLoading, accessDenied, userEmail, isAdminAccess } = useTeamAdmin();
   
   const [candidates, setCandidates] = useState<Candidate[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Start as false for immediate display
   const [submitting, setSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   
@@ -33,16 +36,49 @@ export default function TeamCandidatesPage() {
   });
 
   useEffect(() => {
-    fetchCandidates();
+    // Fetch when we have a valid team code
+    if (teamCode && teamCode !== 'Loading...') {
+      fetchCandidates();
+    }
   }, [teamCode]);
 
   const fetchCandidates = async () => {
+    if (!teamCode || teamCode === 'Loading...') {
+      console.log('🔄 Waiting for valid teamCode...', { 
+        teamCode: teamCode || 'null',
+        isValidTeam: teamCode && teamCode !== 'Loading...'
+      });
+      return;
+    }
+
+    setLoading(true);
     try {
-      const response = await fetch(`/api/candidates?team=${teamCode}`);
+      console.log('🚀 Fetching candidates for team:', teamCode);
+      console.log('👤 Access info:', { userEmail, isAdminAccess });
+      
+      const response = await fetch(`/api/team-admin/candidates?team=${teamCode}`, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      console.log('📊 Candidates API response status:', response.status);
+
+      if (!response.ok) {
+        console.error('❌ Candidates API error:', response.status, response.statusText);
+        const errorText = await response.text();
+        console.error('❌ Error details:', errorText);
+        setCandidates([]);
+        return;
+      }
+
       const data = await response.json();
-      setCandidates(data);
+      console.log('✅ Candidates data received:', data?.length || 0, 'candidates');
+      console.log('📋 Sample candidate data:', data?.[0] || 'No candidates');
+      setCandidates(Array.isArray(data) ? data : []);
     } catch (error) {
-      console.error('Error fetching candidates:', error);
+      console.error('💥 Error fetching candidates:', error);
+      setCandidates([]);
     } finally {
       setLoading(false);
     }
@@ -155,6 +191,9 @@ export default function TeamCandidatesPage() {
     });
   };
 
+  // Always show the page immediately
+  const displayTeamCode = teamCode || 'Loading...';
+
   // Group candidates by section
   const candidatesBySection = {
     senior: candidates.filter(c => c.section === 'senior'),
@@ -162,19 +201,12 @@ export default function TeamCandidatesPage() {
     'sub-junior': candidates.filter(c => c.section === 'sub-junior')
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading candidates...</p>
-        </div>
-      </div>
-    );
-  }
+  // Show content immediately, with loading states for data
+  const isDataLoading = loading;
 
   return (
-    <div className="space-y-6">
+    <SimpleAccessCheck>
+      <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
@@ -182,7 +214,13 @@ export default function TeamCandidatesPage() {
           <p className="text-gray-600">Manage your team members and their information</p>
         </div>
         <div className="text-right">
-          <div className="text-2xl font-bold text-blue-600">{candidates.length}</div>
+          <div className="text-2xl font-bold text-blue-600">
+            {loading ? (
+              <div className="animate-pulse bg-gray-200 h-8 w-12 rounded"></div>
+            ) : (
+              candidates.length
+            )}
+          </div>
           <div className="text-sm text-gray-500">Total Candidates</div>
         </div>
       </div>
@@ -429,5 +467,6 @@ export default function TeamCandidatesPage() {
         </div>
       </div>
     </div>
+    </SimpleAccessCheck>
   );
 }

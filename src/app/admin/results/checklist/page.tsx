@@ -42,6 +42,16 @@ export default function CheckListPage() {
     setIsCalculationActive(activeTab === 'calculation');
   }, [activeTab, setIsCalculationActive]);
 
+  // Update grand marks preview when category filter changes
+  useEffect(() => {
+    if (activeTab === 'calculation') {
+      // Clear calculation results when category changes to prevent showing wrong data
+      setCalculationResults([]);
+      setGrandMarksPreview([]);
+      setGrandMarks([]);
+    }
+  }, [categoryFilter, activeTab, setGrandMarks]);
+
   const fetchData = async () => {
     try {
       const [pendingRes, checkedRes, publishedRes, programmesRes, teamsRes, candidatesRes, participantsRes] = await Promise.all([
@@ -264,150 +274,160 @@ export default function CheckListPage() {
   };
 
   const updateGrandMarksPreview = (results: EnhancedResult[]) => {
-    const teamTotals: { [teamCode: string]: { name: string; points: number; results: number } } = {};
+    const teamTotals: { [teamCode: string]: { 
+      name: string; 
+      points: number; 
+      results: number;
+      artsPoints: number;
+      sportsPoints: number;
+      artsResults: number;
+      sportsResults: number;
+    } } = {};
     
     teams.forEach(team => {
-      teamTotals[team.code] = { name: team.name, points: 0, results: 0 };
+      teamTotals[team.code] = { 
+        name: team.name, 
+        points: 0, 
+        results: 0,
+        artsPoints: 0,
+        sportsPoints: 0,
+        artsResults: 0,
+        sportsResults: 0
+      };
     });
     
-    publishedResults.forEach(result => {
+    // Helper function to add points to team totals
+    const addPointsToTeam = (teamCode: string, points: number, result: EnhancedResult) => {
+      if (teamTotals[teamCode]) {
+        // Separate Arts and Sports points
+        if (result.programmeCategory === 'arts') {
+          teamTotals[teamCode].artsPoints += points;
+          teamTotals[teamCode].artsResults += 1;
+        } else if (result.programmeCategory === 'sports') {
+          teamTotals[teamCode].sportsPoints += points;
+          teamTotals[teamCode].sportsResults += 1;
+        }
+      }
+    };
+
+    // Helper function to check if result matches current category filter
+    const matchesCategoryFilter = (result: EnhancedResult) => {
+      if (categoryFilter === 'arts-total') {
+        return result.programmeCategory === 'arts';
+      } else if (categoryFilter === 'arts-stage') {
+        return result.programmeCategory === 'arts' && result.programmeSubcategory === 'stage';
+      } else if (categoryFilter === 'arts-non-stage') {
+        return result.programmeCategory === 'arts' && result.programmeSubcategory === 'non-stage';
+      } else if (categoryFilter === 'sports') {
+        return result.programmeCategory === 'sports';
+      }
+      return true;
+    };
+    
+    // Process published results (only those matching category filter)
+    publishedResults.filter(matchesCategoryFilter).forEach(result => {
       if (result.firstPlace && result.firstPlace.length > 0) {
         result.firstPlace.forEach(winner => {
           const teamCode = getTeamCodeFromChestNumber(winner.chestNumber);
-          if (teamTotals[teamCode]) {
-            const gradePoints = getGradePoints(winner.grade || '');
-            const totalPoints = result.firstPoints + gradePoints;
-            teamTotals[teamCode].points += totalPoints;
-            teamTotals[teamCode].results += 1;
-          }
+          const gradePoints = getGradePoints(winner.grade || '');
+          const totalPoints = result.firstPoints + gradePoints;
+          addPointsToTeam(teamCode, totalPoints, result);
         });
       }
       
       if (result.secondPlace && result.secondPlace.length > 0) {
         result.secondPlace.forEach(winner => {
           const teamCode = getTeamCodeFromChestNumber(winner.chestNumber);
-          if (teamTotals[teamCode]) {
-            const gradePoints = getGradePoints(winner.grade || '');
-            const totalPoints = result.secondPoints + gradePoints;
-            teamTotals[teamCode].points += totalPoints;
-            teamTotals[teamCode].results += 1;
-          }
+          const gradePoints = getGradePoints(winner.grade || '');
+          const totalPoints = result.secondPoints + gradePoints;
+          addPointsToTeam(teamCode, totalPoints, result);
         });
       }
       
       if (result.thirdPlace && result.thirdPlace.length > 0) {
         result.thirdPlace.forEach(winner => {
           const teamCode = getTeamCodeFromChestNumber(winner.chestNumber);
-          if (teamTotals[teamCode]) {
-            const gradePoints = getGradePoints(winner.grade || '');
-            const totalPoints = result.thirdPoints + gradePoints;
-            teamTotals[teamCode].points += totalPoints;
-            teamTotals[teamCode].results += 1;
-          }
+          const gradePoints = getGradePoints(winner.grade || '');
+          const totalPoints = result.thirdPoints + gradePoints;
+          addPointsToTeam(teamCode, totalPoints, result);
         });
       }
       
       if (result.firstPlaceTeams && result.firstPlaceTeams.length > 0) {
         result.firstPlaceTeams.forEach(winner => {
-          if (teamTotals[winner.teamCode]) {
-            const gradePoints = getGradePoints(winner.grade || '');
-            const totalPoints = result.firstPoints + gradePoints;
-            teamTotals[winner.teamCode].points += totalPoints;
-            teamTotals[winner.teamCode].results += 1;
-          }
+          const gradePoints = getGradePoints(winner.grade || '');
+          const totalPoints = result.firstPoints + gradePoints;
+          addPointsToTeam(winner.teamCode, totalPoints, result);
         });
       }
       
       if (result.secondPlaceTeams && result.secondPlaceTeams.length > 0) {
         result.secondPlaceTeams.forEach(winner => {
-          if (teamTotals[winner.teamCode]) {
-            const gradePoints = getGradePoints(winner.grade || '');
-            const totalPoints = result.secondPoints + gradePoints;
-            teamTotals[winner.teamCode].points += totalPoints;
-            teamTotals[winner.teamCode].results += 1;
-          }
+          const gradePoints = getGradePoints(winner.grade || '');
+          const totalPoints = result.secondPoints + gradePoints;
+          addPointsToTeam(winner.teamCode, totalPoints, result);
         });
       }
       
       if (result.thirdPlaceTeams && result.thirdPlaceTeams.length > 0) {
         result.thirdPlaceTeams.forEach(winner => {
-          if (teamTotals[winner.teamCode]) {
-            const gradePoints = getGradePoints(winner.grade || '');
-            const totalPoints = result.thirdPoints + gradePoints;
-            teamTotals[winner.teamCode].points += totalPoints;
-            teamTotals[winner.teamCode].results += 1;
-          }
+          const gradePoints = getGradePoints(winner.grade || '');
+          const totalPoints = result.thirdPoints + gradePoints;
+          addPointsToTeam(winner.teamCode, totalPoints, result);
         });
       }
     });
     
-    results.forEach(result => {
+    // Process calculation results (only those matching category filter)
+    results.filter(matchesCategoryFilter).forEach(result => {
       if (result.firstPlace && result.firstPlace.length > 0) {
         result.firstPlace.forEach(winner => {
           const teamCode = getTeamCodeFromChestNumber(winner.chestNumber);
-          if (teamTotals[teamCode]) {
-            const gradePoints = getGradePoints(winner.grade || '');
-            const totalPoints = result.firstPoints + gradePoints;
-            teamTotals[teamCode].points += totalPoints;
-            teamTotals[teamCode].results += 1;
-          }
+          const gradePoints = getGradePoints(winner.grade || '');
+          const totalPoints = result.firstPoints + gradePoints;
+          addPointsToTeam(teamCode, totalPoints, result);
         });
       }
       
       if (result.secondPlace && result.secondPlace.length > 0) {
         result.secondPlace.forEach(winner => {
           const teamCode = getTeamCodeFromChestNumber(winner.chestNumber);
-          if (teamTotals[teamCode]) {
-            const gradePoints = getGradePoints(winner.grade || '');
-            const totalPoints = result.secondPoints + gradePoints;
-            teamTotals[teamCode].points += totalPoints;
-            teamTotals[teamCode].results += 1;
-          }
+          const gradePoints = getGradePoints(winner.grade || '');
+          const totalPoints = result.secondPoints + gradePoints;
+          addPointsToTeam(teamCode, totalPoints, result);
         });
       }
       
       if (result.thirdPlace && result.thirdPlace.length > 0) {
         result.thirdPlace.forEach(winner => {
           const teamCode = getTeamCodeFromChestNumber(winner.chestNumber);
-          if (teamTotals[teamCode]) {
-            const gradePoints = getGradePoints(winner.grade || '');
-            const totalPoints = result.thirdPoints + gradePoints;
-            teamTotals[teamCode].points += totalPoints;
-            teamTotals[teamCode].results += 1;
-          }
+          const gradePoints = getGradePoints(winner.grade || '');
+          const totalPoints = result.thirdPoints + gradePoints;
+          addPointsToTeam(teamCode, totalPoints, result);
         });
       }
       
       if (result.firstPlaceTeams && result.firstPlaceTeams.length > 0) {
         result.firstPlaceTeams.forEach(winner => {
-          if (teamTotals[winner.teamCode]) {
-            const gradePoints = getGradePoints(winner.grade || '');
-            const totalPoints = result.firstPoints + gradePoints;
-            teamTotals[winner.teamCode].points += totalPoints;
-            teamTotals[winner.teamCode].results += 1;
-          }
+          const gradePoints = getGradePoints(winner.grade || '');
+          const totalPoints = result.firstPoints + gradePoints;
+          addPointsToTeam(winner.teamCode, totalPoints, result);
         });
       }
       
       if (result.secondPlaceTeams && result.secondPlaceTeams.length > 0) {
         result.secondPlaceTeams.forEach(winner => {
-          if (teamTotals[winner.teamCode]) {
-            const gradePoints = getGradePoints(winner.grade || '');
-            const totalPoints = result.secondPoints + gradePoints;
-            teamTotals[winner.teamCode].points += totalPoints;
-            teamTotals[winner.teamCode].results += 1;
-          }
+          const gradePoints = getGradePoints(winner.grade || '');
+          const totalPoints = result.secondPoints + gradePoints;
+          addPointsToTeam(winner.teamCode, totalPoints, result);
         });
       }
       
       if (result.thirdPlaceTeams && result.thirdPlaceTeams.length > 0) {
         result.thirdPlaceTeams.forEach(winner => {
-          if (teamTotals[winner.teamCode]) {
-            const gradePoints = getGradePoints(winner.grade || '');
-            const totalPoints = result.thirdPoints + gradePoints;
-            teamTotals[winner.teamCode].points += totalPoints;
-            teamTotals[winner.teamCode].results += 1;
-          }
+          const gradePoints = getGradePoints(winner.grade || '');
+          const totalPoints = result.thirdPoints + gradePoints;
+          addPointsToTeam(winner.teamCode, totalPoints, result);
         });
       }
     });
@@ -415,12 +435,33 @@ export default function CheckListPage() {
     const preview = Object.entries(teamTotals)
       .map(([code, data]) => {
         const teamData = teams.find(t => t.code === code);
+        
+        // Set points and results based on active category filter
+        let displayPoints = 0;
+        let displayResults = 0;
+        
+        if (categoryFilter === 'sports') {
+          displayPoints = data.sportsPoints;
+          displayResults = data.sportsResults;
+        } else {
+          // For arts-total, arts-stage, arts-non-stage - show arts points
+          displayPoints = data.artsPoints;
+          displayResults = data.artsResults;
+        }
+        
         return { 
           teamCode: code, 
-          ...data,
+          name: data.name,
+          points: displayPoints,
+          results: displayResults,
+          artsPoints: data.artsPoints,
+          sportsPoints: data.sportsPoints,
+          artsResults: data.artsResults,
+          sportsResults: data.sportsResults,
           color: teamData?.color || '#6366f1'
         };
       })
+      .filter(team => team.points > 0) // Only show teams with points in the selected category
       .sort((a, b) => b.points - a.points);
     
     setGrandMarksPreview(preview);
@@ -491,15 +532,108 @@ export default function CheckListPage() {
     return team ? team.name : teamCode;
   };
 
+  // Helper function to calculate team marks from checked results
+  const getTeamMarksFromCheckedResults = () => {
+    const teamMarks: { [teamCode: string]: { name: string; points: number; artsPoints: number; sportsPoints: number } } = {};
+    
+    teams.forEach(team => {
+      teamMarks[team.code] = { 
+        name: team.name, 
+        points: 0,
+        artsPoints: 0,
+        sportsPoints: 0
+      };
+    });
+
+    getFilteredCheckedResults(checkedResults).forEach(result => {
+      const addPointsToTeamMarks = (teamCode: string, points: number) => {
+        if (teamMarks[teamCode]) {
+          teamMarks[teamCode].points += points;
+          
+          if (result.programmeCategory === 'arts') {
+            teamMarks[teamCode].artsPoints += points;
+          } else if (result.programmeCategory === 'sports') {
+            teamMarks[teamCode].sportsPoints += points;
+          }
+        }
+      };
+
+      // Individual winners
+      if (result.firstPlace && result.firstPlace.length > 0) {
+        result.firstPlace.forEach(winner => {
+          const teamCode = getTeamCodeFromChestNumber(winner.chestNumber);
+          const gradePoints = getGradePoints(winner.grade || '');
+          const totalPoints = result.firstPoints + gradePoints;
+          addPointsToTeamMarks(teamCode, totalPoints);
+        });
+      }
+      
+      if (result.secondPlace && result.secondPlace.length > 0) {
+        result.secondPlace.forEach(winner => {
+          const teamCode = getTeamCodeFromChestNumber(winner.chestNumber);
+          const gradePoints = getGradePoints(winner.grade || '');
+          const totalPoints = result.secondPoints + gradePoints;
+          addPointsToTeamMarks(teamCode, totalPoints);
+        });
+      }
+      
+      if (result.thirdPlace && result.thirdPlace.length > 0) {
+        result.thirdPlace.forEach(winner => {
+          const teamCode = getTeamCodeFromChestNumber(winner.chestNumber);
+          const gradePoints = getGradePoints(winner.grade || '');
+          const totalPoints = result.thirdPoints + gradePoints;
+          addPointsToTeamMarks(teamCode, totalPoints);
+        });
+      }
+
+      // Team winners
+      if (result.firstPlaceTeams && result.firstPlaceTeams.length > 0) {
+        result.firstPlaceTeams.forEach(winner => {
+          const gradePoints = getGradePoints(winner.grade || '');
+          const totalPoints = result.firstPoints + gradePoints;
+          addPointsToTeamMarks(winner.teamCode, totalPoints);
+        });
+      }
+      
+      if (result.secondPlaceTeams && result.secondPlaceTeams.length > 0) {
+        result.secondPlaceTeams.forEach(winner => {
+          const gradePoints = getGradePoints(winner.grade || '');
+          const totalPoints = result.secondPoints + gradePoints;
+          addPointsToTeamMarks(winner.teamCode, totalPoints);
+        });
+      }
+      
+      if (result.thirdPlaceTeams && result.thirdPlaceTeams.length > 0) {
+        result.thirdPlaceTeams.forEach(winner => {
+          const gradePoints = getGradePoints(winner.grade || '');
+          const totalPoints = result.thirdPoints + gradePoints;
+          addPointsToTeamMarks(winner.teamCode, totalPoints);
+        });
+      }
+    });
+
+    return Object.entries(teamMarks)
+      .map(([code, data]) => ({ teamCode: code, ...data }))
+      .filter(team => team.points > 0)
+      .sort((a, b) => {
+        // Sort by category-specific points
+        if (categoryFilter === 'sports') {
+          return b.sportsPoints - a.sportsPoints;
+        } else {
+          return b.artsPoints - a.artsPoints;
+        }
+      });
+  };
+
   return (
     <div className="container mx-auto px-4 py-8 relative">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2 flex items-center">
           <span className="mr-2">📋</span>
-          Result Check List
+          {categoryFilter === 'sports' ? '🏃 Sports Results Checklist' : '🎨 Arts Results Checklist'}
         </h1>
         <p className="text-gray-600">
-          Review and verify competition results before publication
+          Review and verify {categoryFilter === 'sports' ? 'sports' : 'arts'} competition results before publication
         </p>
         
         {/* Category Filter Buttons */}
@@ -558,10 +692,10 @@ export default function CheckListPage() {
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
             >
-              Pending Review
-              {pendingResults.length > 0 && (
+              {categoryFilter === 'sports' ? '🏃 Pending Sports' : '🎨 Pending Arts'}
+              {getFilteredResults(pendingResults).length > 0 && (
                 <span className="ml-2 bg-orange-100 text-orange-800 py-0.5 px-2 rounded-full text-xs">
-                  {pendingResults.length}
+                  {getFilteredResults(pendingResults).length}
                 </span>
               )}
             </button>
@@ -572,10 +706,10 @@ export default function CheckListPage() {
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
             >
-              Checked Results
-              {checkedResults.length > 0 && (
+              {categoryFilter === 'sports' ? '🏃 Checked Sports' : '🎨 Checked Arts'}
+              {getFilteredCheckedResults(checkedResults).length > 0 && (
                 <span className="ml-2 bg-green-100 text-green-800 py-0.5 px-2 rounded-full text-xs">
-                  {checkedResults.length}
+                  {getFilteredCheckedResults(checkedResults).length}
                 </span>
               )}
             </button>
@@ -586,10 +720,10 @@ export default function CheckListPage() {
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
             >
-              📊 Checked Marks Summary
-              {checkedResults.length > 0 && (
+              {categoryFilter === 'sports' ? '📊 Sports Summary' : '📊 Arts Summary'}
+              {getFilteredCheckedResults(checkedResults).length > 0 && (
                 <span className="ml-2 bg-purple-100 text-purple-800 py-0.5 px-2 rounded-full text-xs">
-                  {checkedResults.length}
+                  {getFilteredCheckedResults(checkedResults).length}
                 </span>
               )}
             </button>
@@ -600,10 +734,10 @@ export default function CheckListPage() {
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
             >
-              🧮 Calculation
-              {checkedResults.length > 0 && (
+              {categoryFilter === 'sports' ? '🧮 Sports Calculation' : '🧮 Arts Calculation'}
+              {getFilteredCheckedResults(checkedResults).length > 0 && (
                 <span className="ml-2 bg-indigo-100 text-indigo-800 py-0.5 px-2 rounded-full text-xs">
-                  {checkedResults.length}
+                  {getFilteredCheckedResults(checkedResults).length}
                 </span>
               )}
             </button>
@@ -968,7 +1102,7 @@ export default function CheckListPage() {
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900 flex items-center">
                   <span className="mr-2">🏆</span>
-                  Grand Marks Preview
+                  {categoryFilter === 'sports' ? '🏃 Sports Preview' : '🎨 Arts Preview'}
                 </h3>
                 <button 
                   onClick={() => {
@@ -978,7 +1112,7 @@ export default function CheckListPage() {
                   }}
                   className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition-colors"
                 >
-                  📊 Calculate All {categoryFilter === 'arts-total' ? '(Arts Total)' : categoryFilter === 'arts-stage' ? '(Arts Stage)' : categoryFilter === 'arts-non-stage' ? '(Arts Non-Stage)' : categoryFilter === 'sports' ? '(Sports)' : ''}
+                  {categoryFilter === 'sports' ? '🏃 Calculate Sports' : '🎨 Calculate Arts'}
                 </button>
               </div>
 
@@ -1165,17 +1299,41 @@ export default function CheckListPage() {
                     ))}
                     
                     <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                      <h5 className="font-medium text-blue-900 mb-2">Grand Marks Preview</h5>
+                      <h5 className="font-medium text-blue-900 mb-2">
+                        {categoryFilter === 'sports' ? '🏃 Sports Rankings' : '🎨 Arts Rankings'}
+                      </h5>
                       {grandMarksPreview.length > 0 ? (
-                        <div className="space-y-2">
+                        <div className="space-y-3">
                           {grandMarksPreview.slice(0, 5).map((team, index) => (
-                            <div key={team.teamCode} className="flex items-center justify-between text-sm">
-                              <span className="font-medium">
-                                #{index + 1} {team.name}
-                              </span>
-                              <span className="text-blue-700 font-bold">
-                                {Math.round(team.points)} pts
-                              </span>
+                            <div key={team.teamCode} className="space-y-1">
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="font-medium">
+                                  #{index + 1} {team.name}
+                                </span>
+                                <span className="text-blue-700 font-bold">
+                                  {Math.round(team.points)} pts
+                                </span>
+                              </div>
+                              
+                              {/* Category-specific Breakdown */}
+                              <div className="flex items-center justify-between text-xs pl-2">
+                                <div className="flex items-center">
+                                  {categoryFilter === 'sports' ? (
+                                    <span className="flex items-center">
+                                      <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-1"></span>
+                                      🏃 {Math.round(team.sportsPoints || 0)} pts
+                                    </span>
+                                  ) : (
+                                    <span className="flex items-center">
+                                      <span className="w-1.5 h-1.5 bg-purple-500 rounded-full mr-1"></span>
+                                      🎨 {Math.round(team.artsPoints || 0)} pts
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="text-gray-500">
+                                  {team.results} results
+                                </span>
+                              </div>
                             </div>
                           ))}
                           {grandMarksPreview.length > 5 && (
@@ -1202,7 +1360,7 @@ export default function CheckListPage() {
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-purple-900 flex items-center">
                   <span className="mr-2">🏆</span>
-                  Combined Grand Marks Preview
+                  {categoryFilter === 'sports' ? '🏃 Sports Rankings' : '🎨 Arts Rankings'}
                 </h3>
                 <div className="flex items-center space-x-2">
                   <span className="text-xs text-purple-700 bg-blue-100 px-2 py-1 rounded-full">
@@ -1240,11 +1398,13 @@ export default function CheckListPage() {
                         <div className="text-xl font-bold" style={{ color: team.color }}>
                           {Math.round(team.points)}
                         </div>
-                        <div className="text-xs text-gray-600">points</div>
+                        <div className="text-xs text-gray-600">
+                          {categoryFilter === 'sports' ? 'sports points' : 'arts points'}
+                        </div>
                       </div>
                     </div>
                     
-                    <div className="space-y-1">
+                    <div className="space-y-1 mb-3">
                       <h4 className="font-semibold text-gray-900 text-sm truncate" title={team.name}>
                         {team.name}
                       </h4>
@@ -1253,16 +1413,50 @@ export default function CheckListPage() {
                         <span>#{index + 1}</span>
                       </div>
                     </div>
+
+                    {/* Category-specific Information */}
+                    <div className="space-y-2 mb-3">
+                      {categoryFilter === 'sports' ? (
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="flex items-center">
+                            <span className="w-2 h-2 bg-blue-500 rounded-full mr-1"></span>
+                            🏃 Sports Total
+                          </span>
+                          <div className="text-right">
+                            <div className="font-semibold text-blue-700">{Math.round(team.sportsPoints || 0)}</div>
+                            <div className="text-gray-500">{team.sportsResults || 0} results</div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="flex items-center">
+                            <span className="w-2 h-2 bg-purple-500 rounded-full mr-1"></span>
+                            🎨 Arts Total
+                          </span>
+                          <div className="text-right">
+                            <div className="font-semibold text-purple-700">{Math.round(team.artsPoints || 0)}</div>
+                            <div className="text-gray-500">{team.artsResults || 0} results</div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                     
                     <div className="mt-3">
-                      <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div className="w-full bg-gray-200 rounded-full h-2 mb-1">
                         <div
                           className="h-2 rounded-full transition-all duration-1000"
                           style={{
-                            backgroundColor: team.color,
+                            backgroundColor: categoryFilter === 'sports' ? '#3b82f6' : '#8b5cf6',
                             width: `${Math.min((team.points / Math.max(...grandMarksPreview.map(t => t.points))) * 100, 100)}%`
                           }}
                         ></div>
+                      </div>
+                      
+                      {/* Category-specific Progress Label */}
+                      <div className="text-center">
+                        <span className={`text-xs font-medium ${categoryFilter === 'sports' ? 'text-blue-600' : 'text-purple-600'}`}>
+                          {categoryFilter === 'sports' ? '🏃 Sports Performance' : '🎨 Arts Performance'}
+                        </span>
                       </div>
                     </div>
                   </div>
