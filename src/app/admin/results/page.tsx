@@ -217,8 +217,11 @@ export default function ResultsPage() {
     setFormData(prev => ({ ...prev, section: section as any }));
 
     if (selectedProgramme && section) {
-      if (section === 'general') {
-        // For general section, show teams (marks go to teams)
+      // Determine display mode based on programme position type
+      const isGroupProgramme = selectedProgramme.positionType === 'group' || section === 'general';
+      
+      if (isGroupProgramme) {
+        // For group programmes or general section, show teams (marks go to teams)
         const programmeParticipants = participants.filter(p =>
           p.programmeId === selectedProgramme._id?.toString()
         );
@@ -237,7 +240,7 @@ export default function ResultsPage() {
         setFilteredTeams(registeredTeams);
         setFilteredParticipants([]);
       } else {
-        // For senior/junior/sub-junior sections, show individual participants (marks go to individuals)
+        // For individual programmes, show individual participants (marks go to individuals)
         const programmeParticipants = participants.filter(p =>
           p.programmeId === selectedProgramme._id?.toString()
         );
@@ -1012,12 +1015,12 @@ export default function ResultsPage() {
               </div>
             )}
 
-            {/* Registered Teams Display (for general section) */}
-            {showParticipants && selectedSection === 'general' && filteredTeams.length > 0 && (
+            {/* Registered Teams Display (for group programmes or general section) */}
+            {showParticipants && (selectedProgramme?.positionType === 'group' || selectedSection === 'general') && filteredTeams.length > 0 && (
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                   <span className="mr-2">🏆</span>
-                  Registered Teams - General Section ({filteredTeams.length})
+                  Registered Teams - {selectedProgramme?.positionType === 'group' ? 'Group Programme' : 'General Section'} ({filteredTeams.length})
                 </h3>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -1172,12 +1175,12 @@ export default function ResultsPage() {
               </div>
             )}
 
-            {/* Registered Participants Display (for age-based sections) */}
-            {showParticipants && selectedSection !== 'general' && filteredParticipants.length > 0 && (
+            {/* Registered Participants Display (for individual programmes) */}
+            {showParticipants && selectedProgramme?.positionType === 'individual' && filteredParticipants.length > 0 && (
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                   <span className="mr-2">👥</span>
-                  Registered Participants - {selectedSection.charAt(0).toUpperCase() + selectedSection.slice(1).replace('-', ' ')} Section ({filteredParticipants.length})
+                  Registered Participants - Individual Programme ({filteredParticipants.length})
                 </h3>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -1329,22 +1332,22 @@ export default function ResultsPage() {
               </div>
             )}
 
-            {showParticipants && selectedProgramme?.positionType === 'general' && filteredTeams.length === 0 && (
+            {showParticipants && (selectedProgramme?.positionType === 'group' || selectedSection === 'general') && filteredTeams.length === 0 && (
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
                 <div className="text-yellow-600 text-4xl mb-2">⚠️</div>
                 <h3 className="text-lg font-semibold text-yellow-800 mb-2">No Teams Found</h3>
                 <p className="text-yellow-700">
-                  No teams have registered for this programme in the selected section.
+                  No teams have registered for this {selectedProgramme?.positionType === 'group' ? 'group programme' : 'programme in the general section'}.
                 </p>
               </div>
             )}
 
-            {showParticipants && selectedProgramme?.positionType !== 'general' && filteredParticipants.length === 0 && (
+            {showParticipants && selectedProgramme?.positionType === 'individual' && filteredParticipants.length === 0 && (
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
                 <div className="text-yellow-600 text-4xl mb-2">⚠️</div>
                 <h3 className="text-lg font-semibold text-yellow-800 mb-2">No Participants Found</h3>
                 <p className="text-yellow-700">
-                  No teams have registered for this programme in the selected section.
+                  No participants have registered for this individual programme in the selected section.
                 </p>
               </div>
             )}
