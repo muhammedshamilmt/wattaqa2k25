@@ -2,9 +2,91 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect } from "react";
 
 export function Hero() {
+  // Team data with positions
+  const teams = [
+    {
+      id: 'sumud',
+      name: 'Team Sumud',
+      description: 'Arts & Sports Excellence',
+      image: '/images/teams/sumud team.png',
+      gradient: 'from-green-400 to-emerald-500',
+      overlayGradient: 'from-green-500/50 via-emerald-400/15 to-transparent',
+      borderColor: 'border-green-400/30'
+    },
+    {
+      id: 'aqsa',
+      name: 'Team Aqsa',
+      description: 'Creative & Athletic Champions',
+      image: '/images/teams/AL AQSA TEAM.png',
+      gradient: 'from-gray-600 to-gray-700',
+      overlayGradient: 'from-gray-700/50 via-gray-600/15 to-transparent',
+      borderColor: 'border-gray-500/30'
+    },
+    {
+      id: 'inthifada',
+      name: 'Team Inthifada',
+      description: 'Innovation & Competition',
+      image: '/images/teams/inthifada team.png',
+      gradient: 'from-red-400 to-rose-500',
+      overlayGradient: 'from-red-500/50 via-rose-400/15 to-transparent',
+      borderColor: 'border-red-400/30'
+    }
+  ];
+
+  // Position configurations for the three slots
+  const positions = [
+    {
+      id: 'left',
+      height: 'h-80',
+      width: 'md:w-80',
+      order: 0,
+      scale: 1,
+      y: 0,
+      rotateY: 0,
+      zIndex: 10
+    },
+    {
+      id: 'center',
+      height: 'h-96',
+      width: 'md:w-80',
+      order: 1,
+      scale: 1.05,
+      y: -10,
+      rotateY: 0,
+      zIndex: 20
+    },
+    {
+      id: 'right',
+      height: 'h-80',
+      width: 'md:w-80',
+      order: 2,
+      scale: 1,
+      y: 0,
+      rotateY: 0,
+      zIndex: 10
+    }
+  ];
+
+  // State to track current team positions
+  const [currentPositions, setCurrentPositions] = useState([0, 1, 2]); // indices of teams in positions
+
+  // Animation loop - rotate positions every 4 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentPositions(prev => [
+        (prev[0] + 1) % 3, // Move each team to next position
+        (prev[1] + 1) % 3,
+        (prev[2] + 1) % 3
+      ]);
+    }, 4000); // Change every 4 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div className="h-screen relative overflow-hidden bg-white flex flex-col"
       style={{
@@ -169,215 +251,190 @@ export function Hero() {
             </Link>
           </motion.div>
         </motion.div>
-        {/* Three Animated Image Containers */}
+        {/* Three Animated Team Containers with Position Looping */}
         <motion.div
-          className="flex flex-col md:flex-row items-end justify-center gap-6 max-w-5xl mx-auto"
+          className="flex flex-col md:flex-row items-end justify-center gap-6 max-w-5xl mx-auto relative"
           initial={{ opacity: 0, y: 60 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1, delay: 1.5 }}
         >
+          {positions.map((position, positionIndex) => {
+            const teamIndex = currentPositions[positionIndex];
+            const team = teams[teamIndex];
 
-          {/* Green container - Team Sumud */}
-          <motion.div
-            className="bg-gradient-to-br from-green-400 to-emerald-500 rounded-3xl w-full md:w-80 h-80 relative overflow-hidden cursor-pointer group"
-            initial={{ opacity: 0, y: 100, rotateY: -30 }}
-            animate={{ opacity: 1, y: 0, rotateY: 0 }}
-            transition={{
-              duration: 0.8,
-              delay: 1.7,
-              type: "spring",
-              stiffness: 100
-            }}
-            whileHover={{
-              scale: 1.05,
-              y: -10,
-              rotateY: 5,
-              transition: { duration: 0.3 }
-            }}
-            whileTap={{ scale: 0.95 }}
-          >
+            return (
+              <motion.div
+                key={`${position.id}-${team.id}`}
+                className={`bg-gradient-to-br ${team.gradient} rounded-3xl w-full ${position.width} ${position.height} relative overflow-hidden cursor-pointer group`}
+                layout
+                initial={{
+                  opacity: 0,
+                  y: 100,
+                  rotateY: positionIndex === 0 ? -30 : positionIndex === 2 ? 30 : 0,
+                  scale: 0.8
+                }}
+                animate={{
+                  opacity: 1,
+                  y: position.y,
+                  rotateY: position.rotateY,
+                  scale: position.scale,
+                  zIndex: position.zIndex
+                }}
+                transition={{
+                  duration: 1.2,
+                  delay: 1.7 + positionIndex * 0.2,
+                  type: "spring",
+                  stiffness: 80,
+                  damping: 20,
+                  layout: {
+                    duration: 1.5,
+                    type: "spring",
+                    stiffness: 100,
+                    damping: 25
+                  }
+                }}
+                whileHover={{
+                  scale: position.scale * 1.05,
+                  y: position.y - 15,
+                  rotateY: positionIndex === 1 ? 0 : (positionIndex === 0 ? 5 : -5),
+                  transition: { duration: 0.4, type: "spring", stiffness: 300 }
+                }}
+                whileTap={{ scale: position.scale * 0.95 }}
+                style={{ zIndex: position.zIndex }}
+              >
+                {/* Floating animation background with team-specific colors */}
+                <motion.div
+                  className="absolute inset-0"
+                  animate={{
+                    background: team.id === 'sumud' ? [
+                      "linear-gradient(to bottom right, rgba(34, 197, 94, 0.2), rgba(5, 150, 105, 0.2))",
+                      "linear-gradient(to bottom right, rgba(5, 150, 105, 0.3), rgba(34, 197, 94, 0.1))",
+                      "linear-gradient(to bottom right, rgba(34, 197, 94, 0.2), rgba(5, 150, 105, 0.2))"
+                    ] : team.id === 'aqsa' ? [
+                      "linear-gradient(to bottom right, rgba(107, 114, 128, 0.2), rgba(75, 85, 99, 0.2))",
+                      "linear-gradient(to bottom right, rgba(75, 85, 99, 0.3), rgba(107, 114, 128, 0.1))",
+                      "linear-gradient(to bottom right, rgba(107, 114, 128, 0.2), rgba(75, 85, 99, 0.2))"
+                    ] : [
+                      "linear-gradient(to bottom right, rgba(248, 113, 113, 0.2), rgba(225, 29, 72, 0.2))",
+                      "linear-gradient(to bottom right, rgba(225, 29, 72, 0.3), rgba(248, 113, 113, 0.1))",
+                      "linear-gradient(to bottom right, rgba(248, 113, 113, 0.2), rgba(225, 29, 72, 0.2))"
+                    ]
+                  }}
+                  transition={{
+                    duration: 3,
+                    repeat: Infinity,
+                    delay: teamIndex * 0.5
+                  }}
+                />
 
-            {/* Floating animation background */}
-            <motion.div
-              className="absolute inset-0 bg-gradient-to-br from-green-300/20 to-emerald-600/20"
-              animate={{
-                background: [
-                  "linear-gradient(to bottom right, rgba(34, 197, 94, 0.2), rgba(5, 150, 105, 0.2))",
-                  "linear-gradient(to bottom right, rgba(5, 150, 105, 0.3), rgba(34, 197, 94, 0.1))",
-                  "linear-gradient(to bottom right, rgba(34, 197, 94, 0.2), rgba(5, 150, 105, 0.2))"
-                ]
-              }}
-              transition={{ duration: 3, repeat: Infinity }}
-            />
+                {/* Team Image Background */}
+                <motion.div
+                  className="absolute inset-0 opacity-80"
+                  key={team.id}
+                  initial={{ opacity: 0, scale: 1.1 }}
+                  animate={{ opacity: 0.8, scale: 1 }}
+                  transition={{ duration: 0.8 }}
+                >
+                  <Image
+                    src={team.image}
+                    alt={team.name}
+                    fill
+                    className="object-cover group-hover:scale-110 transition-transform duration-700"
+                  />
+                </motion.div>
 
-            {/* Team Image Background */}
-            <div className="absolute inset-0 opacity-80">
-              <Image
-                src="/images/teams/sumud team.png"
-                alt="Team Sumud"
-                fill
-                className="object-cover group-hover:scale-110 transition-transform duration-500"
-              />
-            </div>
+                {/* Team color overlay */}
+                <div className={`absolute inset-0 bg-gradient-to-t ${team.overlayGradient}`}></div>
 
-            {/* Green overlay for team color identity */}
-            <div className="absolute inset-0 bg-gradient-to-t from-green-500/50 via-emerald-400/15 to-transparent"></div>
+                {/* Team name indicator - appears on hover */}
+                <motion.div
+                  className="absolute top-4 left-4 right-4 text-white text-center relative z-10 opacity-0 group-hover:opacity-100"
+                  initial={{ opacity: 0, y: -10 }}
+                  whileHover={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <h3 className="text-sm font-bold drop-shadow-lg bg-black/20 backdrop-blur-sm rounded-full px-3 py-1">
+                    {team.name}
+                  </h3>
+                </motion.div>
 
-            {/* Content */}
-            <motion.div
-              className="absolute bottom-6 left-6 right-6 text-white text-center relative z-10"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 2 }}
-            >
-              {/* <h3 className="text-lg font-bold mb-1 drop-shadow-lg">Team Sumud</h3>
-              <p className="text-sm opacity-90 drop-shadow-md">Arts & Sports Excellence</p> */}
-            </motion.div>
+                {/* Position indicator dots */}
+                <motion.div
+                  className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-1"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 0.6 }}
+                  transition={{ delay: 2 + positionIndex * 0.1 }}
+                >
+                  {[0, 1, 2].map((dotIndex) => (
+                    <motion.div
+                      key={dotIndex}
+                      className={`w-2 h-2 rounded-full ${dotIndex === positionIndex ? 'bg-white' : 'bg-white/40'
+                        }`}
+                      animate={{
+                        scale: dotIndex === positionIndex ? [1, 1.2, 1] : 1,
+                        opacity: dotIndex === positionIndex ? [0.6, 1, 0.6] : 0.4
+                      }}
+                      transition={{
+                        duration: 2,
+                        repeat: Infinity,
+                        delay: dotIndex * 0.2
+                      }}
+                    />
+                  ))}
+                </motion.div>
 
-            {/* Animated border */}
-            <motion.div
-              className="absolute inset-0 rounded-3xl border-2 border-white/20"
-              animate={{
-                borderColor: ["rgba(255,255,255,0.2)", "rgba(255,255,255,0.4)", "rgba(255,255,255,0.2)"]
-              }}
-              transition={{ duration: 2, repeat: Infinity }}
-            />
-          </motion.div>
+                {/* Animated border with team-specific glow */}
+                <motion.div
+                  className={`absolute inset-0 rounded-3xl border-2 ${team.borderColor}`}
+                  animate={{
+                    borderColor: team.id === 'sumud' ? [
+                      "rgba(34, 197, 94, 0.3)",
+                      "rgba(34, 197, 94, 0.6)",
+                      "rgba(34, 197, 94, 0.3)"
+                    ] : team.id === 'aqsa' ? [
+                      "rgba(107, 114, 128, 0.3)",
+                      "rgba(107, 114, 128, 0.6)",
+                      "rgba(107, 114, 128, 0.3)"
+                    ] : [
+                      "rgba(248, 113, 113, 0.3)",
+                      "rgba(248, 113, 113, 0.6)",
+                      "rgba(248, 113, 113, 0.3)"
+                    ],
+                    boxShadow: positionIndex === 1 ? [
+                      "0 0 20px rgba(255, 255, 255, 0.1)",
+                      "0 0 40px rgba(255, 255, 255, 0.2)",
+                      "0 0 20px rgba(255, 255, 255, 0.1)"
+                    ] : [
+                      "0 0 10px rgba(255, 255, 255, 0.05)",
+                      "0 0 20px rgba(255, 255, 255, 0.1)",
+                      "0 0 10px rgba(255, 255, 255, 0.05)"
+                    ]
+                  }}
+                  transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    delay: teamIndex * 0.3
+                  }}
+                />
 
-          {/* Gray container - Team Aqsa (taller) */}
-          <motion.div
-            className="bg-gradient-to-br from-gray-600 to-gray-700 rounded-3xl w-full md:w-80 h-96 relative overflow-hidden cursor-pointer group"
-            initial={{ opacity: 0, y: 120, scale: 0.8 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{
-              duration: 0.8,
-              delay: 1.9,
-              type: "spring",
-              stiffness: 100
-            }}
-            whileHover={{
-              scale: 1.05,
-              y: -15,
-              rotateY: -5,
-              transition: { duration: 0.3 }
-            }}
-            whileTap={{ scale: 0.95 }}
-          >
-
-            {/* Floating animation background */}
-            <motion.div
-              className="absolute inset-0 bg-gradient-to-br from-gray-500/20 to-gray-600/20"
-              animate={{
-                background: [
-                  "linear-gradient(to bottom right, rgba(107, 114, 128, 0.2), rgba(75, 85, 99, 0.2))",
-                  "linear-gradient(to bottom right, rgba(75, 85, 99, 0.3), rgba(107, 114, 128, 0.1))",
-                  "linear-gradient(to bottom right, rgba(107, 114, 128, 0.2), rgba(75, 85, 99, 0.2))"
-                ]
-              }}
-              transition={{ duration: 3, repeat: Infinity, delay: 0.5 }}
-            />
-
-            {/* Team Image - Front and Center */}
-            <div className="absolute inset-0 opacity-80">
-              <Image
-                src="/images/teams/AL AQSA TEAM.png"
-                alt="Team Aqsa"
-                fill
-                className="object-cover group-hover:scale-110 transition-transform duration-500"
-              />
-            </div>
-
-            {/* Gray overlay for team color identity */}
-            <div className="absolute inset-0 bg-gradient-to-t from-gray-700/50 via-gray-600/15 to-transparent"></div>
-
-            {/* Content */}
-            <motion.div
-              className="absolute bottom-6 left-6 right-6 text-white text-center relative z-10"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 2.2 }}
-            >
-              {/* <h3 className="text-lg font-bold mb-1 drop-shadow-lg">Team Aqsa</h3>
-              <p className="text-sm opacity-90 drop-shadow-md">Creative & Athletic Champions</p> */}
-            </motion.div>
-
-            {/* Animated border */}
-            <motion.div
-              className="absolute inset-0 rounded-3xl border-2 border-white/20"
-              animate={{
-                borderColor: ["rgba(255,255,255,0.2)", "rgba(255,255,255,0.5)", "rgba(255,255,255,0.2)"]
-              }}
-              transition={{ duration: 2, repeat: Infinity, delay: 0.3 }}
-            />
-          </motion.div>
-
-          {/* Red container - Team Inthifada */}
-          <motion.div
-            className="bg-gradient-to-br from-red-400 to-rose-500 rounded-3xl w-full md:w-80 h-80 relative overflow-hidden cursor-pointer group"
-            initial={{ opacity: 0, y: 100, rotateY: 30 }}
-            animate={{ opacity: 1, y: 0, rotateY: 0 }}
-            transition={{
-              duration: 0.8,
-              delay: 2.1,
-              type: "spring",
-              stiffness: 100
-            }}
-            whileHover={{
-              scale: 1.05,
-              y: -10,
-              rotateY: -5,
-              transition: { duration: 0.3 }
-            }}
-            whileTap={{ scale: 0.95 }}
-          >
-
-            {/* Floating animation background */}
-            <motion.div
-              className="absolute inset-0 bg-gradient-to-br from-red-300/20 to-rose-600/20"
-              animate={{
-                background: [
-                  "linear-gradient(to bottom right, rgba(248, 113, 113, 0.2), rgba(225, 29, 72, 0.2))",
-                  "linear-gradient(to bottom right, rgba(225, 29, 72, 0.3), rgba(248, 113, 113, 0.1))",
-                  "linear-gradient(to bottom right, rgba(248, 113, 113, 0.2), rgba(225, 29, 72, 0.2))"
-                ]
-              }}
-              transition={{ duration: 3, repeat: Infinity, delay: 1 }}
-            />
-
-            {/* Team Image Background */}
-            <div className="absolute inset-0 opacity-80">
-              <Image
-                src="/images/teams/INTHIFADA TEAM.png"
-                alt="Team Inthifada"
-                fill
-                className="object-cover group-hover:scale-110 transition-transform duration-500"
-              />
-            </div>
-
-            {/* Red overlay for team color identity */}
-            <div className="absolute inset-0 bg-gradient-to-t from-red-500/50 via-rose-400/15 to-transparent"></div>
-
-            {/* Content */}
-            <motion.div
-              className="absolute bottom-6 left-6 right-6 text-white text-center relative z-10"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 2.4 }}
-            >
-              {/* <h3 className="text-lg font-bold mb-1 drop-shadow-lg">Team Inthifada</h3>
-              <p className="text-sm opacity-90 drop-shadow-md">Innovation & Competition</p> */}
-            </motion.div>
-
-            {/* Animated border */}
-            <motion.div
-              className="absolute inset-0 rounded-3xl border-2 border-white/20"
-              animate={{
-                borderColor: ["rgba(255,255,255,0.2)", "rgba(255,255,255,0.4)", "rgba(255,255,255,0.2)"]
-              }}
-              transition={{ duration: 2, repeat: Infinity, delay: 0.6 }}
-            />
-          </motion.div>
-
+                {/* Spotlight effect for center position */}
+                {positionIndex === 1 && (
+                  <motion.div
+                    className="absolute inset-0 bg-gradient-radial from-white/10 via-transparent to-transparent rounded-3xl"
+                    animate={{
+                      opacity: [0.3, 0.6, 0.3],
+                      scale: [1, 1.05, 1]
+                    }}
+                    transition={{
+                      duration: 3,
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    }}
+                  />
+                )}
+              </motion.div>
+            );
+          })}
         </motion.div>
       </div>
     </div>
