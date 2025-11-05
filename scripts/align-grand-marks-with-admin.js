@@ -1,4 +1,14 @@
-import { NextRequest, NextResponse } from 'next/server';
+const { execSync } = require('child_process');
+const fs = require('fs');
+
+console.log('🔧 Aligning Grand Marks API with Admin MarksSummary Calculation...\n');
+
+async function updateGrandMarksAPI() {
+  try {
+    console.log('📝 Updating Grand Marks API to match MarksSummary calculation method...\n');
+    
+    // Create the aligned API implementation
+    const alignedAPI = `import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase } from '@/lib/mongodb';
 import { getGradePoints } from '@/utils/markingSystem';
 
@@ -226,4 +236,101 @@ export async function GET(request: NextRequest) {
     console.error('Error fetching grand marks:', error);
     return NextResponse.json({ error: 'Failed to fetch grand marks' }, { status: 500 });
   }
+}`;
+
+    // Write the aligned API
+    const apiPath = 'src/app/api/grand-marks/route.ts';
+    fs.writeFileSync(apiPath, alignedAPI);
+    console.log('✅ Updated Grand Marks API to match MarksSummary calculation method');
+    
+    return true;
+    
+  } catch (error) {
+    console.error('❌ Error updating Grand Marks API:', error.message);
+    return false;
+  }
 }
+
+async function testAlignedAPI() {
+  console.log('\n🧪 Testing Aligned API...\n');
+  
+  try {
+    // Wait a moment for the API to reload
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // Test all categories
+    const tests = [
+      { endpoint: '/api/grand-marks?category=all', name: 'All Categories' },
+      { endpoint: '/api/grand-marks?category=arts', name: 'Arts Only' },
+      { endpoint: '/api/grand-marks?category=sports', name: 'Sports Only' }
+    ];
+    
+    for (const test of tests) {
+      console.log(`📊 Testing ${test.name}:`);
+      const response = await fetch(`http://localhost:3000${test.endpoint}`);
+      const data = await response.json();
+      
+      if (data && data.length > 0) {
+        data.forEach((team, index) => {
+          console.log(`  ${index + 1}. ${team.name} (${team.teamCode}): ${team.points} points`);
+          if (test.name === 'All Categories') {
+            console.log(`     Arts: ${team.artsPoints}, Sports: ${team.sportsPoints}`);
+          }
+        });
+      } else {
+        console.log('  No data returned');
+      }
+      console.log('');
+    }
+    
+    // Compare with expected values
+    console.log('🎯 Comparison with Your Expected Values:');
+    const allResponse = await fetch('http://localhost:3000/api/grand-marks?category=all');
+    const allData = await allResponse.json();
+    
+    const expectedArts = { SMD: 759, INT: 754, AQS: 716 };
+    const expectedSports = { SMD: 143, INT: 141, AQS: 137 };
+    
+    console.log('Expected vs Actual:');
+    ['SMD', 'INT', 'AQS'].forEach(teamCode => {
+      const team = allData.find(t => t.teamCode === teamCode);
+      if (team) {
+        console.log(`${teamCode}:`);
+        console.log(`  Arts: ${team.artsPoints} (expected: ${expectedArts[teamCode]}) - Diff: ${team.artsPoints - expectedArts[teamCode]}`);
+        console.log(`  Sports: ${team.sportsPoints} (expected: ${expectedSports[teamCode]}) - Diff: ${team.sportsPoints - expectedSports[teamCode]}`);
+      }
+    });
+    
+    return true;
+    
+  } catch (error) {
+    console.error('❌ Error testing aligned API:', error.message);
+    return false;
+  }
+}
+
+async function main() {
+  console.log('🎯 Grand Marks API Alignment Tool\n');
+  console.log('This tool aligns the Grand Marks API with the MarksSummary calculation method.\n');
+  
+  const apiUpdated = await updateGrandMarksAPI();
+  
+  if (apiUpdated) {
+    console.log('✅ Grand Marks API has been aligned with MarksSummary');
+    await testAlignedAPI();
+  } else {
+    console.log('❌ Failed to update Grand Marks API');
+  }
+  
+  console.log('\n📋 Key Changes Made:');
+  console.log('1. Uses exact same calculation logic as MarksSummary component');
+  console.log('2. Uses candidate lookup for team assignment (not chest number parsing)');
+  console.log('3. Uses getGradePoints from markingSystem utility');
+  console.log('4. Processes individual and team winners separately');
+  console.log('5. Rounds final values to match expected integers');
+  console.log('6. Uses correct team colors');
+  
+  console.log('\n✅ Alignment completed! The API should now match admin calculations.');
+}
+
+main().catch(console.error);

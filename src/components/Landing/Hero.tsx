@@ -37,26 +37,24 @@ export function Hero() {
     }
   ];
 
-  // Position configurations for the three slots - focus on position only
+  // Position configurations for the three slots - fixed positions, no x-axis movement
   const positions = [
     {
       id: 'left',
       height: 'h-80',
       width: 'md:w-80',
       order: 0,
-      scale: 1, // Fixed scale
+      scale: 1, // All teams same scale
       y: 0,
-      x: 0, // Left position
       zIndex: 10
     },
     {
       id: 'center',
-      height: 'h-96', // Larger height for center
-      width: 'md:w-96', // Larger width for center
+      height: 'h-80', // Same height as others
+      width: 'md:w-80', // Same width as others
       order: 1,
-      scale: 1, // No scale animation, just larger container
+      scale: 1, // Same scale as others
       y: 0,
-      x: 0, // Center position
       zIndex: 20
     },
     {
@@ -64,28 +62,13 @@ export function Hero() {
       height: 'h-80',
       width: 'md:w-80',
       order: 2,
-      scale: 1, // Fixed scale
+      scale: 1, // All teams same scale
       y: 0,
-      x: 0, // Right position
       zIndex: 10
     }
   ];
 
-  // State to track current team positions
-  const [currentPositions, setCurrentPositions] = useState([0, 1, 2]); // indices of teams in positions
-
-  // Animation loop - rotate positions every 2.5 seconds for more frequent display
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentPositions(prev => [
-        (prev[0] + 1) % 3, // Move each team to next position
-        (prev[1] + 1) % 3,
-        (prev[2] + 1) % 3
-      ]);
-    }, 2500); // Change every 2.5 seconds - faster rotation
-
-    return () => clearInterval(interval);
-  }, []);
+  // Teams stay in fixed positions - no state management needed
 
   return (
     <div className="h-screen relative overflow-hidden bg-white flex flex-col"
@@ -251,22 +234,20 @@ export function Hero() {
             </Link>
           </motion.div>
         </motion.div>
-        {/* Three Animated Team Containers with Position Looping */}
+        {/* Three Team Containers - Fixed Positions, No Movement */}
         <motion.div
-          className="flex flex-col md:flex-row items-end justify-center gap-6 max-w-5xl mx-auto relative"
+          className="flex flex-col md:flex-row items-end justify-center gap-6 max-w-4xl mx-auto"
           initial={{ opacity: 0, y: 60 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1, delay: 1.5 }}
         >
-          {positions.map((position, positionIndex) => {
-            const teamIndex = currentPositions[positionIndex];
-            const team = teams[teamIndex];
+          {teams.map((team, teamIndex) => {
+            const position = positions[teamIndex] || positions[0]; // Use team index for fixed positions
 
             return (
               <motion.div
-                key={`${position.id}-${team.id}`}
+                key={team.id}
                 className={`bg-gradient-to-br ${team.gradient} rounded-3xl w-full ${position.width} ${position.height} relative overflow-hidden cursor-pointer group`}
-                layout
                 initial={{
                   opacity: 1, // Start visible immediately
                   y: 100,
@@ -275,21 +256,14 @@ export function Hero() {
                 animate={{
                   opacity: 1, // Always fully visible - no hiding
                   y: position.y,
-                  x: position.x,
                   zIndex: position.zIndex
                 }}
                 transition={{
                   duration: 1.2,
-                  delay: 1.7 + positionIndex * 0.2,
+                  delay: 1.7 + teamIndex * 0.2,
                   type: "spring",
                   stiffness: 80,
-                  damping: 20,
-                  layout: {
-                    duration: 0.6, // Smooth position transition
-                    type: "spring",
-                    stiffness: 120,
-                    damping: 25
-                  }
+                  damping: 20
                 }}
                 whileHover={{
                   y: position.y - 10, // Simple hover lift
@@ -344,29 +318,25 @@ export function Hero() {
 
 
 
-                {/* Position indicator dots */}
+                {/* Team indicator dot - fixed position */}
                 <motion.div
-                  className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-1"
+                  className="absolute bottom-4 left-1/2 transform -translate-x-1/2"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 0.6 }}
-                  transition={{ delay: 2 + positionIndex * 0.1 }}
+                  transition={{ delay: 2 + teamIndex * 0.1 }}
                 >
-                  {[0, 1, 2].map((dotIndex) => (
-                    <motion.div
-                      key={dotIndex}
-                      className={`w-2 h-2 rounded-full ${dotIndex === positionIndex ? 'bg-white' : 'bg-white/40'
-                        }`}
-                      animate={{
-                        scale: dotIndex === positionIndex ? [1, 1.2, 1] : 1,
-                        opacity: dotIndex === positionIndex ? [0.6, 1, 0.6] : 0.4
-                      }}
-                      transition={{
-                        duration: 2,
-                        repeat: Infinity,
-                        delay: dotIndex * 0.2
-                      }}
-                    />
-                  ))}
+                  <motion.div
+                    className="w-2 h-2 rounded-full bg-white"
+                    animate={{
+                      scale: [1, 1.2, 1],
+                      opacity: [0.6, 1, 0.6]
+                    }}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      delay: teamIndex * 0.2
+                    }}
+                  />
                 </motion.div>
 
                 {/* Animated border with team-specific glow */}
@@ -386,7 +356,7 @@ export function Hero() {
                       "rgba(248, 113, 113, 0.6)",
                       "rgba(248, 113, 113, 0.3)"
                     ],
-                    boxShadow: positionIndex === 1 ? [
+                    boxShadow: teamIndex === 1 ? [
                       "0 0 20px rgba(255, 255, 255, 0.1)",
                       "0 0 40px rgba(255, 255, 255, 0.2)",
                       "0 0 20px rgba(255, 255, 255, 0.1)"
@@ -403,8 +373,8 @@ export function Hero() {
                   }}
                 />
 
-                {/* Spotlight effect for center position - no scale animation */}
-                {positionIndex === 1 && (
+                {/* Spotlight effect for center team (Team Aqsa) */}
+                {teamIndex === 1 && (
                   <motion.div
                     className="absolute inset-0 bg-gradient-radial from-white/15 via-transparent to-transparent rounded-3xl"
                     animate={{

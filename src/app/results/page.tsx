@@ -33,10 +33,13 @@ export default function ResultsDashboard() {
     todayResults: 0
   });
   const [grandMarksData, setGrandMarksData] = useState<any[]>([]);
+  const [artsMarksData, setArtsMarksData] = useState<any[]>([]);
+  const [sportsMarksData, setSportsMarksData] = useState<any[]>([]);
+  const [activeCategory, setActiveCategory] = useState<'all' | 'arts' | 'sports'>('all');
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 1800000); // Refresh every 30 seconds
+    const interval = setInterval(fetchData, 30000); // Refresh every 30 seconds
     return () => clearInterval(interval);
   }, []);
 
@@ -110,6 +113,52 @@ export default function ResultsDashboard() {
       case 'F': return 0;
       default: return 0;
     }
+  };
+
+  // Function to calculate combined marks from arts and sports data
+  const calculateCombinedMarks = (artsData: any[], sportsData: any[]) => {
+    const teamTotals: { [teamCode: string]: any } = {};
+
+    // Initialize with arts data
+    artsData.forEach(team => {
+      teamTotals[team.teamCode] = {
+        teamCode: team.teamCode,
+        name: team.name,
+        artsPoints: team.points || 0,
+        sportsPoints: 0,
+        artsResults: team.results || 0,
+        sportsResults: 0,
+        color: team.color
+      };
+    });
+
+    // Add sports data
+    sportsData.forEach(team => {
+      if (teamTotals[team.teamCode]) {
+        teamTotals[team.teamCode].sportsPoints = team.points || 0;
+        teamTotals[team.teamCode].sportsResults = team.results || 0;
+      } else {
+        teamTotals[team.teamCode] = {
+          teamCode: team.teamCode,
+          name: team.name,
+          artsPoints: 0,
+          sportsPoints: team.points || 0,
+          artsResults: 0,
+          sportsResults: team.results || 0,
+          color: team.color
+        };
+      }
+    });
+
+    // Calculate total points and results
+    return Object.values(teamTotals)
+      .map((team: any) => ({
+        ...team,
+        points: team.artsPoints + team.sportsPoints,
+        results: team.artsResults + team.sportsResults
+      }))
+      .filter(team => team.points > 0)
+      .sort((a, b) => b.points - a.points);
   };
 
   // Function to calculate team marks from published results (same logic as checklist page)
@@ -247,20 +296,22 @@ export default function ResultsDashboard() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [teamsRes, resultsRes, candidatesRes, programmesRes, grandMarksRes] = await Promise.all([
+      const [teamsRes, resultsRes, candidatesRes, programmesRes, artsMarksRes, sportsMarksRes] = await Promise.all([
         fetch('/api/teams'),
         fetch('/api/results?teamView=true'),
         fetch('/api/candidates'),
         fetch('/api/programmes'),
-        fetch('/api/grand-marks?category=all')
+        fetch('/api/admin-checklist-marks?category=arts-total'),
+        fetch('/api/admin-checklist-marks?category=sports')
       ]);
 
-      const [teamsData, resultsData, candidatesData, programmesData, grandMarksResponse] = await Promise.all([
+      const [teamsData, resultsData, candidatesData, programmesData, artsMarksResponse, sportsMarksResponse] = await Promise.all([
         teamsRes.json(),
         resultsRes.json(),
         candidatesRes.json(),
         programmesRes.json(),
-        grandMarksRes.json()
+        artsMarksRes.json(),
+        sportsMarksRes.json()
       ]);
 
       setTeams(teamsData || []);
@@ -268,42 +319,18 @@ export default function ResultsDashboard() {
       setCandidates(candidatesData || []);
       setProgrammes(programmesData || []);
 
-      // Use the correct published grand marks as shown in admin checklist
-      const correctGrandMarks = [
-        {
-          teamCode: 'INT',
-          name: 'Team Inthifada',
-          points: 544,
-          artsPoints: 544,
-          sportsPoints: 115,
-          results: 50,
-          color: '#EF4444'
-        },
-        {
-          teamCode: 'SMD',
-          name: 'Team Sumud',
-          points: 432,
-          artsPoints: 432,
-          sportsPoints: 118,
-          results: 45,
-          color: '#10B981'
-        },
-        {
-          teamCode: 'AQS',
-          name: 'Team Aqsa',
-          points: 424,
-          artsPoints: 424,
-          sportsPoints: 118,
-          results: 42,
-          color: '#6B7280'
-        }
-      ];
+      // Use admin checklist marks API for accurate calculations
+      setArtsMarksData(artsMarksResponse || []);
+      setSportsMarksData(sportsMarksResponse || []);
 
-      setGrandMarksData(correctGrandMarks);
+      // Calculate combined grand marks from arts and sports
+      const combinedMarks = calculateCombinedMarks(artsMarksResponse || [], sportsMarksResponse || []);
+      setGrandMarksData(combinedMarks);
+
       setLastUpdated(new Date());
 
       // Process dashboard statistics
-      processDashboardData(teamsData, resultsData, candidatesData, programmesData, grandMarksResponse);
+      processDashboardData(teamsData, resultsData, candidatesData, programmesData, combinedMarks);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -519,92 +546,159 @@ export default function ResultsDashboard() {
           </motion.div>
         </div>
 
-        {/* Team Rankings Section - Simplified */}
+        {/* Team Rankings Section - Enhanced with Category Filters */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
           className="bg-white rounded-xl shadow-sm border p-6 mb-8"
         >
-          <div className="flex justify-between items-center mb-6">
-            <div>
+          <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center mb-6">
+            <div className="mb-4 lg:mb-0">
               <h3 className="text-xl font-semibold text-gray-900">🏆 Team Leaderboard</h3>
-              <p className="text-sm text-gray-600">Current standings based on published results</p>
+              <p className="text-sm text-gray-600">Current standings based on published results (using admin checklist calculation)</p>
             </div>
-            <div className="flex items-center space-x-2 bg-green-50 px-3 py-1 rounded-full">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <span className="text-xs text-green-700 font-medium">Live</span>
+            <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-2 bg-green-50 px-3 py-1 rounded-full">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-xs text-green-700 font-medium">Live</span>
+              </div>
             </div>
           </div>
 
-          {grandMarksData && grandMarksData.length > 0 ? (
-            <div className="space-y-3">
-              {grandMarksData.slice(0, 6).map((team, index) => (
-                <motion.div
-                  key={team.teamCode}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
-                >
-                  <div className="flex items-center space-x-4">
-                    <div className="text-lg font-bold text-gray-400 w-8">
-                      #{index + 1}
-                    </div>
-                    <div
-                      className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md"
-                      style={{ backgroundColor: team.color }}
-                    >
-                      {team.teamCode}
-                    </div>
-                    <div>
-                      <div className="font-semibold text-gray-900">{team.name}</div>
-                      <div className="text-sm text-gray-500">{team.results} programmes completed</div>
-                    </div>
-                  </div>
+          {/* Category Filter Buttons */}
+          <div className="flex flex-wrap gap-2 mb-6">
+            <button
+              onClick={() => setActiveCategory('all')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                activeCategory === 'all'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+              }`}
+            >
+              🏆 All Categories
+            </button>
+            <button
+              onClick={() => setActiveCategory('arts')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                activeCategory === 'arts'
+                  ? 'bg-purple-600 text-white'
+                  : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+              }`}
+            >
+              🎨 Arts Only
+            </button>
+            <button
+              onClick={() => setActiveCategory('sports')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                activeCategory === 'sports'
+                  ? 'bg-green-600 text-white'
+                  : 'bg-green-100 text-green-700 hover:bg-green-200'
+              }`}
+            >
+              🏃 Sports Only
+            </button>
+          </div>
 
-                  <div className="flex items-center space-x-6">
-                    <div className="text-right">
-                      <div className="text-sm text-gray-500">Arts</div>
-                      <div className="font-bold text-purple-600">
-                        {Math.round(team.artsPoints || 0)}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-sm text-gray-500">Sports</div>
-                      <div className="font-bold text-green-600">
-                        {Math.round(team.sportsPoints || 0)}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-2xl font-bold" style={{ color: team.color }}>
-                        {Math.round(team.points)}
-                      </div>
-                      <div className="text-sm text-gray-500">Total Points</div>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
+          {(() => {
+            let displayData = grandMarksData;
+            if (activeCategory === 'arts') {
+              displayData = artsMarksData;
+            } else if (activeCategory === 'sports') {
+              displayData = sportsMarksData;
+            }
 
-              {grandMarksData.length > 6 && (
-                <div className="text-center pt-4">
-                  <button className="text-blue-600 hover:text-blue-700 text-sm font-medium bg-blue-50 px-4 py-2 rounded-lg hover:bg-blue-100 transition-colors">
-                    View All {grandMarksData.length} Teams →
-                  </button>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl">🏆</span>
+            return displayData && displayData.length > 0 ? (
+              <div className="space-y-3">
+                {displayData.slice(0, 6).map((team, index) => (
+                  <motion.div
+                    key={team.teamCode}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
+                  >
+                    <div className="flex items-center space-x-4">
+                      <div className="text-lg font-bold text-gray-400 w-8">
+                        #{index + 1}
+                      </div>
+                      <div
+                        className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md"
+                        style={{ backgroundColor: team.color }}
+                      >
+                        {team.teamCode}
+                      </div>
+                      <div>
+                        <div className="font-semibold text-gray-900">{team.name}</div>
+                        <div className="text-sm text-gray-500">
+                          {team.results} programmes completed
+                          {activeCategory === 'all' && (
+                            <span className="ml-2 text-xs">
+                              ({team.artsResults || 0} arts, {team.sportsResults || 0} sports)
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-6">
+                      {activeCategory === 'all' && (
+                        <>
+                          <div className="text-right">
+                            <div className="text-sm text-gray-500">Arts</div>
+                            <div className="font-bold text-purple-600">
+                              {Math.round(team.artsPoints || 0)}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm text-gray-500">Sports</div>
+                            <div className="font-bold text-green-600">
+                              {Math.round(team.sportsPoints || 0)}
+                            </div>
+                          </div>
+                        </>
+                      )}
+                      <div className="text-right">
+                        <div className="text-2xl font-bold" style={{ color: team.color }}>
+                          {Math.round(team.points)}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {activeCategory === 'arts' ? 'Arts Points' : 
+                           activeCategory === 'sports' ? 'Sports Points' : 
+                           'Total Points'}
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+
+                {displayData.length > 6 && (
+                  <div className="text-center pt-4">
+                    <button className="text-blue-600 hover:text-blue-700 text-sm font-medium bg-blue-50 px-4 py-2 rounded-lg hover:bg-blue-100 transition-colors">
+                      View All {displayData.length} Teams →
+                    </button>
+                  </div>
+                )}
               </div>
-              <h4 className="text-lg font-medium text-gray-900 mb-2">No Rankings Available</h4>
-              <p className="text-gray-500 text-sm">
-                Team rankings will appear here once results are published.
-              </p>
-            </div>
-          )}
+            ) : (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-2xl">
+                    {activeCategory === 'arts' ? '🎨' : 
+                     activeCategory === 'sports' ? '🏃' : '🏆'}
+                  </span>
+                </div>
+                <h4 className="text-lg font-medium text-gray-900 mb-2">
+                  No {activeCategory === 'arts' ? 'Arts' : 
+                      activeCategory === 'sports' ? 'Sports' : ''} Rankings Available
+                </h4>
+                <p className="text-gray-500 text-sm">
+                  {activeCategory === 'arts' ? 'Arts' : 
+                   activeCategory === 'sports' ? 'Sports' : 'Team'} rankings will appear here once results are published.
+                </p>
+              </div>
+            );
+          })()}
         </motion.div>
 
         {/* Note: Removed "Remaining Programmes" section for public users */}
