@@ -396,19 +396,80 @@ export default function PublicRankings({ className = '' }: PublicRankingsProps) 
                             <div className="text-2xl font-bold text-gray-400">
                               #{index + 1}
                             </div>
-                            <div 
-                              className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold shadow-lg"
-                              style={{ backgroundColor: team?.color || '#6b7280' }}
-                            >
-                              {team?.code || '?'}
+                            
+                            {/* Profile Image */}
+                            <div className="relative">
+                              <div className="w-16 h-16 rounded-full overflow-hidden border-3 border-white shadow-lg">
+                                {performer.candidate?.profileImage ? (
+                                  <img
+                                    src={performer.candidate.profileImage}
+                                    alt={performer.candidate.name}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                      // Fallback to team color circle if image fails to load
+                                      const target = e.target as HTMLImageElement;
+                                      target.style.display = 'none';
+                                      const fallback = target.nextElementSibling as HTMLElement;
+                                      if (fallback) fallback.style.display = 'flex';
+                                    }}
+                                  />
+                                ) : null}
+                                <div 
+                                  className={`w-full h-full ${performer.candidate?.profileImage ? 'hidden' : 'flex'} items-center justify-center text-white font-bold text-lg`}
+                                  style={{ backgroundColor: team?.color || '#6b7280' }}
+                                >
+                                  {performer.candidate?.name?.charAt(0)?.toUpperCase() || team?.code || '?'}
+                                </div>
+                              </div>
+                              {/* Team badge overlay */}
+                              <div 
+                                className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-md border-2 border-white"
+                                style={{ backgroundColor: team?.color || '#6b7280' }}
+                              >
+                                {team?.code || '?'}
+                              </div>
                             </div>
+                            
                             <div>
                               <h3 className="font-bold text-gray-900">
                                 {performer.candidate?.name || 'Unknown Participant'}
                               </h3>
-                              <p className="text-sm text-gray-600">
-                                #{performer.chestNumber} • {team?.name || 'Unknown Team'}
-                              </p>
+                              <div className="flex items-center space-x-2 text-sm text-gray-600">
+                                <span>#{performer.chestNumber}</span>
+                                <span>•</span>
+                                <span>{team?.name || 'Unknown Team'}</span>
+                                {performer.candidate?.section && (
+                                  <>
+                                    <span>•</span>
+                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                      performer.candidate.section === 'senior' ? 'bg-blue-100 text-blue-700' :
+                                      performer.candidate.section === 'junior' ? 'bg-green-100 text-green-700' :
+                                      'bg-yellow-100 text-yellow-700'
+                                    }`}>
+                                      {performer.candidate.section.charAt(0).toUpperCase() + performer.candidate.section.slice(1)}
+                                    </span>
+                                  </>
+                                )}
+                              </div>
+                              {/* Additional Profile Information */}
+                              <div className="flex items-center space-x-3 mt-1 text-xs text-gray-500">
+                                {performer.candidate?.age && (
+                                  <span className="flex items-center space-x-1">
+                                    <span>🎂</span>
+                                    <span>{performer.candidate.age} years</span>
+                                  </span>
+                                )}
+                                {performer.candidate?.gender && (
+                                  <span className="flex items-center space-x-1">
+                                    <span>{performer.candidate.gender === 'male' ? '👨' : '👩'}</span>
+                                    <span>{performer.candidate.gender}</span>
+                                  </span>
+                                )}
+                                <span className="flex items-center space-x-1">
+                                  <span>🏆</span>
+                                  <span>{performer.programmeResults.length} programme{performer.programmeResults.length !== 1 ? 's' : ''}</span>
+                                </span>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -437,7 +498,7 @@ export default function PublicRankings({ className = '' }: PublicRankingsProps) 
                         </div>
                       </div>
 
-                      {/* Expanded Programme Results */}
+                      {/* Expanded Profile and Programme Results */}
                       {expandedPerformers.has(performer.chestNumber) && (
                         <motion.div
                           initial={{ opacity: 0, height: 0 }}
@@ -445,54 +506,166 @@ export default function PublicRankings({ className = '' }: PublicRankingsProps) 
                           exit={{ opacity: 0, height: 0 }}
                           className="mt-4 pt-4 border-t border-gray-200"
                         >
-                          <h4 className="font-medium text-gray-900 mb-3">Programme Results:</h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {/* Enhanced Profile Information */}
+                          <div className="mb-6 bg-gray-50 rounded-lg p-4">
+                            <h4 className="font-medium text-gray-900 mb-3 flex items-center">
+                              <span className="mr-2">👤</span>
+                              Participant Profile
+                            </h4>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              {/* Profile Image and Basic Info */}
+                              <div className="flex items-center space-x-4 md:col-span-1">
+                                <div className="w-20 h-20 rounded-full overflow-hidden border-3 border-white shadow-lg flex-shrink-0">
+                                  {performer.candidate?.profileImage ? (
+                                    <img
+                                      src={performer.candidate.profileImage}
+                                      alt={performer.candidate.name}
+                                      className="w-full h-full object-cover"
+                                      onError={(e) => {
+                                        const target = e.target as HTMLImageElement;
+                                        target.style.display = 'none';
+                                        const fallback = target.nextElementSibling as HTMLElement;
+                                        if (fallback) fallback.style.display = 'flex';
+                                      }}
+                                    />
+                                  ) : null}
+                                  <div 
+                                    className={`w-full h-full ${performer.candidate?.profileImage ? 'hidden' : 'flex'} items-center justify-center text-white font-bold text-xl`}
+                                    style={{ backgroundColor: team?.color || '#6b7280' }}
+                                  >
+                                    {performer.candidate?.name?.charAt(0)?.toUpperCase() || '?'}
+                                  </div>
+                                </div>
+                                <div className="flex-1">
+                                  <h5 className="font-bold text-gray-900 text-lg">
+                                    {performer.candidate?.name || 'Unknown'}
+                                  </h5>
+                                  <p className="text-gray-600 font-mono">#{performer.chestNumber}</p>
+                                  <div className="flex items-center space-x-2 mt-1">
+                                    <div 
+                                      className="w-3 h-3 rounded-full"
+                                      style={{ backgroundColor: team?.color || '#6b7280' }}
+                                    ></div>
+                                    <span className="text-sm text-gray-700">{team?.name || 'Unknown Team'}</span>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              {/* Personal Details */}
+                              <div className="space-y-2">
+                                <h6 className="font-medium text-gray-700 text-sm">Personal Details</h6>
+                                {performer.candidate?.section && (
+                                  <div className="flex items-center space-x-2">
+                                    <span className="text-gray-500 text-sm font-medium">Section:</span>
+                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                      performer.candidate.section === 'senior' ? 'bg-blue-100 text-blue-700' :
+                                      performer.candidate.section === 'junior' ? 'bg-green-100 text-green-700' :
+                                      'bg-yellow-100 text-yellow-700'
+                                    }`}>
+                                      {performer.candidate.section.charAt(0).toUpperCase() + performer.candidate.section.slice(1)}
+                                    </span>
+                                  </div>
+                                )}
+                                {performer.candidate?.age && (
+                                  <div className="flex items-center space-x-2">
+                                    <span className="text-gray-500 text-sm font-medium">Age:</span>
+                                    <span className="text-gray-900">{performer.candidate.age} years</span>
+                                  </div>
+                                )}
+                                {performer.candidate?.gender && (
+                                  <div className="flex items-center space-x-2">
+                                    <span className="text-gray-500 text-sm font-medium">Gender:</span>
+                                    <span className="text-gray-900 capitalize">
+                                      {performer.candidate.gender}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                              
+                              {/* Performance Stats */}
+                              <div className="space-y-2">
+                                <h6 className="font-medium text-gray-700 text-sm">Performance Stats</h6>
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-gray-500 text-sm font-medium">Total Points:</span>
+                                  <span className="text-2xl font-bold" style={{ color: team?.color || '#6b7280' }}>
+                                    {performer.totalMarks}
+                                  </span>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-gray-500 text-sm font-medium">Programmes:</span>
+                                  <span className="text-gray-900 font-medium">
+                                    {performer.programmeResults.length} competition{performer.programmeResults.length !== 1 ? 's' : ''}
+                                  </span>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-gray-500 text-sm font-medium">Avg Points:</span>
+                                  <span className="text-gray-900 font-medium">
+                                    {performer.programmeResults.length > 0 
+                                      ? Math.round(performer.totalMarks / performer.programmeResults.length)
+                                      : 0} per programme
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <h4 className="font-medium text-gray-900 mb-3 flex items-center">
+                            <span className="mr-2">🏆</span>
+                            Programme Results
+                          </h4>
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                             {performer.programmeResults.map((programme, idx) => (
-                              <div key={idx} className="bg-gray-50 rounded-lg p-3">
-                                <div className="flex justify-between items-start mb-2">
+                              <div key={idx} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                                <div className="flex justify-between items-start mb-3">
                                   <div className="flex-1">
-                                    <h5 className="font-medium text-gray-900 text-sm">
+                                    <h5 className="font-semibold text-gray-900 text-sm mb-2">
                                       {programme.programmeName}
                                     </h5>
-                                    <div className="flex items-center space-x-2 text-xs text-gray-600 mt-1">
-                                      <span className={`px-2 py-1 rounded-full ${
+                                    <div className="flex items-center space-x-2 text-xs mb-2">
+                                      <span className={`px-2 py-1 rounded-full font-medium ${
                                         programme.category === 'arts' 
                                           ? 'bg-purple-100 text-purple-700' 
                                           : 'bg-green-100 text-green-700'
                                       }`}>
                                         {programme.category === 'arts' ? '🎨' : '⚽'} {programme.category}
                                       </span>
-                                      <span className="bg-gray-200 text-gray-700 px-2 py-1 rounded-full">
+                                      {programme.subcategory && (
+                                        <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded-full">
+                                          {programme.subcategory}
+                                        </span>
+                                      )}
+                                      <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-full">
                                         {programme.section}
                                       </span>
                                     </div>
+                                    <div className="text-xs text-gray-500 font-mono">
+                                      Code: {programme.programmeCode}
+                                    </div>
                                   </div>
                                   <div className="text-right ml-3">
-                                    <div className="font-bold text-lg" style={{ color: team?.color || '#6b7280' }}>
+                                    <div className="font-bold text-xl" style={{ color: team?.color || '#6b7280' }}>
                                       {programme.totalMarks}
                                     </div>
                                     <div className="text-xs text-gray-500">points</div>
                                   </div>
                                 </div>
-                                <div className="flex justify-between items-center">
+                                
+                                <div className="flex justify-between items-center pt-2 border-t border-gray-100">
                                   <div className="flex items-center space-x-2">
-                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                      programme.position === 'first' ? 'bg-yellow-100 text-yellow-800' :
-                                      programme.position === 'second' ? 'bg-gray-100 text-gray-800' :
-                                      'bg-orange-100 text-orange-800'
+                                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                                      programme.position === 'first' ? 'bg-yellow-100 text-yellow-800 border border-yellow-300' :
+                                      programme.position === 'second' ? 'bg-gray-100 text-gray-800 border border-gray-300' :
+                                      'bg-orange-100 text-orange-800 border border-orange-300'
                                     }`}>
-                                      {programme.position === 'first' ? '🥇 1st' :
-                                       programme.position === 'second' ? '🥈 2nd' : '🥉 3rd'} Place
+                                      {programme.position === 'first' ? '🥇 1st Place' :
+                                       programme.position === 'second' ? '🥈 2nd Place' : '🥉 3rd Place'}
                                     </span>
-                                    {programme.grade && (
-                                      <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">
-                                        Grade: {programme.grade}
-                                      </span>
-                                    )}
                                   </div>
-                                  <span className="text-xs text-gray-500 font-mono">
-                                    {programme.programmeCode}
-                                  </span>
+                                  {programme.grade && (
+                                    <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium border border-blue-200">
+                                      Grade: {programme.grade}
+                                    </span>
+                                  )}
                                 </div>
                               </div>
                             ))}

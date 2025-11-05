@@ -41,7 +41,7 @@ export default function PublicLeaderboard() {
     const interval = setInterval(() => {
       fetchData();
       setAnimationKey(prev => prev + 1);
-    }, 30000); // Update every 30 seconds
+    }, 180000); // Update every 30 seconds
     return () => clearInterval(interval);
   }, []);
 
