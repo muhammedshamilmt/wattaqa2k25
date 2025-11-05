@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, onAuthStateChanged, Auth } from 'firebase/auth';
-import { signInWithGoogle, signOutUser } from '@/lib/firebase';
+import { signInWithGoogle, signOutUser, handleRedirectResult } from '@/lib/firebase';
 import { auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 
@@ -117,45 +117,83 @@ export function FirebaseTeamAuthProvider({ children }: { children: React.ReactNo
     }
   };
 
-  // Sign in with Google
+  // Sign in with Google (with automatic fallback to redirect)
   const signInWithGoogleAuth = async () => {
     try {
       setLoading(true);
       console.log('🚀 Starting Google sign-in...');
       
-      const result = await signInWithGoogle();
-      const firebaseUser = result.user;
-      
-      if (firebaseUser.email) {
-        console.log('✅ Google sign-in successful:', firebaseUser.email);
+      try {
+        // First try popup method
+        const result = await signInWithGoogle(false);
         
-        // Create team auth user object
-        const teamAuthUser: TeamAuthUser = {
-          uid: firebaseUser.uid,
-          email: firebaseUser.email,
-          displayName: firebaseUser.displayName || firebaseUser.email,
-          photoURL: firebaseUser.photoURL || undefined,
-          isTeamCaptain: true, // Will be verified against database
-        };
+        if (result) {
+          const firebaseUser = result.user;
+          
+          if (firebaseUser.email) {
+            console.log('✅ Google sign-in successful (popup):', firebaseUser.email);
+            
+            // Create team auth user object
+            const teamAuthUser: TeamAuthUser = {
+              uid: firebaseUser.uid,
+              email: firebaseUser.email,
+              displayName: firebaseUser.displayName || firebaseUser.email,
+              photoURL: firebaseUser.photoURL || undefined,
+              isTeamCaptain: true, // Will be verified against database
+            };
 
-        setUser(teamAuthUser);
+            setUser(teamAuthUser);
+            
+            // Store user data for persistence
+            localStorage.setItem('firebaseTeamUser', JSON.stringify(teamAuthUser));
+            
+            console.log('👤 Team auth user created:', teamAuthUser.email);
+          } else {
+            throw new Error('No email found in Google account');
+          }
+        }
+      } catch (popupError: any) {
+        console.log('⚠️ Popup sign-in failed, trying redirect method...', popupError.message);
         
-        // Store user data for persistence
-        localStorage.setItem('firebaseTeamUser', JSON.stringify(teamAuthUser));
-        
-        console.log('👤 Team auth user created:', teamAuthUser.email);
-      } else {
-        throw new Error('No email found in Google account');
+        // If popup fails due to blocker or user cancellation, try redirect
+        if (popupError.code === 'auth/popup-blocked' || 
+            popupError.code === 'auth/popup-closed-by-user' ||
+            popupError.message.includes('popup') ||
+            popupError.message.includes('cancelled')) {
+          
+          console.log('🔄 Switching to redirect authentication...');
+          
+          // Show user-friendly message
+          const useRedirect = confirm(
+            'Popup sign-in was blocked or cancelled.\n\n' +
+            'Would you like to try redirect sign-in instead?\n' +
+            '(You will be redirected to Google and back)'
+          );
+          
+          if (useRedirect) {
+            // Use redirect method - this will redirect the page
+            await signInWithGoogle(true);
+            // Note: Code after this won't execute as page redirects
+            return;
+          } else {
+            throw new Error('Sign-in cancelled by user');
+          }
+        } else {
+          // Re-throw other errors
+          throw popupError;
+        }
       }
     } catch (error: any) {
       console.error('❌ Google sign-in error:', error);
       
       // User-friendly error messages
       let errorMessage = 'Failed to sign in with Google';
-      if (error.message.includes('popup')) {
-        errorMessage = 'Sign-in popup was blocked or closed. Please try again.';
+      if (error.message.includes('popup') || error.message.includes('cancelled')) {
+        errorMessage = 'Sign-in was cancelled. Please try again or allow popups for this site.';
       } else if (error.message.includes('network')) {
         errorMessage = 'Network error. Please check your connection and try again.';
+      } else if (error.message.includes('unauthorized-domain')) {
+        errorMessage = 'This domain is not authorized. Please contact support.';
       }
       
       alert(errorMessage);
@@ -188,9 +226,36 @@ export function FirebaseTeamAuthProvider({ children }: { children: React.ReactNo
     }
   };
 
-  // Listen for Firebase auth state changes
+  // Listen for Firebase auth state changes and handle redirect results
   useEffect(() => {
     console.log('🔄 Setting up Firebase auth listener...');
+    
+    // Check for redirect result first (in case user was redirected back from Google)
+    const checkRedirectResult = async () => {
+      try {
+        const result = await handleRedirectResult();
+        if (result && result.user.email) {
+          console.log('✅ Google sign-in redirect successful:', result.user.email);
+          
+          const teamAuthUser: TeamAuthUser = {
+            uid: result.user.uid,
+            email: result.user.email,
+            displayName: result.user.displayName || result.user.email,
+            photoURL: result.user.photoURL || undefined,
+            isTeamCaptain: true,
+          };
+
+          setUser(teamAuthUser);
+          localStorage.setItem('firebaseTeamUser', JSON.stringify(teamAuthUser));
+          
+          console.log('👤 Team auth user created from redirect:', teamAuthUser.email);
+        }
+      } catch (error) {
+        console.error('❌ Error handling redirect result:', error);
+      }
+    };
+    
+    checkRedirectResult();
     
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: User | null) => {
       console.log('🔔 Firebase auth state changed:', firebaseUser?.email || 'No user');

@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut } from 'firebase/auth';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyAzGdDSntSR6EwvHrYv4APWB4cPgwdjnC8",
@@ -39,31 +39,59 @@ const googleProvider = new GoogleAuthProvider();
 googleProvider.addScope('email');
 googleProvider.addScope('profile');
 
-// Sign in with Google
-export const signInWithGoogle = async () => {
+// Sign in with Google (with popup fallback to redirect)
+export const signInWithGoogle = async (useRedirect = false) => {
   try {
     if (!auth) {
       throw new Error('Firebase Auth not initialized');
     }
     
-    console.log('Attempting Google sign-in...');
-    const result = await signInWithPopup(auth, googleProvider);
-    console.log('Google sign-in successful:', result.user.email);
-    return result;
+    console.log('Attempting Google sign-in...', useRedirect ? '(redirect mode)' : '(popup mode)');
+    
+    if (useRedirect) {
+      // Use redirect method (more reliable, avoids popup blockers)
+      await signInWithRedirect(auth, googleProvider);
+      // Note: This will redirect the page, so we won't reach the return statement
+      return null;
+    } else {
+      // Use popup method (faster UX when it works)
+      const result = await signInWithPopup(auth, googleProvider);
+      console.log('Google sign-in successful:', result.user.email);
+      return result;
+    }
   } catch (error: any) {
     console.error('Error signing in with Google:', error);
     
-    // Provide more specific error messages
+    // Provide more specific error messages and suggest redirect method for popup issues
     if (error.code === 'auth/configuration-not-found') {
       throw new Error('Firebase configuration error. Please check your project settings.');
     } else if (error.code === 'auth/popup-blocked') {
-      throw new Error('Popup was blocked by browser. Please allow popups and try again.');
+      throw new Error('Popup was blocked by browser. Trying redirect method...');
     } else if (error.code === 'auth/popup-closed-by-user') {
-      throw new Error('Sign-in was cancelled. Please try again.');
+      throw new Error('Sign-in was cancelled. Trying redirect method...');
     } else if (error.code === 'auth/unauthorized-domain') {
       throw new Error('This domain is not authorized for OAuth operations.');
     }
     
+    throw error;
+  }
+};
+
+// Handle redirect result (call this on page load)
+export const handleRedirectResult = async () => {
+  try {
+    if (!auth) {
+      throw new Error('Firebase Auth not initialized');
+    }
+    
+    const result = await getRedirectResult(auth);
+    if (result) {
+      console.log('Google sign-in redirect successful:', result.user.email);
+      return result;
+    }
+    return null;
+  } catch (error: any) {
+    console.error('Error handling redirect result:', error);
     throw error;
   }
 };
