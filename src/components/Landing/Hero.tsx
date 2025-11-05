@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
 
 export function Hero() {
@@ -37,26 +37,26 @@ export function Hero() {
     }
   ];
 
-  // Position configurations for the three slots
+  // Position configurations for the three slots - focus on position only
   const positions = [
     {
       id: 'left',
       height: 'h-80',
       width: 'md:w-80',
       order: 0,
-      scale: 1,
+      scale: 1, // Fixed scale
       y: 0,
-      rotateY: 0,
+      x: 0, // Left position
       zIndex: 10
     },
     {
       id: 'center',
-      height: 'h-96',
-      width: 'md:w-80',
+      height: 'h-96', // Larger height for center
+      width: 'md:w-96', // Larger width for center
       order: 1,
-      scale: 1.05,
-      y: -10,
-      rotateY: 0,
+      scale: 1, // No scale animation, just larger container
+      y: 0,
+      x: 0, // Center position
       zIndex: 20
     },
     {
@@ -64,9 +64,9 @@ export function Hero() {
       height: 'h-80',
       width: 'md:w-80',
       order: 2,
-      scale: 1,
+      scale: 1, // Fixed scale
       y: 0,
-      rotateY: 0,
+      x: 0, // Right position
       zIndex: 10
     }
   ];
@@ -74,7 +74,7 @@ export function Hero() {
   // State to track current team positions
   const [currentPositions, setCurrentPositions] = useState([0, 1, 2]); // indices of teams in positions
 
-  // Animation loop - rotate positions every 4 seconds
+  // Animation loop - rotate positions every 2.5 seconds for more frequent display
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentPositions(prev => [
@@ -82,7 +82,7 @@ export function Hero() {
         (prev[1] + 1) % 3,
         (prev[2] + 1) % 3
       ]);
-    }, 4000); // Change every 4 seconds
+    }, 2500); // Change every 2.5 seconds - faster rotation
 
     return () => clearInterval(interval);
   }, []);
@@ -268,16 +268,14 @@ export function Hero() {
                 className={`bg-gradient-to-br ${team.gradient} rounded-3xl w-full ${position.width} ${position.height} relative overflow-hidden cursor-pointer group`}
                 layout
                 initial={{
-                  opacity: 0,
+                  opacity: 1, // Start visible immediately
                   y: 100,
-                  rotateY: positionIndex === 0 ? -30 : positionIndex === 2 ? 30 : 0,
-                  scale: 0.8
+                  scale: 1 // No initial scale animation
                 }}
                 animate={{
-                  opacity: 1,
+                  opacity: 1, // Always fully visible - no hiding
                   y: position.y,
-                  rotateY: position.rotateY,
-                  scale: position.scale,
+                  x: position.x,
                   zIndex: position.zIndex
                 }}
                 transition={{
@@ -287,19 +285,17 @@ export function Hero() {
                   stiffness: 80,
                   damping: 20,
                   layout: {
-                    duration: 1.5,
+                    duration: 0.6, // Smooth position transition
                     type: "spring",
-                    stiffness: 100,
+                    stiffness: 120,
                     damping: 25
                   }
                 }}
                 whileHover={{
-                  scale: position.scale * 1.05,
-                  y: position.y - 15,
-                  rotateY: positionIndex === 1 ? 0 : (positionIndex === 0 ? 5 : -5),
-                  transition: { duration: 0.4, type: "spring", stiffness: 300 }
+                  y: position.y - 10, // Simple hover lift
+                  transition: { duration: 0.3, type: "spring", stiffness: 300 }
                 }}
-                whileTap={{ scale: position.scale * 0.95 }}
+                whileTap={{ y: position.y + 2 }} // Simple tap effect
                 style={{ zIndex: position.zIndex }}
               >
                 {/* Floating animation background with team-specific colors */}
@@ -321,9 +317,9 @@ export function Hero() {
                     ]
                   }}
                   transition={{
-                    duration: 3,
+                    duration: 2.5, // Match the rotation interval
                     repeat: Infinity,
-                    delay: teamIndex * 0.5
+                    delay: teamIndex * 0.3 // Shorter delay for more frequent visibility
                   }}
                 />
 
@@ -331,8 +327,8 @@ export function Hero() {
                 <motion.div
                   className="absolute inset-0 opacity-80"
                   key={team.id}
-                  initial={{ opacity: 0, scale: 1.1 }}
-                  animate={{ opacity: 0.8, scale: 1 }}
+                  initial={{ opacity: 0.8, scale: 1.1 }} // Start visible
+                  animate={{ opacity: 0.8, scale: 1 }} // Maintain visibility
                   transition={{ duration: 0.8 }}
                 >
                   <Image
@@ -346,17 +342,7 @@ export function Hero() {
                 {/* Team color overlay */}
                 <div className={`absolute inset-0 bg-gradient-to-t ${team.overlayGradient}`}></div>
 
-                {/* Team name indicator - appears on hover */}
-                <motion.div
-                  className="absolute top-4 left-4 right-4 text-white text-center relative z-10 opacity-0 group-hover:opacity-100"
-                  initial={{ opacity: 0, y: -10 }}
-                  whileHover={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <h3 className="text-sm font-bold drop-shadow-lg bg-black/20 backdrop-blur-sm rounded-full px-3 py-1">
-                    {team.name}
-                  </h3>
-                </motion.div>
+
 
                 {/* Position indicator dots */}
                 <motion.div
@@ -411,22 +397,21 @@ export function Hero() {
                     ]
                   }}
                   transition={{
-                    duration: 2,
+                    duration: 2.5, // Match rotation timing
                     repeat: Infinity,
-                    delay: teamIndex * 0.3
+                    delay: teamIndex * 0.2 // Shorter delay for more visibility
                   }}
                 />
 
-                {/* Spotlight effect for center position */}
+                {/* Spotlight effect for center position - no scale animation */}
                 {positionIndex === 1 && (
                   <motion.div
-                    className="absolute inset-0 bg-gradient-radial from-white/10 via-transparent to-transparent rounded-3xl"
+                    className="absolute inset-0 bg-gradient-radial from-white/15 via-transparent to-transparent rounded-3xl"
                     animate={{
-                      opacity: [0.3, 0.6, 0.3],
-                      scale: [1, 1.05, 1]
+                      opacity: [0.4, 0.7, 0.4]
                     }}
                     transition={{
-                      duration: 3,
+                      duration: 2.5, // Match rotation timing
                       repeat: Infinity,
                       ease: "easeInOut"
                     }}
