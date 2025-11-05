@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { Team } from '@/types';
 import { TeamSidebarModern } from '@/components/TeamAdmin/TeamSidebarModern';
 import { Header } from "@/components/Layouts/header";
-
 import { GrandMarksProvider } from "@/contexts/GrandMarksContext";
 import { TeamAdminProvider } from "@/contexts/TeamAdminContext";
 import { FirebaseTeamAuthProvider } from "@/contexts/FirebaseTeamAuthContext";
@@ -38,7 +37,7 @@ export default function TeamAdminLayout({
           return;
         }
         
-        // Fallback to localStorage
+        // Fallback to localStorage for team captain access
         const storedUser = localStorage.getItem('currentUser');
         if (storedUser) {
           const user = JSON.parse(storedUser);
@@ -81,7 +80,7 @@ export default function TeamAdminLayout({
       window.removeEventListener('popstate', handleLocationChange);
       clearInterval(intervalId);
     };
-  }, [selectedTeam]); // Add selectedTeam as dependency
+  }, [selectedTeam]);
 
   // Fetch teams data in background (non-blocking)
   useEffect(() => {
@@ -98,37 +97,6 @@ export default function TeamAdminLayout({
     
     fetchTeamsData();
   }, []);
-
-  // Optional: Log access for debugging (non-blocking)
-  useEffect(() => {
-    // Only run on client side
-    if (typeof window === 'undefined') return;
-    
-    try {
-      const storedUser = localStorage.getItem('currentUser');
-      const urlParams = new URLSearchParams(window.location.search);
-      const urlTeamCode = urlParams.get('team');
-      
-      console.log('🔍 Team Admin Access Debug:', {
-        hasStoredUser: !!storedUser,
-        urlTeamCode,
-        selectedTeam,
-        timestamp: new Date().toISOString()
-      });
-      
-      if (storedUser) {
-        const user = JSON.parse(storedUser);
-        console.log('👤 User Info:', {
-          userType: user.userType,
-          teamCode: user.team?.code,
-          isAdminAccess: user.isAdminAccess,
-          email: user.email || user.originalAdminEmail
-        });
-      }
-    } catch (error) {
-      console.error('❌ Error logging access info:', error);
-    }
-  }, [selectedTeam]);
 
   const selectedTeamData = teams.find(t => t.code === selectedTeam);
 

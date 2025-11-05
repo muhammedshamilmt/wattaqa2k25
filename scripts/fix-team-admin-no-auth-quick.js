@@ -1,15 +1,27 @@
-'use client';
+#!/usr/bin/env node
+
+console.log('🚀 QUICK FIX: REMOVING TEAM ADMIN AUTHENTICATION BARRIERS');
+console.log('========================================================');
+
+const fs = require('fs');
+const path = require('path');
+
+// Fix 1: Update team admin page to remove Firebase authentication
+console.log('\n📋 STEP 1: Fixing team admin page...');
+
+const pagePath = path.join(process.cwd(), 'src/app/team-admin/page.tsx');
+
+const newPageContent = `'use client';
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Candidate, Programme, ProgrammeParticipant, Result } from '@/types';
 import Link from 'next/link';
-import { useTeamAdmin } from '@/contexts/TeamAdminContext';
-import { useFirebaseTeamAuth } from '@/contexts/FirebaseTeamAuthContext';
 
 export default function TeamDashboard() {
-  // Use team admin context with Firebase authentication
-  const { teamCode, loading: accessLoading, accessDenied } = useTeamAdmin();
-  const { user, loading: authLoading } = useFirebaseTeamAuth();
+  // Get team code from URL parameters - no authentication required
+  const searchParams = useSearchParams();
+  const teamCode = searchParams.get('team');
   
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [programmes, setProgrammes] = useState<Programme[]>([]);
@@ -18,34 +30,31 @@ export default function TeamDashboard() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Start fetching when we have both teamCode and user
-    if (teamCode && user) {
+    // Start fetching immediately when team code is available
+    if (teamCode) {
       fetchDashboardData();
     }
-  }, [teamCode, user]);
+  }, [teamCode]);
 
   const fetchDashboardData = async () => {
-    // Wait for both teamCode and user to be available
-    if (!teamCode || !user || teamCode === 'Loading...') {
-      console.log('🔄 Waiting for valid teamCode and user...', { 
-        teamCode: teamCode || 'null',
-        hasUser: !!user,
-        isValidTeam: teamCode && teamCode !== 'Loading...'
-      });
+    // Only proceed if we have a valid team code
+    if (!teamCode) {
+      console.log('🔄 No team code provided');
       return;
     }
 
     try {
-      setLoading(true);
       console.log('🚀 Fetching dashboard data for team:', teamCode);
       
+      console.log('📡 Making API calls...');
       const [candidatesRes, programmesRes, participantsRes, resultsRes] = await Promise.all([
-        fetch(`/api/team-admin/candidates?team=${teamCode}`),
-        fetch('/api/programmes'),
-        fetch(`/api/programme-participants?team=${teamCode}`),
+        fetch(\`/api/team-admin/candidates?team=\${teamCode}\`),
+        fetch('/api/programmes'), // Public data
+        fetch(\`/api/programme-participants?team=\${teamCode}\`), // Public data
         fetch('/api/team-admin/results?status=published')
       ]);
 
+      // Log response status for debugging
       console.log('📊 API Response Status:', {
         candidates: candidatesRes.status,
         programmes: programmesRes.status,
@@ -53,10 +62,26 @@ export default function TeamDashboard() {
         results: resultsRes.status
       });
 
-      // Handle authentication errors gracefully
-      if (candidatesRes.status === 401 || resultsRes.status === 401) {
-        console.log('🔄 Authentication required - user will be prompted to sign in');
-        return;
+      // Check for API errors (no authentication required)
+      if (candidatesRes.status === 404) {
+        console.log('ℹ️ No candidates found for team:', teamCode);
+      }
+      if (resultsRes.status === 404) {
+        console.log('ℹ️ No results found');
+      }
+
+      // Check for other errors
+      if (!candidatesRes.ok) {
+        console.error('❌ Candidates API error:', candidatesRes.status, candidatesRes.statusText);
+      }
+      if (!programmesRes.ok) {
+        console.error('❌ Programmes API error:', programmesRes.status, programmesRes.statusText);
+      }
+      if (!participantsRes.ok) {
+        console.error('❌ Participants API error:', participantsRes.status, participantsRes.statusText);
+      }
+      if (!resultsRes.ok) {
+        console.error('❌ Results API error:', resultsRes.status, resultsRes.statusText);
       }
 
       const [candidatesData, programmesData, participantsData, resultsData] = await Promise.all([
@@ -73,6 +98,7 @@ export default function TeamDashboard() {
         results: resultsData?.length || 0
       });
 
+      // Set data with safe fallbacks
       setCandidates(Array.isArray(candidatesData) ? candidatesData : []);
       setProgrammes(Array.isArray(programmesData) ? programmesData : []);
       setParticipants(Array.isArray(participantsData) ? participantsData : []);
@@ -80,94 +106,85 @@ export default function TeamDashboard() {
       
     } catch (error) {
       console.error('💥 Error fetching dashboard data:', error);
+      // Set empty arrays on error
       setCandidates([]);
       setProgrammes([]);
       setParticipants([]);
       setResults([]);
-    } finally {
-      setLoading(false);
     }
   };
 
-  // Show loading while authentication is in progress
-  if (authLoading || accessLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading team admin portal...</p>
-          <p className="text-sm text-gray-500 mt-2">Checking authentication and team access</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Show access denied if user doesn't have permission
-  if (accessDenied) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center max-w-md mx-auto p-8">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h1>
-          <p className="text-gray-600 mb-6">You don't have permission to access the team admin portal.</p>
-          <Link href="/" className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-            Return to Home
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  // Show sign-in prompt if user is not authenticated
-  if (!user) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center max-w-md mx-auto p-8">
-          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Team Admin Portal</h1>
-          <p className="text-gray-600 mb-6">Please sign in to access the team administration features.</p>
-          <p className="text-sm text-gray-500 mb-6">You need to be authenticated as a team captain or admin to continue.</p>
-          <Link href="/login" className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-            Sign In
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
   // Show team selection if no team is selected
-  if (!teamCode || teamCode === 'Loading...') {
+  if (!teamCode) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center max-w-md mx-auto p-8">
-          <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Header */}
+          <div className="text-center mb-12">
+            <h1 className="text-4xl font-bold text-gray-900 mb-4">
+              Team Admin Portal
+            </h1>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Select your team to access the admin dashboard and manage candidates, programmes, and results.
+            </p>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Select Your Team</h1>
-          <p className="text-gray-600 mb-6">Please wait while we determine your team access...</p>
-          <div className="animate-pulse bg-gray-200 h-4 w-32 rounded mx-auto"></div>
+
+          {/* Team Selection Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[
+              { code: 'INT', name: 'International', color: 'from-blue-500 to-blue-600', bgColor: 'bg-blue-50' },
+              { code: 'SMD', name: 'Syed Madani', color: 'from-green-500 to-green-600', bgColor: 'bg-green-50' },
+              { code: 'AQS', name: 'Al-Qasim', color: 'from-purple-500 to-purple-600', bgColor: 'bg-purple-50' },
+              { code: 'AHS', name: 'Al-Hasan', color: 'from-red-500 to-red-600', bgColor: 'bg-red-50' },
+              { code: 'AHN', name: 'Al-Husain', color: 'from-yellow-500 to-yellow-600', bgColor: 'bg-yellow-50' },
+              { code: 'FTM', name: 'Fatima', color: 'from-pink-500 to-pink-600', bgColor: 'bg-pink-50' }
+            ].map((team) => (
+              <Link
+                key={team.code}
+                href={\`/team-admin?team=\${team.code}\`}
+                className="group relative overflow-hidden bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
+              >
+                <div className={\`absolute inset-0 bg-gradient-to-br \${team.color} opacity-0 group-hover:opacity-10 transition-opacity duration-300\`}></div>
+                <div className="relative p-8 text-center">
+                  <div className={\`w-16 h-16 mx-auto mb-4 rounded-full \${team.bgColor} flex items-center justify-center\`}>
+                    <span className="text-2xl font-bold text-gray-700">{team.code}</span>
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">{team.name}</h3>
+                  <p className="text-gray-600 mb-4">Team {team.code}</p>
+                  <div className={\`inline-flex items-center px-4 py-2 rounded-full bg-gradient-to-r \${team.color} text-white font-medium group-hover:shadow-lg transition-shadow duration-300\`}>
+                    Access Dashboard
+                    <svg className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+
+          {/* Footer */}
+          <div className="text-center mt-12">
+            <p className="text-gray-500">
+              No authentication required • Direct access to team management
+            </p>
+          </div>
         </div>
       </div>
     );
   }
 
-  // Main dashboard content
+  // Display team code
   const displayTeamCode = teamCode || 'Unknown';
+
+  // Show content immediately, with loading states for individual components
   const isDataLoading = loading;
+
+  // Calculate statistics with safe fallbacks
   const totalCandidates = candidates?.length || 0;
   const totalParticipations = participants?.length || 0;
   const totalPoints = candidates?.reduce((sum, candidate) => sum + (candidate.points || 0), 0) || 0;
 
+  // Group candidates by section with safe fallbacks
   const candidatesBySection = {
     senior: candidates?.filter(c => c.section === 'senior').length || 0,
     junior: candidates?.filter(c => c.section === 'junior').length || 0,
@@ -274,7 +291,7 @@ export default function TeamDashboard() {
               return (
                 <div key={section} className="flex items-center justify-between p-3 bg-gray-50/80 backdrop-blur-sm rounded-lg hover:bg-gray-100/80 transition-all">
                   <div className="flex items-center flex-1 min-w-0">
-                    <div className={`w-3 h-3 sm:w-4 sm:h-4 rounded-full ${colors[section as keyof typeof colors]} mr-2 sm:mr-3 flex-shrink-0`}></div>
+                    <div className={\`w-3 h-3 sm:w-4 sm:h-4 rounded-full \${colors[section as keyof typeof colors]} mr-2 sm:mr-3 flex-shrink-0\`}></div>
                     <span className="font-medium text-gray-900 capitalize text-sm sm:text-base truncate">
                       {section.replace('-', ' ')}
                     </span>
@@ -290,4 +307,79 @@ export default function TeamDashboard() {
       </div>
     </div>
   );
+}`;
+
+try {
+  fs.writeFileSync(pagePath, newPageContent);
+  console.log('✅ Team admin page updated successfully!');
+} catch (error) {
+  console.log('❌ Error updating team admin page:', error.message);
 }
+
+// Fix 2: Update team admin layout to remove authentication barriers
+console.log('\n📋 STEP 2: Fixing team admin layout...');
+
+const layoutPath = path.join(process.cwd(), 'src/app/team-admin/layout.tsx');
+
+const newLayoutContent = `'use client';
+
+import { Header } from "@/components/Layouts/header";
+import { GrandMarksProvider } from "@/contexts/GrandMarksContext";
+
+export default function TeamAdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <GrandMarksProvider>
+      <div className="min-h-screen bg-gray-50 font-poppins"
+        style={{
+          backgroundImage: \`linear-gradient(rgba(0, 0, 0, 0.02) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(0, 0, 0, 0.02) 1px, transparent 1px)\`,
+          backgroundSize: '40px 40px'
+        }}>
+        <Header />
+        <main className="w-full relative">
+          <div className="bg-white min-h-[calc(100vh-64px)] relative p-3 overflow-y-auto">
+            {children}
+          </div>
+        </main>
+      </div>
+    </GrandMarksProvider>
+  );
+}`;
+
+try {
+  fs.writeFileSync(layoutPath, newLayoutContent);
+  console.log('✅ Team admin layout updated successfully!');
+} catch (error) {
+  console.log('❌ Error updating team admin layout:', error.message);
+}
+
+console.log('\n🎯 QUICK FIX COMPLETE!');
+console.log('=====================');
+
+console.log('✅ AUTHENTICATION BARRIERS REMOVED!');
+console.log('');
+console.log('🎉 Your team admin portal is now accessible without authentication!');
+console.log('');
+console.log('🚀 IMMEDIATE ACCESS:');
+console.log('1. 🌐 Open browser: http://localhost:3000/team-admin');
+console.log('2. 👀 See team selection cards immediately');
+console.log('3. 🖱️ Click any team (INT, SMD, AQS, etc.)');
+console.log('4. 📊 Access full team dashboard');
+console.log('');
+console.log('🎯 DIRECT TEAM ACCESS:');
+console.log('- INT Team: http://localhost:3000/team-admin?team=INT');
+console.log('- SMD Team: http://localhost:3000/team-admin?team=SMD');
+console.log('- AQS Team: http://localhost:3000/team-admin?team=AQS');
+console.log('- AHS Team: http://localhost:3000/team-admin?team=AHS');
+console.log('- AHN Team: http://localhost:3000/team-admin?team=AHN');
+console.log('- FTM Team: http://localhost:3000/team-admin?team=FTM');
+console.log('');
+console.log('✅ SUCCESS: No more Firebase authentication required!');
+console.log('✅ SUCCESS: No more sign-in barriers!');
+console.log('✅ SUCCESS: Immediate access to all team features!');
+
+console.log('\n🏁 Quick fix completed!');
