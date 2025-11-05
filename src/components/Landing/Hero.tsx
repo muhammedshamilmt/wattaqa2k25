@@ -43,13 +43,13 @@ export function Hero() {
       <div className="flex-1 flex flex-col justify-center text-center px-8 max-w-6xl mx-auto w-full">
 
         {/* User avatars and rating */}
-        <motion.div 
+        <motion.div
           className="flex items-center justify-center mb-8"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
         >
-          <motion.div 
+          <motion.div
             className="flex items-center mr-2"
             animate={{ rotate: [0, 10, -10, 0] }}
             transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
@@ -59,7 +59,7 @@ export function Hero() {
           <div className="flex -space-x-2 mr-4">
             {[
               'from-green-400 to-emerald-400',
-              'from-blue-400 to-cyan-400', 
+              'from-blue-400 to-cyan-400',
               'from-red-400 to-rose-400',
               'from-gray-600 to-gray-800'
             ].map((gradient, index) => (
@@ -68,8 +68,8 @@ export function Hero() {
                 className={`w-10 h-10 bg-gradient-to-r ${gradient} rounded-full border-2 border-white ${index === 3 ? 'flex items-center justify-center' : ''}`}
                 initial={{ scale: 0, rotate: -180 }}
                 animate={{ scale: 1, rotate: 0 }}
-                transition={{ 
-                  duration: 0.6, 
+                transition={{
+                  duration: 0.6,
                   delay: 0.4 + index * 0.1,
                   type: "spring",
                   stiffness: 200
@@ -80,7 +80,7 @@ export function Hero() {
               </motion.div>
             ))}
           </div>
-          <motion.span 
+          <motion.span
             className="text-gray-600 text-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -91,18 +91,18 @@ export function Hero() {
         </motion.div>
 
         {/* Main heading */}
-        <motion.div 
+        <motion.div
           className="relative mb-8"
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1, delay: 0.3 }}
         >
-          <motion.h1 
+          <motion.h1
             className="text-5xl md:text-7xl font-bold text-gray-900 leading-tight"
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ 
-              duration: 1.2, 
+            transition={{
+              duration: 1.2,
               delay: 0.5,
               type: "spring",
               stiffness: 100
@@ -128,7 +128,7 @@ export function Hero() {
         </motion.div>
 
         {/* Subtitle */}
-        <motion.p 
+        <motion.p
           className="text-gray-500 text-lg mb-12 max-w-2xl mx-auto leading-relaxed"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -139,7 +139,7 @@ export function Hero() {
         </motion.p>
 
         {/* CTA Buttons */}
-        <motion.div 
+        <motion.div
           className="flex flex-col sm:flex-row items-center justify-center gap-6 mb-12"
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
@@ -170,7 +170,7 @@ export function Hero() {
           </motion.div>
         </motion.div>
         {/* Three Animated Image Containers */}
-        <motion.div 
+        <motion.div
           className="flex flex-col md:flex-row items-end justify-center gap-6 max-w-5xl mx-auto"
           initial={{ opacity: 0, y: 60 }}
           animate={{ opacity: 1, y: 0 }}
@@ -178,18 +178,18 @@ export function Hero() {
         >
 
           {/* Green container - Team Sumud */}
-          <motion.div 
+          <motion.div
             className="bg-gradient-to-br from-green-400 to-emerald-500 rounded-3xl w-full md:w-80 h-80 relative overflow-hidden cursor-pointer group"
             initial={{ opacity: 0, y: 100, rotateY: -30 }}
             animate={{ opacity: 1, y: 0, rotateY: 0 }}
-            transition={{ 
-              duration: 0.8, 
+            transition={{
+              duration: 0.8,
               delay: 1.7,
               type: "spring",
               stiffness: 100
             }}
-            whileHover={{ 
-              scale: 1.05, 
+            whileHover={{
+              scale: 1.05,
               y: -10,
               rotateY: 5,
               transition: { duration: 0.3 }
@@ -198,9 +198,9 @@ export function Hero() {
           >
 
             {/* Floating animation background */}
-            <motion.div 
+            <motion.div
               className="absolute inset-0 bg-gradient-to-br from-green-300/20 to-emerald-600/20"
-              animate={{ 
+              animate={{
                 background: [
                   "linear-gradient(to bottom right, rgba(34, 197, 94, 0.2), rgba(5, 150, 105, 0.2))",
                   "linear-gradient(to bottom right, rgba(5, 150, 105, 0.3), rgba(34, 197, 94, 0.1))",
@@ -213,7 +213,7 @@ export function Hero() {
             {/* Team Image Background */}
             <div className="absolute inset-0 opacity-80">
               <Image
-                src="/images/teams/SUMUD TEAM.png"
+                src="/images/teams/sumud team.png"
                 alt="Team Sumud"
                 fill
                 className="object-cover group-hover:scale-110 transition-transform duration-500"
@@ -224,7 +224,7 @@ export function Hero() {
             <div className="absolute inset-0 bg-gradient-to-t from-green-500/50 via-emerald-400/15 to-transparent"></div>
 
             {/* Content */}
-            <motion.div 
+            <motion.div
               className="absolute bottom-6 left-6 right-6 text-white text-center relative z-10"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -235,9 +235,9 @@ export function Hero() {
             </motion.div>
 
             {/* Animated border */}
-            <motion.div 
+            <motion.div
               className="absolute inset-0 rounded-3xl border-2 border-white/20"
-              animate={{ 
+              animate={{
                 borderColor: ["rgba(255,255,255,0.2)", "rgba(255,255,255,0.4)", "rgba(255,255,255,0.2)"]
               }}
               transition={{ duration: 2, repeat: Infinity }}
@@ -245,18 +245,18 @@ export function Hero() {
           </motion.div>
 
           {/* Gray container - Team Aqsa (taller) */}
-          <motion.div 
+          <motion.div
             className="bg-gradient-to-br from-gray-600 to-gray-700 rounded-3xl w-full md:w-80 h-96 relative overflow-hidden cursor-pointer group"
             initial={{ opacity: 0, y: 120, scale: 0.8 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ 
-              duration: 0.8, 
+            transition={{
+              duration: 0.8,
               delay: 1.9,
               type: "spring",
               stiffness: 100
             }}
-            whileHover={{ 
-              scale: 1.05, 
+            whileHover={{
+              scale: 1.05,
               y: -15,
               rotateY: -5,
               transition: { duration: 0.3 }
@@ -265,9 +265,9 @@ export function Hero() {
           >
 
             {/* Floating animation background */}
-            <motion.div 
+            <motion.div
               className="absolute inset-0 bg-gradient-to-br from-gray-500/20 to-gray-600/20"
-              animate={{ 
+              animate={{
                 background: [
                   "linear-gradient(to bottom right, rgba(107, 114, 128, 0.2), rgba(75, 85, 99, 0.2))",
                   "linear-gradient(to bottom right, rgba(75, 85, 99, 0.3), rgba(107, 114, 128, 0.1))",
@@ -291,7 +291,7 @@ export function Hero() {
             <div className="absolute inset-0 bg-gradient-to-t from-gray-700/50 via-gray-600/15 to-transparent"></div>
 
             {/* Content */}
-            <motion.div 
+            <motion.div
               className="absolute bottom-6 left-6 right-6 text-white text-center relative z-10"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -302,9 +302,9 @@ export function Hero() {
             </motion.div>
 
             {/* Animated border */}
-            <motion.div 
+            <motion.div
               className="absolute inset-0 rounded-3xl border-2 border-white/20"
-              animate={{ 
+              animate={{
                 borderColor: ["rgba(255,255,255,0.2)", "rgba(255,255,255,0.5)", "rgba(255,255,255,0.2)"]
               }}
               transition={{ duration: 2, repeat: Infinity, delay: 0.3 }}
@@ -312,18 +312,18 @@ export function Hero() {
           </motion.div>
 
           {/* Red container - Team Inthifada */}
-          <motion.div 
+          <motion.div
             className="bg-gradient-to-br from-red-400 to-rose-500 rounded-3xl w-full md:w-80 h-80 relative overflow-hidden cursor-pointer group"
             initial={{ opacity: 0, y: 100, rotateY: 30 }}
             animate={{ opacity: 1, y: 0, rotateY: 0 }}
-            transition={{ 
-              duration: 0.8, 
+            transition={{
+              duration: 0.8,
               delay: 2.1,
               type: "spring",
               stiffness: 100
             }}
-            whileHover={{ 
-              scale: 1.05, 
+            whileHover={{
+              scale: 1.05,
               y: -10,
               rotateY: -5,
               transition: { duration: 0.3 }
@@ -332,9 +332,9 @@ export function Hero() {
           >
 
             {/* Floating animation background */}
-            <motion.div 
+            <motion.div
               className="absolute inset-0 bg-gradient-to-br from-red-300/20 to-rose-600/20"
-              animate={{ 
+              animate={{
                 background: [
                   "linear-gradient(to bottom right, rgba(248, 113, 113, 0.2), rgba(225, 29, 72, 0.2))",
                   "linear-gradient(to bottom right, rgba(225, 29, 72, 0.3), rgba(248, 113, 113, 0.1))",
@@ -358,7 +358,7 @@ export function Hero() {
             <div className="absolute inset-0 bg-gradient-to-t from-red-500/50 via-rose-400/15 to-transparent"></div>
 
             {/* Content */}
-            <motion.div 
+            <motion.div
               className="absolute bottom-6 left-6 right-6 text-white text-center relative z-10"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -369,9 +369,9 @@ export function Hero() {
             </motion.div>
 
             {/* Animated border */}
-            <motion.div 
+            <motion.div
               className="absolute inset-0 rounded-3xl border-2 border-white/20"
-              animate={{ 
+              animate={{
                 borderColor: ["rgba(255,255,255,0.2)", "rgba(255,255,255,0.4)", "rgba(255,255,255,0.2)"]
               }}
               transition={{ duration: 2, repeat: Infinity, delay: 0.6 }}
