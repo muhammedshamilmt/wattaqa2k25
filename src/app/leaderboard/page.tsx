@@ -1,1205 +1,591 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { Team, Candidate, Programme, Result } from '@/types';
-import { PublicNavbar } from '@/components/Navigation/PublicNavbar';
-import { PublicFooter } from '@/components/Navigation/PublicFooter';
-import { DynamicChart } from '@/components/Charts/DynamicChart';
-import { PerformanceMetrics } from '@/components/Leaderboard/PerformanceMetrics';
-import { LiveUpdates } from '@/components/Leaderboard/LiveUpdates';
-import { TeamProfile } from '@/components/Leaderboard/TeamProfile';
-import { IndividualProfile } from '@/components/Leaderboard/IndividualProfile';
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { BackButton } from '@/components/ui/BackButton';
 
-interface TeamStats {
-    team: Team;
-    totalPoints: number;
-    totalWins: number;
-    medals: {
-        gold: number;
-        silver: number;
-        bronze: number;
-    };
-    memberCount: number;
-    rank: number;
-    winRate: number;
-    averagePoints: number;
-    recentPerformance: number[];
-    progressData: { programme: string; points: number; date: string; position: number }[];
-    strongCategories: string[];
-    participationRate: number;
-    momentum: 'up' | 'down' | 'stable';
+interface TeamData {
+  teamCode: string;
+  name: string;
+  points: number;
+  artsPoints: number;
+  sportsPoints: number;
+  results: number;
+  color: string;
+  rank: number;
+  change?: number; // Position change from last update
 }
 
-interface IndividualStats {
-    candidate: Candidate;
-    team: Team;
-    totalPoints: number;
-    totalWins: number;
-    medals: {
-        gold: number;
-        silver: number;
-        bronze: number;
-    };
-    rank: number;
-    winRate: number;
-    averagePoints: number;
-    recentPerformance: number[];
-    achievements: string[];
-    strongCategories: string[];
-    participationCount: number;
-    consistency: number;
-    momentum: 'up' | 'down' | 'stable';
+interface TopPerformer {
+  name: string;
+  chestNumber: string;
+  team: string;
+  programme: string;
+  position: string;
+  grade: string;
+  points: number;
 }
 
-interface SectionStats {
-    section: string;
-    totalPoints: number;
-    teamCount: number;
-    topTeam: string;
-    averagePoints: number;
-    rank: number;
-    participationRate: number;
-    competitiveness: number;
-    dominantCategory: string;
-}
+export default function PublicLeaderboard() {
+  const [teams, setTeams] = useState<TeamData[]>([]);
+  const [topPerformers, setTopPerformers] = useState<TopPerformer[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [activeView, setActiveView] = useState<'teams' | 'individuals'>('teams');
+  const [categoryFilter, setCategoryFilter] = useState<'all' | 'arts' | 'sports'>('all');
+  const [animationKey, setAnimationKey] = useState(0);
 
-interface LiveUpdate {
-    id: string;
-    type: 'result' | 'achievement' | 'milestone';
-    message: string;
-    timestamp: Date;
-    importance: 'high' | 'medium' | 'low';
-}
+  useEffect(() => {
+    fetchData();
+    const interval = setInterval(() => {
+      fetchData();
+      setAnimationKey(prev => prev + 1);
+    }, 30000); // Update every 30 seconds
+    return () => clearInterval(interval);
+  }, []);
 
-export default function DynamicLeaderboardPage() {
-    const [teams, setTeams] = useState<Team[]>([]);
-    const [candidates, setCandidates] = useState<Candidate[]>([]);
-    const [programmes, setProgrammes] = useState<Programme[]>([]);
-    const [results, setResults] = useState<Result[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'overview' | 'teams' | 'individuals' | 'sections' | 'live'>('overview');
-    const [teamStats, setTeamStats] = useState<TeamStats[]>([]);
-    const [individualStats, setIndividualStats] = useState<IndividualStats[]>([]);
-    const [sectionStats, setSectionStats] = useState<SectionStats[]>([]);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
-    const [selectedIndividual, setSelectedIndividual] = useState<string | null>(null);
-    const [autoRefresh, setAutoRefresh] = useState(true);
-    const [liveUpdates, setLiveUpdates] = useState<LiveUpdate[]>([]);
-    const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
-    const [isClient, setIsClient] = useState(false);
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch dynamic data from APIs
+      const [grandMarksRes, resultsRes, candidatesRes] = await Promise.all([
+        fetch('/api/grand-marks?category=all'),
+        fetch('/api/results?status=published'),
+        fetch('/api/candidates')
+      ]);
 
-    const fetchData = useCallback(async () => {
-        try {
-            setLoading(true);
-            const [teamsRes, candidatesRes, programmesRes, resultsRes, grandMarksRes] = await Promise.all([
-                fetch('/api/teams'),
-                fetch('/api/candidates'),
-                fetch('/api/programmes'),
-                fetch('/api/results?teamView=true'),
-                fetch('/api/grand-marks?category=all')
-            ]);
+      if (grandMarksRes.ok && resultsRes.ok && candidatesRes.ok) {
+        const [grandMarksData, resultsData, candidatesData] = await Promise.all([
+          grandMarksRes.json(),
+          resultsRes.json(),
+          candidatesRes.json()
+        ]);
 
-            const [teamsData, candidatesData, programmesData, resultsData, grandMarksData] = await Promise.all([
-                teamsRes.json(),
-                candidatesRes.json(),
-                programmesRes.json(),
-                resultsRes.json(),
-                grandMarksRes.json()
-            ]);
+        // Transform grand marks data to team data format
+        const teamData: TeamData[] = grandMarksData.map((team: any, index: number) => ({
+          teamCode: team.teamCode,
+          name: team.name,
+          points: team.points,
+          artsPoints: team.artsPoints || 0,
+          sportsPoints: team.sportsPoints || 0,
+          results: team.results || 0,
+          color: team.color || '#6366f1',
+          rank: index + 1,
+          change: 0
+        }));
 
-            setTeams(teamsData || []);
-            setCandidates(candidatesData || []);
-            setProgrammes(programmesData || []);
-            setResults(resultsData || []);
-            setLastUpdated(new Date());
-        } catch (error) {
-            console.error('Error fetching data:', error);
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    useEffect(() => {
-        setIsClient(true);
-        fetchData();
-    }, [fetchData]);
-
-    // Auto-refresh functionality
-    useEffect(() => {
-        let interval: NodeJS.Timeout;
-        if (autoRefresh && isClient) {
-            interval = setInterval(() => {
-                fetchData();
-            }, 30000); // Refresh every 30 seconds
-        }
-        return () => {
-            if (interval) clearInterval(interval);
-        };
-    }, [autoRefresh, isClient, fetchData]);
-
-    useEffect(() => {
-        if (teams.length > 0 && results.length > 0 && candidates.length > 0) {
-            calculateAdvancedStats();
-        }
-    }, [teams, results, candidates, programmes]);
-
-    const calculateAdvancedStats = () => {
-        // Enhanced team statistics calculation
-        const teamStatsMap: { [teamCode: string]: TeamStats } = {};
+        // Generate top performers from published results
+        const topPerformersData: TopPerformer[] = [];
         
-        teams.forEach(team => {
-            const teamCandidates = candidates.filter(c => c.team === team.code);
-            teamStatsMap[team.code] = {
-                team,
-                totalPoints: 0,
-                totalWins: 0,
-                medals: { gold: 0, silver: 0, bronze: 0 },
-                memberCount: teamCandidates.length,
-                rank: 0,
-                winRate: 0,
-                averagePoints: 0,
-                recentPerformance: [],
-                progressData: [],
-                strongCategories: [],
-                participationRate: 0,
-                momentum: 'stable'
-            };
-        });
-
-        // Calculate detailed statistics from results
-        const recentResults = results.slice(-10); // Last 10 results for momentum
-        let totalParticipations = 0;
-
-        results.forEach((result, index) => {
-            const programme = programmes.find(p => p._id === result.programmeId || p.id === result.programmeId);
-            const programmeName = programme?.name || 'Unknown Programme';
-            const category = programme?.category || 'general';
-            const resultDate = result.createdAt ? new Date(result.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
-            const isRecent = recentResults.includes(result);
-
-            totalParticipations++;
-
-            // Process individual results
-            [
-                { place: result.firstPlace, points: result.firstPoints, medal: 'gold' as const, position: 1 },
-                { place: result.secondPlace, points: result.secondPoints, medal: 'silver' as const, position: 2 },
-                { place: result.thirdPlace, points: result.thirdPoints, medal: 'bronze' as const, position: 3 }
-            ].forEach(({ place, points, medal, position }) => {
-                (place || []).forEach(participant => {
-                    const candidate = candidates.find(c => c.chestNumber === participant.chestNumber);
-                    if (candidate && teamStatsMap[candidate.team]) {
-                        const teamStat = teamStatsMap[candidate.team];
-                        teamStat.totalPoints += points;
-                        teamStat.totalWins += 1;
-                        teamStat.medals[medal] += 1;
-                        
-                        // Track progress over time
-                        teamStat.progressData.push({
-                            programme: programmeName,
-                            points: points,
-                            date: resultDate,
-                            position: position
-                        });
-
-                        // Track recent performance for momentum
-                        if (isRecent) {
-                            teamStat.recentPerformance.push(points);
-                        }
-
-                        // Track strong categories
-                        if (!teamStat.strongCategories.includes(category)) {
-                            teamStat.strongCategories.push(category);
-                        }
-                    }
+        resultsData.slice(0, 10).forEach((result: any) => {
+          // Add first place winners
+          if (result.firstPlace && result.firstPlace.length > 0) {
+            result.firstPlace.forEach((winner: any) => {
+              const candidate = candidatesData.find((c: any) => c.chestNumber === winner.chestNumber);
+              if (candidate && topPerformersData.length < 6) {
+                topPerformersData.push({
+                  name: candidate.name || 'Unknown Participant',
+                  chestNumber: winner.chestNumber,
+                  team: candidate.team || 'Unknown Team',
+                  programme: result.programmeName || 'Unknown Programme',
+                  position: '1st Place',
+                  grade: winner.grade || 'A',
+                  points: (result.firstPoints || 5) + getGradePoints(winner.grade || '')
                 });
+              }
             });
-
-            // Process team results
-            [
-                { teams: result.firstPlaceTeams, points: result.firstPoints, medal: 'gold' as const, position: 1 },
-                { teams: result.secondPlaceTeams, points: result.secondPoints, medal: 'silver' as const, position: 2 },
-                { teams: result.thirdPlaceTeams, points: result.thirdPoints, medal: 'bronze' as const, position: 3 }
-            ].forEach(({ teams, points, medal, position }) => {
-                (teams || []).forEach(teamResult => {
-                    if (teamStatsMap[teamResult.teamCode]) {
-                        const teamStat = teamStatsMap[teamResult.teamCode];
-                        teamStat.totalPoints += points;
-                        teamStat.totalWins += 1;
-                        teamStat.medals[medal] += 1;
-                        
-                        teamStat.progressData.push({
-                            programme: programmeName,
-                            points: points,
-                            date: resultDate,
-                            position: position
-                        });
-
-                        if (isRecent) {
-                            teamStat.recentPerformance.push(points);
-                        }
-                    }
+          }
+          
+          // Add second place winners
+          if (result.secondPlace && result.secondPlace.length > 0 && topPerformersData.length < 6) {
+            result.secondPlace.forEach((winner: any) => {
+              const candidate = candidatesData.find((c: any) => c.chestNumber === winner.chestNumber);
+              if (candidate && topPerformersData.length < 6) {
+                topPerformersData.push({
+                  name: candidate.name || 'Unknown Participant',
+                  chestNumber: winner.chestNumber,
+                  team: candidate.team || 'Unknown Team',
+                  programme: result.programmeName || 'Unknown Programme',
+                  position: '2nd Place',
+                  grade: winner.grade || 'B+',
+                  points: (result.secondPoints || 3) + getGradePoints(winner.grade || '')
                 });
+              }
             });
+          }
         });
 
-        // Calculate advanced metrics for teams
-        Object.values(teamStatsMap).forEach(teamStat => {
-            const totalParticipationsForTeam = teamStat.progressData.length;
-            teamStat.winRate = totalParticipationsForTeam > 0 ? (teamStat.totalWins / totalParticipationsForTeam) * 100 : 0;
-            teamStat.averagePoints = totalParticipationsForTeam > 0 ? teamStat.totalPoints / totalParticipationsForTeam : 0;
-            teamStat.participationRate = teamStat.memberCount > 0 ? (totalParticipationsForTeam / teamStat.memberCount) * 100 : 0;
-            
-            // Calculate momentum based on recent performance
-            if (teamStat.recentPerformance.length >= 3) {
-                const recent = teamStat.recentPerformance.slice(-3);
-                const earlier = teamStat.recentPerformance.slice(-6, -3);
-                const recentAvg = recent.reduce((a, b) => a + b, 0) / recent.length;
-                const earlierAvg = earlier.length > 0 ? earlier.reduce((a, b) => a + b, 0) / earlier.length : recentAvg;
-                
-                if (recentAvg > earlierAvg * 1.1) {
-                    teamStat.momentum = 'up';
-                } else if (recentAvg < earlierAvg * 0.9) {
-                    teamStat.momentum = 'down';
-                } else {
-                    teamStat.momentum = 'stable';
-                }
-            }
-        });
-
-        // Sort and assign ranks
-        const sortedTeamStats = Object.values(teamStatsMap)
-            .sort((a, b) => b.totalPoints - a.totalPoints || b.totalWins - a.totalWins)
-            .map((team, index) => ({ ...team, rank: index + 1 }));
-
-        setTeamStats(sortedTeamStats);
-
-        // Calculate individual statistics
-        const individualStatsMap: { [chestNumber: string]: IndividualStats } = {};
+        setTeams(teamData);
+        setTopPerformers(topPerformersData);
+      } else {
+        // Fallback to static data if API fails
+        const fallbackTeamData: TeamData[] = [
+          {
+            teamCode: 'INT',
+            name: 'Team Inthifada',
+            points: 544,
+            artsPoints: 544,
+            sportsPoints: 115,
+            results: 50,
+            color: '#EF4444',
+            rank: 1,
+            change: 0
+          },
+          {
+            teamCode: 'SMD',
+            name: 'Team Sumud',
+            points: 432,
+            artsPoints: 432,
+            sportsPoints: 118,
+            results: 45,
+            color: '#10B981',
+            rank: 2,
+            change: 0
+          },
+          {
+            teamCode: 'AQS',
+            name: 'Team Aqsa',
+            points: 424,
+            artsPoints: 424,
+            sportsPoints: 118,
+            results: 42,
+            color: '#6B7280',
+            rank: 3,
+            change: 0
+          }
+        ];
         
-        candidates.forEach(candidate => {
-            const team = teams.find(t => t.code === candidate.team);
-            if (team) {
-                individualStatsMap[candidate.chestNumber] = {
-                    candidate,
-                    team,
-                    totalPoints: 0,
-                    totalWins: 0,
-                    medals: { gold: 0, silver: 0, bronze: 0 },
-                    rank: 0,
-                    winRate: 0,
-                    averagePoints: 0,
-                    recentPerformance: [],
-                    achievements: [],
-                    strongCategories: [],
-                    participationCount: 0,
-                    consistency: 0,
-                    momentum: 'stable'
-                };
-            }
-        });
-
-        results.forEach(result => {
-            const programme = programmes.find(p => p._id === result.programmeId || p.id === result.programmeId);
-            const programmeName = programme?.name || 'Unknown Programme';
-            const category = programme?.category || 'general';
-            const isRecent = recentResults.includes(result);
-
-            [
-                { place: result.firstPlace, points: result.firstPoints, medal: 'gold' as const, emoji: '🥇' },
-                { place: result.secondPlace, points: result.secondPoints, medal: 'silver' as const, emoji: '🥈' },
-                { place: result.thirdPlace, points: result.thirdPoints, medal: 'bronze' as const, emoji: '🥉' }
-            ].forEach(({ place, points, medal, emoji }) => {
-                (place || []).forEach(participant => {
-                    if (individualStatsMap[participant.chestNumber]) {
-                        const individualStat = individualStatsMap[participant.chestNumber];
-                        individualStat.totalPoints += points;
-                        individualStat.totalWins += 1;
-                        individualStat.medals[medal] += 1;
-                        individualStat.participationCount += 1;
-                        individualStat.achievements.push(`${emoji} ${programmeName}`);
-                        
-                        if (!individualStat.strongCategories.includes(category)) {
-                            individualStat.strongCategories.push(category);
-                        }
-
-                        if (isRecent) {
-                            individualStat.recentPerformance.push(points);
-                        }
-                    }
-                });
-            });
-        });
-
-        // Calculate advanced metrics for individuals
-        Object.values(individualStatsMap).forEach(individualStat => {
-            individualStat.winRate = individualStat.participationCount > 0 ? (individualStat.totalWins / individualStat.participationCount) * 100 : 0;
-            individualStat.averagePoints = individualStat.participationCount > 0 ? individualStat.totalPoints / individualStat.participationCount : 0;
-            
-            // Calculate consistency (lower standard deviation = higher consistency)
-            if (individualStat.recentPerformance.length > 1) {
-                const mean = individualStat.recentPerformance.reduce((a, b) => a + b, 0) / individualStat.recentPerformance.length;
-                const variance = individualStat.recentPerformance.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / individualStat.recentPerformance.length;
-                individualStat.consistency = Math.max(0, 100 - Math.sqrt(variance));
-            } else {
-                individualStat.consistency = 100;
-            }
-
-            // Calculate momentum
-            if (individualStat.recentPerformance.length >= 3) {
-                const recent = individualStat.recentPerformance.slice(-3);
-                const earlier = individualStat.recentPerformance.slice(-6, -3);
-                const recentAvg = recent.reduce((a, b) => a + b, 0) / recent.length;
-                const earlierAvg = earlier.length > 0 ? earlier.reduce((a, b) => a + b, 0) / earlier.length : recentAvg;
-                
-                if (recentAvg > earlierAvg * 1.1) {
-                    individualStat.momentum = 'up';
-                } else if (recentAvg < earlierAvg * 0.9) {
-                    individualStat.momentum = 'down';
-                } else {
-                    individualStat.momentum = 'stable';
-                }
-            }
-        });
-
-        const sortedIndividualStats = Object.values(individualStatsMap)
-            .filter(individual => individual.totalPoints > 0)
-            .sort((a, b) => b.totalPoints - a.totalPoints || b.totalWins - a.totalWins)
-            .map((individual, index) => ({ ...individual, rank: index + 1 }));
-
-        setIndividualStats(sortedIndividualStats);
-
-        // Calculate section statistics
-        const sectionStatsMap: { [section: string]: SectionStats } = {};
-        
-        teams.forEach(team => {
-            const section = team.code.split('-')[0] || 'Other';
-            if (!sectionStatsMap[section]) {
-                sectionStatsMap[section] = {
-                    section,
-                    totalPoints: 0,
-                    teamCount: 0,
-                    topTeam: '',
-                    averagePoints: 0,
-                    rank: 0,
-                    participationRate: 0,
-                    competitiveness: 0,
-                    dominantCategory: ''
-                };
-            }
-
-            const teamStat = sortedTeamStats.find(t => t.team.code === team.code);
-            if (teamStat) {
-                sectionStatsMap[section].totalPoints += teamStat.totalPoints;
-                sectionStatsMap[section].teamCount += 1;
-
-                if (!sectionStatsMap[section].topTeam || teamStat.totalPoints > 
-                    (sortedTeamStats.find(t => t.team.name === sectionStatsMap[section].topTeam)?.totalPoints || 0)) {
-                    sectionStatsMap[section].topTeam = team.name;
-                }
-            }
-        });
-
-        // Calculate section metrics
-        Object.values(sectionStatsMap).forEach(section => {
-            section.averagePoints = section.teamCount > 0 ? section.totalPoints / section.teamCount : 0;
-            
-            // Calculate competitiveness (how close teams are to each other)
-            const sectionTeams = sortedTeamStats.filter(t => t.team.code.startsWith(section.section));
-            if (sectionTeams.length > 1) {
-                const points = sectionTeams.map(t => t.totalPoints);
-                const max = Math.max(...points);
-                const min = Math.min(...points);
-                section.competitiveness = max > 0 ? ((max - min) / max) * 100 : 0;
-            }
-        });
-
-        const sortedSectionStats = Object.values(sectionStatsMap)
-            .sort((a, b) => b.totalPoints - a.totalPoints)
-            .map((section, index) => ({ ...section, rank: index + 1 }));
-
-        setSectionStats(sortedSectionStats);
-
-        // Generate live updates
-        generateLiveUpdates(sortedTeamStats, sortedIndividualStats);
-    };
-
-    const generateLiveUpdates = (teamStats: TeamStats[], individualStats: IndividualStats[]) => {
-        const updates: LiveUpdate[] = [];
-        const now = new Date();
-
-        // Check for milestones and achievements
-        teamStats.forEach(team => {
-            if (team.totalPoints >= 100 && team.totalPoints < 110) {
-                updates.push({
-                    id: `milestone-${team.team.code}-100`,
-                    type: 'milestone',
-                    message: `🎯 ${team.team.name} has reached 100 points!`,
-                    timestamp: now,
-                    importance: 'high'
-                });
-            }
-
-            if (team.momentum === 'up') {
-                updates.push({
-                    id: `momentum-${team.team.code}`,
-                    type: 'achievement',
-                    message: `📈 ${team.team.name} is on a winning streak!`,
-                    timestamp: now,
-                    importance: 'medium'
-                });
-            }
-        });
-
-        individualStats.slice(0, 3).forEach(individual => {
-            if (individual.medals.gold >= 3) {
-                updates.push({
-                    id: `gold-${individual.candidate.chestNumber}`,
-                    type: 'achievement',
-                    message: `🏆 ${individual.candidate.name} has won ${individual.medals.gold} gold medals!`,
-                    timestamp: now,
-                    importance: 'high'
-                });
-            }
-        });
-
-        setLiveUpdates(updates.slice(0, 10)); // Keep only latest 10 updates
-    };    
-const getRankBadge = (rank: number) => {
-        if (rank === 1) return '🥇';
-        if (rank === 2) return '🥈';
-        if (rank === 3) return '🥉';
-        return `#${rank}`;
-    };
-
-    const getRankColor = (rank: number) => {
-        if (rank === 1) return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-        if (rank === 2) return 'bg-gray-100 text-gray-800 border-gray-200';
-        if (rank === 3) return 'bg-orange-100 text-orange-800 border-orange-200';
-        return 'bg-purple-100 text-purple-800 border-purple-200';
-    };
-
-    const getMomentumIcon = (momentum: 'up' | 'down' | 'stable') => {
-        switch (momentum) {
-            case 'up': return '📈';
-            case 'down': return '📉';
-            default: return '➡️';
-        }
-    };
-
-    const getMomentumColor = (momentum: 'up' | 'down' | 'stable') => {
-        switch (momentum) {
-            case 'up': return 'text-green-600';
-            case 'down': return 'text-red-600';
-            default: return 'text-gray-600';
-        }
-    };
-
-    const filteredTeamStats = teamStats.filter(team => {
-        const matchesSearch = team.team.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                             team.team.code.toLowerCase().includes(searchTerm.toLowerCase());
-        return matchesSearch;
-    });
-
-    const filteredIndividualStats = individualStats.filter(individual => {
-        const matchesSearch = individual.candidate.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                             individual.team.name.toLowerCase().includes(searchTerm.toLowerCase());
-        return matchesSearch;
-    });
-
-    if (!isClient || loading) {
-        return (
-            <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100">
-                <PublicNavbar />
-                <div className="container mx-auto px-4 py-8">
-                    <div className="flex flex-col justify-center items-center h-64">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mb-4"></div>
-                        <p className="text-gray-600">Loading dynamic leaderboard...</p>
-                    </div>
-                </div>
-                <PublicFooter />
-            </div>
-        );
+        setTeams(fallbackTeamData);
+        setTopPerformers([]);
+      }
+      
+      setLastUpdated(new Date());
+    } catch (error) {
+      console.error('Error fetching leaderboard data:', error);
+      // Set fallback data on error
+      setTeams([]);
+      setTopPerformers([]);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    const hasData = teams.length > 0 && results.length > 0;
-
-    if (!hasData) {
-        return (
-            <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100">
-                <PublicNavbar />
-                <div className="container mx-auto px-4 py-8">
-                    <div className="text-center py-12">
-                        <div className="text-6xl mb-4">🚀</div>
-                        <h1 className="text-2xl font-bold text-gray-900 mb-4">Dynamic Leaderboard Loading...</h1>
-                        <p className="text-gray-600 mb-6">
-                            Real-time competition tracking will be available once events begin.
-                        </p>
-                        <div className="bg-white rounded-lg shadow-md p-6 max-w-md mx-auto">
-                            <h3 className="font-semibold mb-2">Coming Features:</h3>
-                            <ul className="text-sm text-gray-600 space-y-1">
-                                <li>• Live performance tracking</li>
-                                <li>• Dynamic momentum indicators</li>
-                                <li>• Real-time achievement notifications</li>
-                                <li>• Advanced analytics dashboard</li>
-                                <li>• Interactive team profiles</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-                <PublicFooter />
-            </div>
-        );
+  // Helper function to get grade points
+  const getGradePoints = (grade: string): number => {
+    switch (grade) {
+      case 'A+': return 10;
+      case 'A': return 9;
+      case 'A-': return 8;
+      case 'B+': return 7;
+      case 'B': return 6;
+      case 'B-': return 5;
+      case 'C+': return 4;
+      case 'C': return 3;
+      case 'C-': return 2;
+      case 'D+': return 1;
+      case 'D': return 0.5;
+      case 'D-': return 0.25;
+      case 'E+': return 0.1;
+      case 'E': return 0.05;
+      case 'E-': return 0.01;
+      case 'F': return 0;
+      default: return 0;
     }
+  };
 
+  const getFilteredTeams = () => {
+    return teams.map(team => {
+      let displayPoints = team.points;
+      if (categoryFilter === 'arts') {
+        displayPoints = team.artsPoints;
+      } else if (categoryFilter === 'sports') {
+        displayPoints = team.sportsPoints;
+      }
+      return { ...team, points: displayPoints };
+    }).sort((a, b) => b.points - a.points);
+  };
+
+  const getRankIcon = (rank: number) => {
+    switch (rank) {
+      case 1: return '🥇';
+      case 2: return '🥈';
+      case 3: return '🥉';
+      default: return '🏆';
+    }
+  };
+
+  const getGradeColor = (grade: string) => {
+    switch (grade) {
+      case 'A+': return 'text-green-600 bg-green-100';
+      case 'A': return 'text-blue-600 bg-blue-100';
+      case 'A-': return 'text-indigo-600 bg-indigo-100';
+      case 'B+': return 'text-purple-600 bg-purple-100';
+      default: return 'text-gray-600 bg-gray-100';
+    }
+  };
+
+  if (loading) {
     return (
-        <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100" suppressHydrationWarning>
-            <PublicNavbar />
-
-            <div className="container mx-auto px-4 py-8">
-                {/* Dynamic Header with Live Stats */}
-                <div className="text-center mb-8">
-                    <h1 className="text-4xl font-bold text-gray-900 mb-4">
-                        🚀 Dynamic Leaderboard
-                        <span className="ml-3 text-sm bg-green-100 text-green-800 px-3 py-1 rounded-full">
-                            LIVE
-                        </span>
-                    </h1>
-                    <p className="text-lg text-gray-600 max-w-3xl mx-auto mb-4">
-                        Real-time competition tracking with advanced analytics and performance insights
-                    </p>
-                    <div className="flex justify-center items-center gap-4 text-sm text-gray-500">
-                        <span>Last updated: {lastUpdated.toLocaleTimeString()}</span>
-                        <div className="flex items-center gap-2">
-                            <div className={`w-2 h-2 rounded-full ${autoRefresh ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></div>
-                            <span>{autoRefresh ? 'Auto-refresh ON' : 'Auto-refresh OFF'}</span>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Live Updates Ticker */}
-                {liveUpdates.length > 0 && (
-                    <div className="bg-white rounded-lg shadow-md p-4 mb-8 overflow-hidden">
-                        <div className="flex items-center gap-2 mb-2">
-                            <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                            <span className="font-semibold text-gray-800">Live Updates</span>
-                        </div>
-                        <div className="animate-marquee whitespace-nowrap">
-                            {liveUpdates.map((update, index) => (
-                                <span key={update.id} className="inline-block mr-8 text-sm text-gray-600">
-                                    {update.message}
-                                    {index < liveUpdates.length - 1 && <span className="mx-4">•</span>}
-                                </span>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {/* Enhanced Stats Dashboard */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                    <div className="bg-white rounded-lg shadow-md p-6 text-center transform hover:scale-105 transition-transform">
-                        <div className="text-3xl mb-2">🏆</div>
-                        <p className="text-3xl font-bold text-purple-600">{teamStats.length}</p>
-                        <p className="text-gray-600">Active Teams</p>
-                        <div className="mt-2 text-xs text-gray-500">
-                            {teamStats.filter(t => t.momentum === 'up').length} trending up
-                        </div>
-                    </div>
-                    <div className="bg-white rounded-lg shadow-md p-6 text-center transform hover:scale-105 transition-transform">
-                        <div className="text-3xl mb-2">⭐</div>
-                        <p className="text-3xl font-bold text-green-600">{individualStats.length}</p>
-                        <p className="text-gray-600">Top Performers</p>
-                        <div className="mt-2 text-xs text-gray-500">
-                            {individualStats.filter(i => i.medals.gold > 0).length} gold medalists
-                        </div>
-                    </div>
-                    <div className="bg-white rounded-lg shadow-md p-6 text-center transform hover:scale-105 transition-transform">
-                        <div className="text-3xl mb-2">🎯</div>
-                        <p className="text-3xl font-bold text-blue-600">{results.length}</p>
-                        <p className="text-gray-600">Events Completed</p>
-                        <div className="mt-2 text-xs text-gray-500">
-                            {Math.round((results.length / programmes.length) * 100)}% progress
-                        </div>
-                    </div>
-                    <div className="bg-white rounded-lg shadow-md p-6 text-center transform hover:scale-105 transition-transform">
-                        <div className="text-3xl mb-2">🔥</div>
-                        <p className="text-3xl font-bold text-orange-600">
-                            {teamStats.reduce((sum, team) => sum + team.totalPoints, 0)}
-                        </p>
-                        <p className="text-gray-600">Total Points</p>
-                        <div className="mt-2 text-xs text-gray-500">
-                            Avg: {Math.round(teamStats.reduce((sum, team) => sum + team.totalPoints, 0) / teamStats.length || 0)}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Control Panel */}
-                <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-                    <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
-                        <div className="flex flex-col sm:flex-row gap-4 flex-1">
-                            <input
-                                type="text"
-                                placeholder="Search teams or performers..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                            />
-                        </div>
-                        
-                        <div className="flex gap-4 items-center">
-                            <div className="flex items-center gap-2">
-                                <input
-                                    type="checkbox"
-                                    id="autoRefresh"
-                                    checked={autoRefresh}
-                                    onChange={(e) => setAutoRefresh(e.target.checked)}
-                                    className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-                                />
-                                <label htmlFor="autoRefresh" className="text-sm text-gray-700">Auto-refresh</label>
-                            </div>
-                            
-                            <button
-                                onClick={fetchData}
-                                disabled={loading}
-                                className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center gap-2"
-                            >
-                                {loading ? (
-                                    <>
-                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                                        Updating...
-                                    </>
-                                ) : (
-                                    <>
-                                        🔄 Refresh
-                                    </>
-                                )}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Navigation Tabs */}
-                <div className="bg-white rounded-lg shadow-md mb-8">
-                    <div className="flex flex-wrap border-b">
-                        {[
-                            { key: 'overview', label: '📊 Overview', icon: '📊' },
-                            { key: 'teams', label: '🏆 Team Analytics', icon: '🏆' },
-                            { key: 'individuals', label: '⭐ Individual Stats', icon: '⭐' },
-                            { key: 'sections', label: '🏛️ Section Analysis', icon: '🏛️' },
-                            { key: 'live', label: '🔴 Live Feed', icon: '🔴' }
-                        ].map(tab => (
-                            <button
-                                key={tab.key}
-                                onClick={() => setActiveTab(tab.key as any)}
-                                className={`px-4 py-4 font-medium text-sm md:text-base transition-colors ${activeTab === tab.key
-                                    ? 'text-purple-600 border-b-2 border-purple-600 bg-purple-50'
-                                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                                    }`}
-                            >
-                                <span className="hidden md:inline">{tab.label}</span>
-                                <span className="md:hidden">{tab.icon}</span>
-                            </button>
-                        ))}
-                    </div>
-                </div>          
-      {/* Tab Content */}
-                {activeTab === 'overview' && (
-                    <div className="space-y-8">
-                        {/* Dynamic Championship Podium */}
-                        <div className="bg-white rounded-lg shadow-md p-8">
-                            <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">🏆 Live Championship Standings</h2>
-                            {teamStats.length >= 3 ? (
-                                <div className="flex items-end justify-center gap-8 mb-8">
-                                    {/* Second Place */}
-                                    <div className="text-center">
-                                        <div className="bg-gradient-to-t from-gray-400 to-gray-300 rounded-lg p-6 h-32 flex items-end justify-center mb-4 shadow-lg relative">
-                                            <div className="absolute top-2 right-2">
-                                                <span className={`text-lg ${getMomentumColor(teamStats[1]?.momentum)}`}>
-                                                    {getMomentumIcon(teamStats[1]?.momentum)}
-                                                </span>
-                                            </div>
-                                            <div className="text-center">
-                                                <div className="text-4xl mb-2">🥈</div>
-                                                <div className="text-white font-bold text-lg">{teamStats[1]?.totalPoints}</div>
-                                            </div>
-                                        </div>
-                                        <h3 className="font-bold text-lg">{teamStats[1]?.team.name}</h3>
-                                        <p className="text-gray-600">{teamStats[1]?.team.code}</p>
-                                        <div className="mt-2 space-y-1">
-                                            <div className="flex justify-center gap-1">
-                                                <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs">🥇 {teamStats[1]?.medals.gold}</span>
-                                                <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs">🥈 {teamStats[1]?.medals.silver}</span>
-                                                <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs">🥉 {teamStats[1]?.medals.bronze}</span>
-                                            </div>
-                                            <div className="text-xs text-gray-500">
-                                                Win Rate: {teamStats[1]?.winRate.toFixed(1)}%
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    {/* First Place */}
-                                    <div className="text-center">
-                                        <div className="bg-gradient-to-t from-yellow-500 to-yellow-400 rounded-lg p-6 h-40 flex items-end justify-center mb-4 shadow-lg animate-pulse relative">
-                                            <div className="absolute top-2 right-2">
-                                                <span className={`text-lg ${getMomentumColor(teamStats[0]?.momentum)}`}>
-                                                    {getMomentumIcon(teamStats[0]?.momentum)}
-                                                </span>
-                                            </div>
-                                            <div className="text-center">
-                                                <div className="text-5xl mb-2">🥇</div>
-                                                <div className="text-white font-bold text-xl">{teamStats[0]?.totalPoints}</div>
-                                            </div>
-                                        </div>
-                                        <h3 className="font-bold text-xl text-yellow-600">{teamStats[0]?.team.name}</h3>
-                                        <p className="text-gray-600">{teamStats[0]?.team.code}</p>
-                                        <div className="mt-2 bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">
-                                            🏆 Festival Champion
-                                        </div>
-                                        <div className="mt-2 space-y-1">
-                                            <div className="flex justify-center gap-1">
-                                                <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs">🥇 {teamStats[0]?.medals.gold}</span>
-                                                <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs">🥈 {teamStats[0]?.medals.silver}</span>
-                                                <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs">🥉 {teamStats[0]?.medals.bronze}</span>
-                                            </div>
-                                            <div className="text-xs text-gray-500">
-                                                Win Rate: {teamStats[0]?.winRate.toFixed(1)}%
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    {/* Third Place */}
-                                    <div className="text-center">
-                                        <div className="bg-gradient-to-t from-orange-500 to-orange-400 rounded-lg p-6 h-24 flex items-end justify-center mb-4 shadow-lg relative">
-                                            <div className="absolute top-2 right-2">
-                                                <span className={`text-lg ${getMomentumColor(teamStats[2]?.momentum)}`}>
-                                                    {getMomentumIcon(teamStats[2]?.momentum)}
-                                                </span>
-                                            </div>
-                                            <div className="text-center">
-                                                <div className="text-4xl mb-2">🥉</div>
-                                                <div className="text-white font-bold">{teamStats[2]?.totalPoints}</div>
-                                            </div>
-                                        </div>
-                                        <h3 className="font-bold text-lg">{teamStats[2]?.team.name}</h3>
-                                        <p className="text-gray-600">{teamStats[2]?.team.code}</p>
-                                        <div className="mt-2 space-y-1">
-                                            <div className="flex justify-center gap-1">
-                                                <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs">🥇 {teamStats[2]?.medals.gold}</span>
-                                                <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs">🥈 {teamStats[2]?.medals.silver}</span>
-                                                <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs">🥉 {teamStats[2]?.medals.bronze}</span>
-                                            </div>
-                                            <div className="text-xs text-gray-500">
-                                                Win Rate: {teamStats[2]?.winRate.toFixed(1)}%
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="text-center py-12">
-                                    <div className="text-6xl mb-4">🏆</div>
-                                    <p className="text-gray-500">Championship standings will be revealed as competitions progress...</p>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Performance Insights */}
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                            {/* Momentum Leaders */}
-                            <div className="bg-white rounded-lg shadow-md p-6">
-                                <h3 className="text-xl font-bold text-gray-900 mb-4">📈 Momentum Leaders</h3>
-                                <div className="space-y-3">
-                                    {teamStats.filter(t => t.momentum === 'up').slice(0, 5).map((team) => (
-                                        <div key={team.team.code} className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                                            <div className="flex items-center gap-3">
-                                                <span className="text-green-600 text-lg">📈</span>
-                                                <div>
-                                                    <p className="font-semibold">{team.team.name}</p>
-                                                    <p className="text-sm text-gray-600">Recent avg: {team.recentPerformance.length > 0 ? (team.recentPerformance.reduce((a, b) => a + b, 0) / team.recentPerformance.length).toFixed(1) : 0} pts</p>
-                                                </div>
-                                            </div>
-                                            <div className="text-right">
-                                                <p className="font-bold text-green-600">{team.totalPoints} pts</p>
-                                                <p className="text-sm text-gray-500">#{team.rank}</p>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Top Individual Performers */}
-                            <div className="bg-white rounded-lg shadow-md p-6">
-                                <h3 className="text-xl font-bold text-gray-900 mb-4">⭐ Star Performers</h3>
-                                <div className="space-y-3">
-                                    {individualStats.slice(0, 5).map((individual) => (
-                                        <div key={individual.candidate.chestNumber} className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
-                                            <div className="flex items-center gap-3">
-                                                <span className={`px-3 py-1 rounded-full text-sm font-bold border ${getRankColor(individual.rank)}`}>
-                                                    {getRankBadge(individual.rank)}
-                                                </span>
-                                                <div>
-                                                    <p className="font-semibold">{individual.candidate.name}</p>
-                                                    <p className="text-sm text-gray-600">#{individual.candidate.chestNumber} • {individual.team.name}</p>
-                                                </div>
-                                            </div>
-                                            <div className="text-right">
-                                                <p className="font-bold text-purple-600">{individual.totalPoints} pts</p>
-                                                <div className="flex gap-1">
-                                                    <span className="text-xs bg-yellow-100 text-yellow-800 px-1 rounded">🥇{individual.medals.gold}</span>
-                                                    <span className="text-xs bg-gray-100 text-gray-800 px-1 rounded">🥈{individual.medals.silver}</span>
-                                                    <span className="text-xs bg-orange-100 text-orange-800 px-1 rounded">🥉{individual.medals.bronze}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Section Performance Overview */}
-                        <div className="bg-white rounded-lg shadow-md p-6">
-                            <h2 className="text-2xl font-bold text-gray-900 mb-6">🏛️ Section Performance Overview</h2>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {sectionStats.map((section) => (
-                                    <div key={section.section} className="border rounded-lg p-4 hover:shadow-lg transition-shadow">
-                                        <div className="flex items-center justify-between mb-3">
-                                            <h3 className="text-lg font-bold">{section.section}</h3>
-                                            <span className={`px-2 py-1 rounded-full text-sm font-bold border ${getRankColor(section.rank)}`}>
-                                                {getRankBadge(section.rank)}
-                                            </span>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <p className="text-purple-600 font-bold">{section.totalPoints} points</p>
-                                            <p className="text-sm text-gray-600">{section.teamCount} teams</p>
-                                            <p className="text-sm text-blue-600">Avg: {Math.round(section.averagePoints)} pts</p>
-                                            <p className="text-sm text-green-600">Leader: {section.topTeam}</p>
-                                            <div className="w-full bg-gray-200 rounded-full h-2">
-                                                <div 
-                                                    className="bg-gradient-to-r from-purple-400 to-purple-600 h-2 rounded-full"
-                                                    style={{ width: `${Math.min((section.averagePoints / (teamStats[0]?.totalPoints || 1)) * 100, 100)}%` }}
-                                                ></div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                )}    
-            {activeTab === 'teams' && (
-                    <div className="space-y-6">
-                        <div className="bg-white rounded-lg shadow-md p-6">
-                            <div className="flex justify-between items-center mb-6">
-                                <h2 className="text-2xl font-bold text-gray-900">🏆 Advanced Team Analytics</h2>
-                                <div className="text-sm text-gray-600">
-                                    {filteredTeamStats.length} teams • Real-time tracking
-                                </div>
-                            </div>
-
-                            <div className="space-y-6">
-                                {filteredTeamStats.map((team) => (
-                                    <div key={team.team.code} className="border rounded-lg p-6 hover:shadow-lg transition-all duration-300 bg-gradient-to-r from-white to-gray-50">
-                                        <div className="flex items-center justify-between mb-4">
-                                            <div className="flex items-center gap-4">
-                                                <span className={`px-4 py-2 rounded-full font-bold border-2 ${getRankColor(team.rank)} text-lg`}>
-                                                    {getRankBadge(team.rank)}
-                                                </span>
-                                                <div>
-                                                    <h3 className="text-xl font-bold flex items-center gap-2">
-                                                        {team.team.name}
-                                                        <span className={`text-lg ${getMomentumColor(team.momentum)}`}>
-                                                            {getMomentumIcon(team.momentum)}
-                                                        </span>
-                                                    </h3>
-                                                    <p className="text-gray-600">{team.team.code} • {team.memberCount} members</p>
-                                                </div>
-                                            </div>
-
-                                            <button
-                                                onClick={() => setSelectedTeam(selectedTeam === team.team.code ? null : team.team.code)}
-                                                className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
-                                            >
-                                                {selectedTeam === team.team.code ? 'Hide Details' : 'View Profile'}
-                                            </button>
-                                        </div>
-
-                                        {/* Team Stats Grid */}
-                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                                            <div className="text-center p-3 bg-purple-50 rounded-lg">
-                                                <p className="text-2xl font-bold text-purple-600">{team.totalPoints}</p>
-                                                <p className="text-sm text-gray-600">Total Points</p>
-                                            </div>
-                                            <div className="text-center p-3 bg-green-50 rounded-lg">
-                                                <p className="text-2xl font-bold text-green-600">{team.totalWins}</p>
-                                                <p className="text-sm text-gray-600">Total Wins</p>
-                                            </div>
-                                            <div className="text-center p-3 bg-blue-50 rounded-lg">
-                                                <p className="text-2xl font-bold text-blue-600">{team.winRate.toFixed(1)}%</p>
-                                                <p className="text-sm text-gray-600">Win Rate</p>
-                                            </div>
-                                            <div className="text-center p-3 bg-orange-50 rounded-lg">
-                                                <p className="text-2xl font-bold text-orange-600">{team.averagePoints.toFixed(1)}</p>
-                                                <p className="text-sm text-gray-600">Avg Points</p>
-                                            </div>
-                                        </div>
-
-                                        {/* Medal Display */}
-                                        <div className="flex justify-center gap-4 mb-4">
-                                            <div className="text-center">
-                                                <div className="text-2xl font-bold text-yellow-600">{team.medals.gold}</div>
-                                                <div className="text-xs text-gray-500">🥇 Gold</div>
-                                            </div>
-                                            <div className="text-center">
-                                                <div className="text-2xl font-bold text-gray-600">{team.medals.silver}</div>
-                                                <div className="text-xs text-gray-500">🥈 Silver</div>
-                                            </div>
-                                            <div className="text-center">
-                                                <div className="text-2xl font-bold text-orange-600">{team.medals.bronze}</div>
-                                                <div className="text-xs text-gray-500">🥉 Bronze</div>
-                                            </div>
-                                        </div>
-
-                                        {/* Performance Indicators */}
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                                            <div className="bg-gray-50 rounded-lg p-3">
-                                                <p className="text-sm text-gray-600 mb-1">Participation Rate</p>
-                                                <div className="w-full bg-gray-200 rounded-full h-2">
-                                                    <div 
-                                                        className="bg-blue-500 h-2 rounded-full"
-                                                        style={{ width: `${Math.min(team.participationRate, 100)}%` }}
-                                                    ></div>
-                                                </div>
-                                                <p className="text-xs text-gray-500 mt-1">{team.participationRate.toFixed(1)}%</p>
-                                            </div>
-                                            <div className="bg-gray-50 rounded-lg p-3">
-                                                <p className="text-sm text-gray-600 mb-1">Strong Categories</p>
-                                                <div className="flex flex-wrap gap-1">
-                                                    {team.strongCategories.map((category, idx) => (
-                                                        <span key={idx} className="bg-purple-100 text-purple-800 px-2 py-1 rounded text-xs">
-                                                            {category}
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                            <div className="bg-gray-50 rounded-lg p-3">
-                                                <p className="text-sm text-gray-600 mb-1">Recent Form</p>
-                                                <div className="flex gap-1">
-                                                    {team.recentPerformance.slice(-5).map((points, idx) => (
-                                                        <div 
-                                                            key={idx}
-                                                            className={`w-4 h-4 rounded ${points >= team.averagePoints ? 'bg-green-500' : 'bg-red-500'}`}
-                                                            title={`${points} points`}
-                                                        ></div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Expanded Team Profile */}
-                                        {selectedTeam === team.team.code && (
-                                            <div className="mt-6 pt-6 border-t bg-white rounded-lg p-4">
-                                                <TeamProfile team={team} />
-                                            </div>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {activeTab === 'individuals' && (
-                    <div className="space-y-6">
-                        <div className="bg-white rounded-lg shadow-md p-6">
-                            <div className="flex justify-between items-center mb-6">
-                                <h2 className="text-2xl font-bold text-gray-900">⭐ Individual Performance Analytics</h2>
-                                <div className="text-sm text-gray-600">
-                                    {filteredIndividualStats.length} top performers
-                                </div>
-                            </div>
-
-                            <div className="space-y-6">
-                                {filteredIndividualStats.map((individual) => (
-                                    <div key={individual.candidate.chestNumber} className="border rounded-lg p-6 hover:shadow-lg transition-all duration-300 bg-gradient-to-r from-white to-purple-50">
-                                        <div className="flex items-center justify-between mb-4">
-                                            <div className="flex items-center gap-4">
-                                                <span className={`px-4 py-2 rounded-full font-bold border-2 ${getRankColor(individual.rank)} text-lg`}>
-                                                    {getRankBadge(individual.rank)}
-                                                </span>
-                                                <div>
-                                                    <h3 className="text-xl font-bold flex items-center gap-2">
-                                                        {individual.candidate.name}
-                                                        <span className={`text-lg ${getMomentumColor(individual.momentum)}`}>
-                                                            {getMomentumIcon(individual.momentum)}
-                                                        </span>
-                                                    </h3>
-                                                    <p className="text-gray-600">#{individual.candidate.chestNumber} • {individual.team.name} • {individual.candidate.section}</p>
-                                                </div>
-                                            </div>
-
-                                            <button
-                                                onClick={() => setSelectedIndividual(selectedIndividual === individual.candidate.chestNumber ? null : individual.candidate.chestNumber)}
-                                                className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
-                                            >
-                                                {selectedIndividual === individual.candidate.chestNumber ? 'Hide Profile' : 'View Profile'}
-                                            </button>
-                                        </div>
-
-                                        {/* Individual Stats Grid */}
-                                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
-                                            <div className="text-center p-3 bg-purple-50 rounded-lg">
-                                                <p className="text-xl font-bold text-purple-600">{individual.totalPoints}</p>
-                                                <p className="text-xs text-gray-600">Points</p>
-                                            </div>
-                                            <div className="text-center p-3 bg-green-50 rounded-lg">
-                                                <p className="text-xl font-bold text-green-600">{individual.totalWins}</p>
-                                                <p className="text-xs text-gray-600">Wins</p>
-                                            </div>
-                                            <div className="text-center p-3 bg-blue-50 rounded-lg">
-                                                <p className="text-xl font-bold text-blue-600">{individual.winRate.toFixed(1)}%</p>
-                                                <p className="text-xs text-gray-600">Win Rate</p>
-                                            </div>
-                                            <div className="text-center p-3 bg-orange-50 rounded-lg">
-                                                <p className="text-xl font-bold text-orange-600">{individual.averagePoints.toFixed(1)}</p>
-                                                <p className="text-xs text-gray-600">Avg Points</p>
-                                            </div>
-                                            <div className="text-center p-3 bg-yellow-50 rounded-lg">
-                                                <p className="text-xl font-bold text-yellow-600">{individual.consistency.toFixed(0)}%</p>
-                                                <p className="text-xs text-gray-600">Consistency</p>
-                                            </div>
-                                        </div>
-
-                                        {/* Medal Display */}
-                                        <div className="flex justify-center gap-6 mb-4">
-                                            <div className="text-center">
-                                                <div className="text-2xl font-bold text-yellow-600">{individual.medals.gold}</div>
-                                                <div className="text-xs text-gray-500">🥇 Gold</div>
-                                            </div>
-                                            <div className="text-center">
-                                                <div className="text-2xl font-bold text-gray-600">{individual.medals.silver}</div>
-                                                <div className="text-xs text-gray-500">🥈 Silver</div>
-                                            </div>
-                                            <div className="text-center">
-                                                <div className="text-2xl font-bold text-orange-600">{individual.medals.bronze}</div>
-                                                <div className="text-xs text-gray-500">🥉 Bronze</div>
-                                            </div>
-                                        </div>
-
-                                        {/* Recent Achievements Preview */}
-                                        {individual.achievements.length > 0 && (
-                                            <div className="mb-4">
-                                                <h4 className="text-sm font-semibold text-gray-700 mb-2">Recent Achievements</h4>
-                                                <div className="flex flex-wrap gap-2">
-                                                    {individual.achievements.slice(0, 3).map((achievement, idx) => (
-                                                        <span key={idx} className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">
-                                                            {achievement}
-                                                        </span>
-                                                    ))}
-                                                    {individual.achievements.length > 3 && (
-                                                        <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-sm">
-                                                            +{individual.achievements.length - 3} more
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* Expanded Individual Profile */}
-                                        {selectedIndividual === individual.candidate.chestNumber && (
-                                            <div className="mt-6 pt-6 border-t bg-white rounded-lg p-4">
-                                                <IndividualProfile individual={individual} />
-                                            </div>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {activeTab === 'sections' && (
-                    <div className="bg-white rounded-lg shadow-md p-6">
-                        <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-2xl font-bold text-gray-900">🏛️ Section Analysis Dashboard</h2>
-                            <div className="text-sm text-gray-600">
-                                Comprehensive department performance
-                            </div>
-                        </div>
-
-                        <div className="space-y-6">
-                            {sectionStats.map((section) => (
-                                <div key={section.section} className="border rounded-lg p-6 hover:shadow-lg transition-shadow bg-gradient-to-r from-white to-blue-50">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <div className="flex items-center gap-4">
-                                            <span className={`px-4 py-2 rounded-full font-bold border-2 ${getRankColor(section.rank)} text-lg`}>
-                                                {getRankBadge(section.rank)}
-                                            </span>
-                                            <div>
-                                                <h3 className="text-2xl font-bold">{section.section}</h3>
-                                                <p className="text-gray-600">{section.teamCount} teams competing</p>
-                                            </div>
-                                        </div>
-
-                                        <div className="text-right">
-                                            <p className="text-3xl font-bold text-purple-600">{section.totalPoints}</p>
-                                            <p className="text-sm text-gray-600">Total Points</p>
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                                        <div className="bg-gray-50 rounded-lg p-4">
-                                            <h4 className="font-semibold text-gray-800 mb-2">Performance Metrics</h4>
-                                            <div className="space-y-2">
-                                                <div className="flex justify-between">
-                                                    <span className="text-sm text-gray-600">Average Points:</span>
-                                                    <span className="font-bold text-blue-600">{Math.round(section.averagePoints)}</span>
-                                                </div>
-                                                <div className="flex justify-between">
-                                                    <span className="text-sm text-gray-600">Participation Rate:</span>
-                                                    <span className="font-bold text-green-600">{section.participationRate.toFixed(1)}%</span>
-                                                </div>
-                                                <div className="flex justify-between">
-                                                    <span className="text-sm text-gray-600">Competitiveness:</span>
-                                                    <span className="font-bold text-orange-600">{section.competitiveness.toFixed(1)}%</span>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="bg-gray-50 rounded-lg p-4">
-                                            <h4 className="font-semibold text-gray-800 mb-2">Leading Team</h4>
-                                            <p className="text-lg font-bold text-green-600">{section.topTeam}</p>
-                                            <p className="text-sm text-gray-600">Department Champion</p>
-                                        </div>
-
-                                        <div className="bg-gray-50 rounded-lg p-4">
-                                            <h4 className="font-semibold text-gray-800 mb-2">Performance Index</h4>
-                                            <div className="flex items-center gap-2">
-                                                <div className="flex-1 bg-gray-200 rounded-full h-3">
-                                                    <div 
-                                                        className="bg-gradient-to-r from-purple-400 to-purple-600 h-3 rounded-full"
-                                                        style={{ width: `${Math.min((section.averagePoints / (teamStats[0]?.totalPoints || 1)) * 100, 100)}%` }}
-                                                    ></div>
-                                                </div>
-                                                <span className="text-sm font-bold text-purple-600">
-                                                    {Math.round((section.averagePoints / (teamStats[0]?.totalPoints || 1)) * 100)}%
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {activeTab === 'live' && (
-                    <div className="space-y-6">
-                        <LiveUpdates updates={liveUpdates} />
-                        <PerformanceMetrics teamStats={teamStats} individualStats={individualStats} />
-                    </div>
-                )}
-            </div>
-
-            <PublicFooter />
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-4 border-gray-200 border-t-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 text-lg font-medium">Loading Leaderboard...</p>
+          <p className="text-gray-500 text-sm mt-2">Fetching latest competition standings</p>
         </div>
+      </div>
     );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Standard Header */}
+      <div className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex justify-between items-center mb-4">
+            <BackButton 
+              href="/" 
+              label="← Back to Home" 
+              className="bg-gray-100 border-gray-200 text-gray-700 hover:bg-gray-200 px-4 py-2 rounded-lg text-sm"
+            />
+            <div className="flex items-center space-x-2 bg-green-50 px-3 py-2 rounded-full">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              <span className="text-sm font-medium text-green-700">Live Updates</span>
+            </div>
+          </div>
+          
+          <div className="text-center">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-4"
+            >
+              <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
+                🏆 Wattaqa 2K25 Leaderboard
+              </h1>
+              <p className="text-gray-600">
+                Real-time competition standings and top performers
+              </p>
+            </motion.div>
+            
+            <div className="flex flex-wrap justify-center gap-4 text-sm text-gray-600">
+              <div className="bg-gray-100 px-3 py-1 rounded-full">
+                <span className="font-medium">Last Updated:</span> {lastUpdated.toLocaleTimeString()}
+              </div>
+              <div className="bg-gray-100 px-3 py-1 rounded-full">
+                <span className="font-medium">Total Teams:</span> {teams.length}
+              </div>
+              <div className="bg-gray-100 px-3 py-1 rounded-full">
+                <span className="font-medium">Published Results:</span> {teams.reduce((sum, team) => sum + team.results, 0)}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Navigation Tabs */}
+        <div className="flex justify-center mb-6">
+          <div className="bg-white rounded-lg p-1 shadow-sm border">
+            <div className="flex space-x-1">
+              <button
+                onClick={() => setActiveView('teams')}
+                className={`px-4 py-2 rounded-md font-medium text-sm transition-all duration-200 ${
+                  activeView === 'teams'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-gray-600 hover:text-blue-600 hover:bg-gray-50'
+                }`}
+              >
+                🏆 Team Rankings
+              </button>
+              <button
+                onClick={() => setActiveView('individuals')}
+                className={`px-4 py-2 rounded-md font-medium text-sm transition-all duration-200 ${
+                  activeView === 'individuals'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-gray-600 hover:text-blue-600 hover:bg-gray-50'
+                }`}
+              >
+                ⭐ Top Performers
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Category Filter for Teams */}
+        {activeView === 'teams' && (
+          <div className="flex justify-center mb-6">
+            <div className="bg-white rounded-lg p-1 shadow-sm border">
+              <div className="flex space-x-1">
+                <button
+                  onClick={() => setCategoryFilter('all')}
+                  className={`px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                    categoryFilter === 'all'
+                      ? 'bg-gray-900 text-white'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  }`}
+                >
+                  🏅 Overall
+                </button>
+                <button
+                  onClick={() => setCategoryFilter('arts')}
+                  className={`px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                    categoryFilter === 'arts'
+                      ? 'bg-gray-900 text-white'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  }`}
+                >
+                  🎨 Arts
+                </button>
+                <button
+                  onClick={() => setCategoryFilter('sports')}
+                  className={`px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                    categoryFilter === 'sports'
+                      ? 'bg-gray-900 text-white'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  }`}
+                >
+                  ⚽ Sports
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Team Rankings View */}
+        <AnimatePresence mode="wait">
+          {activeView === 'teams' && (
+            <motion.div
+              key={`teams-${animationKey}`}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.5 }}
+            >
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                {getFilteredTeams().map((team, index) => (
+                  <motion.div
+                    key={team.teamCode}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: index * 0.1 }}
+                    className="relative overflow-hidden rounded-2xl shadow-lg border border-gray-200 bg-white hover:shadow-xl transition-all duration-300"
+                    style={{ 
+                      borderColor: team.color + '40',
+                      backgroundColor: team.color + '05'
+                    }}
+                  >
+                    {/* Rank Badge */}
+                    <div className="absolute top-4 left-4 z-10">
+                      <div 
+                        className="w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold text-white shadow-md"
+                        style={{ backgroundColor: team.color }}
+                      >
+                        {index + 1}
+                      </div>
+                    </div>
+
+                    {/* Trophy Icon for Winner */}
+                    {index === 0 && (
+                      <div className="absolute top-4 right-4 text-2xl">
+                        🏆
+                      </div>
+                    )}
+
+                    <div className="p-6 pt-16">
+                      {/* Team Info */}
+                      <div className="text-center mb-4">
+                        <div 
+                          className="w-16 h-16 rounded-full mx-auto mb-3 flex items-center justify-center text-white font-bold text-lg shadow-md"
+                          style={{ backgroundColor: team.color }}
+                        >
+                          {team.teamCode}
+                        </div>
+                        <h3 className="text-lg font-bold text-gray-900 mb-1">
+                          {team.name}
+                        </h3>
+                        <div className="text-sm text-gray-600">
+                          {team.results} programmes completed
+                        </div>
+                      </div>
+
+                      {/* Points Display */}
+                      <div className="text-center mb-4">
+                        <div className="text-3xl font-bold mb-1" style={{ color: team.color }}>
+                          {Math.round(team.points)}
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          {categoryFilter === 'all' ? 'Total Points' :
+                           categoryFilter === 'arts' ? 'Arts Points' : 'Sports Points'}
+                        </div>
+                      </div>
+
+                      {/* Points Breakdown */}
+                      {categoryFilter === 'all' && (
+                        <div className="grid grid-cols-2 gap-3 mb-4">
+                          <div className="text-center p-3 bg-gray-50 rounded-lg">
+                            <div className="text-lg font-bold text-purple-600">
+                              {Math.round(team.artsPoints)}
+                            </div>
+                            <div className="text-xs text-gray-600">🎨 Arts</div>
+                          </div>
+                          <div className="text-center p-3 bg-gray-50 rounded-lg">
+                            <div className="text-lg font-bold text-green-600">
+                              {Math.round(team.sportsPoints)}
+                            </div>
+                            <div className="text-xs text-gray-600">⚽ Sports</div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Progress Bar */}
+                      <div className="mt-4">
+                        <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+                          <div
+                            className="h-2 rounded-full transition-all duration-1000"
+                            style={{
+                              backgroundColor: team.color,
+                              width: `${Math.min((team.points / Math.max(...getFilteredTeams().map(t => t.points))) * 100, 100)}%`
+                            }}
+                          ></div>
+                        </div>
+                        <div className="text-center text-xs text-gray-500">
+                          Rank #{index + 1}
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Top Performers View */}
+          {activeView === 'individuals' && (
+            <motion.div
+              key="individuals"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.5 }}
+            >
+              <div className="bg-white rounded-3xl shadow-xl border p-8">
+                <div className="text-center mb-8">
+                  <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                    ⭐ Top Individual Performers
+                  </h3>
+                  <p className="text-gray-600">
+                    Outstanding achievements in competition programmes
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {topPerformers.map((performer, index) => (
+                    <motion.div
+                      key={`${performer.chestNumber}-${index}`}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: index * 0.1 }}
+                      className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-6 border-2 border-gray-100 hover:border-blue-200 hover:shadow-lg transition-all duration-300"
+                    >
+                      {/* Achievement Badge */}
+                      <div className="flex justify-between items-start mb-4">
+                        <div className={`px-3 py-1 rounded-full text-xs font-medium ${getGradeColor(performer.grade)}`}>
+                          Grade {performer.grade}
+                        </div>
+                        <div className="text-2xl">
+                          {index < 3 ? ['🥇', '🥈', '🥉'][index] : '⭐'}
+                        </div>
+                      </div>
+
+                      {/* Performer Info */}
+                      <div className="mb-4">
+                        <h4 className="font-bold text-gray-900 mb-1">
+                          {performer.name}
+                        </h4>
+                        <div className="text-sm text-gray-600 space-y-1">
+                          <div className="flex items-center">
+                            <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                            {performer.chestNumber}
+                          </div>
+                          <div className="flex items-center">
+                            <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                            {performer.team}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Programme & Achievement */}
+                      <div className="bg-white rounded-xl p-4 mb-4">
+                        <div className="text-sm font-medium text-gray-900 mb-1">
+                          {performer.programme}
+                        </div>
+                        <div className="text-xs text-gray-600 mb-2">
+                          {performer.position}
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-gray-500">Points Earned</span>
+                          <span className="font-bold text-blue-600">
+                            {performer.points} pts
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Achievement Level */}
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className="h-2 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-1000"
+                          style={{ width: `${(performer.points / 15) * 100}%` }}
+                        ></div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Footer Stats */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="mt-8 bg-white rounded-lg shadow-sm border p-6"
+        >
+          <div className="text-center mb-4">
+            <h3 className="text-lg font-bold text-gray-900 mb-1">
+              📊 Competition Statistics
+            </h3>
+            <p className="text-gray-600 text-sm">
+              Live updates from Wattaqa 2K25 festival
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center p-3 bg-gray-50 rounded-lg">
+              <div className="text-2xl font-bold text-gray-900 mb-1">
+                {teams.reduce((sum, team) => sum + team.results, 0)}
+              </div>
+              <div className="text-xs text-gray-600">Published Results</div>
+            </div>
+            <div className="text-center p-3 bg-gray-50 rounded-lg">
+              <div className="text-2xl font-bold text-gray-900 mb-1">{teams.length}</div>
+              <div className="text-xs text-gray-600">Active Teams</div>
+            </div>
+            <div className="text-center p-3 bg-gray-50 rounded-lg">
+              <div className="text-2xl font-bold text-gray-900 mb-1">{topPerformers.length}</div>
+              <div className="text-xs text-gray-600">Top Performers</div>
+            </div>
+            <div className="text-center p-3 bg-gray-50 rounded-lg">
+              <div className="text-2xl font-bold text-gray-900 mb-1">
+                {Math.round((teams.reduce((sum, team) => sum + team.results, 0) / 137) * 100)}%
+              </div>
+              <div className="text-xs text-gray-600">Progress</div>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    </div>
+  );
 }

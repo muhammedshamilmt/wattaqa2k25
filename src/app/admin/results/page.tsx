@@ -1919,6 +1919,254 @@ export default function ResultsPage() {
           )}
         </ShowcaseSection>
 
+        {/* Remaining Programmes */}
+        <ShowcaseSection title="Remaining Programmes">
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="flex flex-col items-center space-y-4">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600"></div>
+                <p className="text-gray-600">Loading programmes...</p>
+              </div>
+            </div>
+          ) : (() => {
+            // Get programmes that don't have results yet
+            const programmeIds = results.map(result => result.programmeId);
+            const remainingProgrammes = programmes.filter(programme => 
+              !programmeIds.includes(programme._id?.toString())
+            );
+
+            return remainingProgrammes.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="text-green-600 text-6xl mb-4">✅</div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">All Programmes Complete!</h3>
+                <p className="text-gray-600">Results have been added for all programmes.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Summary Stats */}
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-semibold text-orange-900">
+                        📋 Programmes Awaiting Results
+                      </h3>
+                      <p className="text-orange-700 text-sm mt-1">
+                        {remainingProgrammes.length} programmes still need results to be added
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-2xl font-bold text-orange-600">
+                        {remainingProgrammes.length}
+                      </div>
+                      <div className="text-sm text-orange-600">Remaining</div>
+                    </div>
+                  </div>
+                  
+                  {/* Progress Bar */}
+                  <div className="mt-4">
+                    <div className="flex justify-between text-sm text-gray-600 mb-2">
+                      <span>Progress</span>
+                      <span>{Math.round((results.length / programmes.length) * 100)}% Complete</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-orange-500 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${(results.length / programmes.length) * 100}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Category Breakdown */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  {/* Arts Programmes */}
+                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                    <div className="flex items-center mb-2">
+                      <span className="text-2xl mr-2">🎨</span>
+                      <h4 className="font-semibold text-purple-900">Arts</h4>
+                    </div>
+                    <div className="text-2xl font-bold text-purple-600">
+                      {remainingProgrammes.filter(p => p.category === 'arts').length}
+                    </div>
+                    <div className="text-sm text-purple-600">programmes remaining</div>
+                  </div>
+
+                  {/* Sports Programmes */}
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div className="flex items-center mb-2">
+                      <span className="text-2xl mr-2">⚽</span>
+                      <h4 className="font-semibold text-green-900">Sports</h4>
+                    </div>
+                    <div className="text-2xl font-bold text-green-600">
+                      {remainingProgrammes.filter(p => p.category === 'sports').length}
+                    </div>
+                    <div className="text-sm text-green-600">programmes remaining</div>
+                  </div>
+
+                  {/* By Section */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex items-center mb-2">
+                      <span className="text-2xl mr-2">👥</span>
+                      <h4 className="font-semibold text-blue-900">Sections</h4>
+                    </div>
+                    <div className="text-sm text-blue-600 space-y-1">
+                      <div>Senior: {remainingProgrammes.filter(p => p.section === 'senior').length}</div>
+                      <div>Junior: {remainingProgrammes.filter(p => p.section === 'junior').length}</div>
+                      <div>Sub-Junior: {remainingProgrammes.filter(p => p.section === 'sub-junior').length}</div>
+                      <div>General: {remainingProgrammes.filter(p => p.section === 'general').length}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Remaining Programmes List */}
+                <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                  <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                    <h4 className="font-semibold text-gray-900">Programmes Without Results</h4>
+                  </div>
+                  
+                  <div className="divide-y divide-gray-200 max-h-96 overflow-y-auto">
+                    {remainingProgrammes
+                      .sort((a, b) => {
+                        // Sort by category first, then by section, then by name
+                        if (a.category !== b.category) {
+                          return a.category === 'arts' ? -1 : 1;
+                        }
+                        if (a.section !== b.section) {
+                          const sectionOrder = ['senior', 'junior', 'sub-junior', 'general'];
+                          return sectionOrder.indexOf(a.section) - sectionOrder.indexOf(b.section);
+                        }
+                        return a.name.localeCompare(b.name);
+                      })
+                      .map((programme, index) => (
+                        <div key={programme._id?.toString()} className="p-4 hover:bg-gray-50 transition-colors">
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-3">
+                                <div className="text-2xl">
+                                  {programme.category === 'arts' ? '🎨' : '⚽'}
+                                </div>
+                                <div>
+                                  <h5 className="font-medium text-gray-900">
+                                    {programme.name}
+                                  </h5>
+                                  <div className="flex items-center space-x-2 mt-1">
+                                    <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
+                                      {programme.code}
+                                    </span>
+                                    <span className={`text-xs px-2 py-1 rounded ${
+                                      programme.category === 'arts' 
+                                        ? 'bg-purple-100 text-purple-700' 
+                                        : 'bg-green-100 text-green-700'
+                                    }`}>
+                                      {programme.category}
+                                    </span>
+                                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                                      {programme.section.charAt(0).toUpperCase() + programme.section.slice(1).replace('-', ' ')}
+                                    </span>
+                                    <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
+                                      {programme.positionType === 'individual' ? '👤 Individual' : '🤝 Group'}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center space-x-2">
+                              <button
+                                onClick={() => {
+                                  // Auto-select this programme in the form
+                                  setSelectedProgramme(programme);
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    programme: programme._id?.toString() || '',
+                                    section: programme.section as any,
+                                    positionType: programme.positionType as any
+                                  }));
+                                  // Scroll to form
+                                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                                }}
+                                className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                              >
+                                Add Result
+                              </button>
+                              <div className="text-sm text-gray-500">
+                                #{index + 1}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+
+                {/* Quick Actions */}
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-900 mb-3">Quick Actions</h4>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => {
+                        const artsPrograms = remainingProgrammes.filter(p => p.category === 'arts');
+                        if (artsPrograms.length > 0) {
+                          setSelectedProgramme(artsPrograms[0]);
+                          setFormData(prev => ({
+                            ...prev,
+                            programme: artsPrograms[0]._id?.toString() || '',
+                            section: artsPrograms[0].section as any,
+                            positionType: artsPrograms[0].positionType as any
+                          }));
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }
+                      }}
+                      disabled={remainingProgrammes.filter(p => p.category === 'arts').length === 0}
+                      className="px-3 py-2 text-sm bg-purple-100 text-purple-700 rounded hover:bg-purple-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      🎨 Next Arts Programme
+                    </button>
+                    <button
+                      onClick={() => {
+                        const sportsPrograms = remainingProgrammes.filter(p => p.category === 'sports');
+                        if (sportsPrograms.length > 0) {
+                          setSelectedProgramme(sportsPrograms[0]);
+                          setFormData(prev => ({
+                            ...prev,
+                            programme: sportsPrograms[0]._id?.toString() || '',
+                            section: sportsPrograms[0].section as any,
+                            positionType: sportsPrograms[0].positionType as any
+                          }));
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }
+                      }}
+                      disabled={remainingProgrammes.filter(p => p.category === 'sports').length === 0}
+                      className="px-3 py-2 text-sm bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      ⚽ Next Sports Programme
+                    </button>
+                    <button
+                      onClick={() => {
+                        const seniorPrograms = remainingProgrammes.filter(p => p.section === 'senior');
+                        if (seniorPrograms.length > 0) {
+                          setSelectedProgramme(seniorPrograms[0]);
+                          setFormData(prev => ({
+                            ...prev,
+                            programme: seniorPrograms[0]._id?.toString() || '',
+                            section: seniorPrograms[0].section as any,
+                            positionType: seniorPrograms[0].positionType as any
+                          }));
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }
+                      }}
+                      disabled={remainingProgrammes.filter(p => p.section === 'senior').length === 0}
+                      className="px-3 py-2 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      👥 Next Senior Programme
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+        </ShowcaseSection>
+
 
       </div>
     </>
