@@ -39,7 +39,7 @@ export default function ResultsDashboard() {
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 190000); // Refresh every 30 seconds
+    const interval = setInterval(fetchData, 19000000); // Refresh every 30 seconds
     return () => clearInterval(interval);
   }, []);
 
@@ -570,31 +570,28 @@ export default function ResultsDashboard() {
           <div className="flex flex-wrap gap-2 mb-6">
             <button
               onClick={() => setActiveCategory('all')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                activeCategory === 'all'
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeCategory === 'all'
                   ? 'bg-blue-600 text-white'
                   : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-              }`}
+                }`}
             >
               🏆 All Categories
             </button>
             <button
               onClick={() => setActiveCategory('arts')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                activeCategory === 'arts'
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeCategory === 'arts'
                   ? 'bg-purple-600 text-white'
                   : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
-              }`}
+                }`}
             >
               🎨 Arts Only
             </button>
             <button
               onClick={() => setActiveCategory('sports')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                activeCategory === 'sports'
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeCategory === 'sports'
                   ? 'bg-green-600 text-white'
                   : 'bg-green-100 text-green-700 hover:bg-green-200'
-              }`}
+                }`}
             >
               🏃 Sports Only
             </button>
@@ -663,9 +660,9 @@ export default function ResultsDashboard() {
                           {Math.round(team.points)}
                         </div>
                         <div className="text-sm text-gray-500">
-                          {activeCategory === 'arts' ? 'Arts Points' : 
-                           activeCategory === 'sports' ? 'Sports Points' : 
-                           'Total Points'}
+                          {activeCategory === 'arts' ? 'Arts Points' :
+                            activeCategory === 'sports' ? 'Sports Points' :
+                              'Total Points'}
                         </div>
                       </div>
                     </div>
@@ -684,17 +681,17 @@ export default function ResultsDashboard() {
               <div className="text-center py-12">
                 <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <span className="text-2xl">
-                    {activeCategory === 'arts' ? '🎨' : 
-                     activeCategory === 'sports' ? '🏃' : '🏆'}
+                    {activeCategory === 'arts' ? '🎨' :
+                      activeCategory === 'sports' ? '🏃' : '🏆'}
                   </span>
                 </div>
                 <h4 className="text-lg font-medium text-gray-900 mb-2">
-                  No {activeCategory === 'arts' ? 'Arts' : 
-                      activeCategory === 'sports' ? 'Sports' : ''} Rankings Available
+                  No {activeCategory === 'arts' ? 'Arts' :
+                    activeCategory === 'sports' ? 'Sports' : ''} Rankings Available
                 </h4>
                 <p className="text-gray-500 text-sm">
-                  {activeCategory === 'arts' ? 'Arts' : 
-                   activeCategory === 'sports' ? 'Sports' : 'Team'} rankings will appear here once results are published.
+                  {activeCategory === 'arts' ? 'Arts' :
+                    activeCategory === 'sports' ? 'Sports' : 'Team'} rankings will appear here once results are published.
                 </p>
               </div>
             );

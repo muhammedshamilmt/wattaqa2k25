@@ -8,8 +8,8 @@ export function Lineup() {
       borderColor: "border-green-200",
       textColor: "text-green-600",
       students: 45,
-      specialties: ["Visual Arts", "Basketball", "Poetry", "Drama"],
-      captain: "Sarah Ahmed",
+      specialties: ["Visual Arts", "Caligraphy", "Poetry", "cricket"],
+      captain: "Hafiz M.Musthafa",
       motto: "Excellence through perseverance"
     },
     {
@@ -20,8 +20,8 @@ export function Lineup() {
       borderColor: "border-blue-200",
       textColor: "text-blue-600",
       students: 45,
-      specialties: ["Music", "Football", "Dance", "Art Exhibition"],
-      captain: "Omar Hassan",
+      specialties: ["Burdha", "Football", "Qawali", "Art Exhibition"],
+      captain: "Hafiz M.Hafiz",
       motto: "Unity in diversity"
     },
     {
@@ -33,7 +33,7 @@ export function Lineup() {
       textColor: "text-red-600",
       students: 45,
       specialties: ["Athletics", "Innovation", "Performance", "Leadership"],
-      captain: "Layla Mahmoud",
+      captain: "Hafiz M.Mufeed",
       motto: "Rise through innovation"
     }
   ];
