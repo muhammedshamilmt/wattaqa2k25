@@ -95,7 +95,6 @@ export function Hero() {
           <a href="#schedule" className="hover:text-gray-900 transition-colors">Schedule</a>
           <Link href="/programmes" className="hover:text-gray-900 transition-colors">Programmes</Link>
           <Link href="/profiles" className="hover:text-gray-900 transition-colors">Profiles</Link>
-          <Link href="/leaderboard" className="hover:text-gray-900 transition-colors">Leaderboard</Link>
           <Link href="/results" className="hover:text-gray-900 transition-colors">Results</Link>
         </div>
 
@@ -225,14 +224,7 @@ export function Hero() {
               <span>View Results</span>
             </Link>
           </motion.div>
-          <motion.div
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <Link href="/leaderboard" className="text-gray-500 hover:text-gray-900 transition-colors text-lg">
-              View Leaderboard
-            </Link>
-          </motion.div>
+        
         </motion.div>
         {/* Three Team Containers - Fixed Positions, No Movement */}
         <motion.div

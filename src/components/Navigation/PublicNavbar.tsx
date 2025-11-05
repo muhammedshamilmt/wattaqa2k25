@@ -59,14 +59,6 @@ export function PublicNavbar() {
             Programmes
           </Link>
           <Link 
-            href="/leaderboard" 
-            className={`hover:text-gray-900 transition-colors ${
-              isActive('/leaderboard') ? 'text-gray-900' : ''
-            }`}
-          >
-            Leaderboard
-          </Link>
-          <Link 
             href="/results" 
             className={`hover:text-gray-900 transition-colors ${
               isActive('/results') ? 'text-gray-900' : ''
@@ -148,15 +140,6 @@ export function PublicNavbar() {
               }`}
             >
               Programmes
-            </Link>
-            <Link
-              href="/leaderboard"
-              onClick={() => setIsOpen(false)}
-              className={`block text-gray-500 hover:text-gray-900 transition-colors ${
-                isActive('/leaderboard') ? 'text-gray-900' : ''
-              }`}
-            >
-              Leaderboard
             </Link>
             <Link
               href="/results"
