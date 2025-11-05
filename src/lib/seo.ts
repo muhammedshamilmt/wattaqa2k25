@@ -48,10 +48,10 @@ export function generateMetadata({
   type?: 'website' | 'article';
   noIndex?: boolean;
 }): Metadata {
-  const fullTitle = title 
+  const fullTitle = title
     ? `${title} | ${baseSEO.siteName}`
     : baseSEO.defaultTitle;
-  
+
   const fullDescription = description || baseSEO.defaultDescription;
   const fullUrl = url ? `${baseSEO.siteUrl}${url}` : baseSEO.siteUrl;
   const fullKeywords = [...baseSEO.keywords, ...keywords];
@@ -64,7 +64,7 @@ export function generateMetadata({
     authors: [{ name: baseSEO.author }],
     creator: baseSEO.author,
     publisher: baseSEO.siteName,
-    
+
     // Open Graph
     openGraph: {
       title: fullTitle,
@@ -82,7 +82,7 @@ export function generateMetadata({
       locale: baseSEO.locale,
       type: type,
     },
-    
+
     // Twitter Card
     twitter: {
       card: 'summary_large_image',
@@ -92,20 +92,20 @@ export function generateMetadata({
       creator: '@wattaqa2k25',
       site: '@wattaqa2k25',
     },
-    
+
     // Additional meta tags
     robots: noIndex ? 'noindex, nofollow' : 'index, follow',
     alternates: {
       canonical: fullUrl,
     },
-    
+
     // Verification tags (add your actual verification codes)
     verification: {
       google: process.env.GOOGLE_SITE_VERIFICATION,
       yandex: process.env.YANDEX_VERIFICATION,
       yahoo: process.env.YAHOO_VERIFICATION,
     },
-    
+
     // App-specific
     applicationName: baseSEO.siteName,
     category: 'Education',
@@ -120,26 +120,26 @@ export const pageSEO = {
     description: 'Welcome to Wattaqa 2K25, the premier annual inter-school competition. Discover exciting programs in arts, sports, and academics. Register your team today!',
     keywords: ['home', 'welcome', 'registration', 'programs'],
   },
-  
+
   results: {
     title: 'Competition Results',
     description: 'View live results and rankings from Wattaqa 2K25 competitions. Track your team\'s performance across arts, sports, and academic programs.',
     keywords: ['results', 'rankings', 'scores', 'leaderboard', 'performance'],
   },
-  
+
   programmes: {
     title: 'Competition Programs',
     description: 'Explore all available competition programs in Wattaqa 2K25. From arts and sports to academic challenges - find the perfect programs for your team.',
-    keywords: ['programs', 'competitions', 'arts', 'sports', 'academic', 'events','toper'],
+    keywords: ['programs', 'competitions', 'arts', 'sports', 'academic', 'events', 'toper'],
   },
-  
+
   teamAdmin: {
     title: 'Team Administration',
     description: 'Manage your team\'s participation in Wattaqa 2K25. Register for programs, view results, and track your team\'s progress.',
-    keywords: ['team management', 'registration', 'administration', 'dashboard','sumud','inthifada','aqsa'],
+    keywords: ['team management', 'registration', 'administration', 'dashboard', 'sumud', 'inthifada', 'aqsa'],
     noIndex: true, // Private area
   },
-  
+
 };
 
 // Structured data generators
@@ -251,7 +251,7 @@ export const performanceConfig = {
     formats: ['image/webp', 'image/avif'],
     sizes: '(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw',
   },
-  
+
   // Font optimization
   fonts: {
     preload: [
@@ -259,7 +259,7 @@ export const performanceConfig = {
       '/fonts/satoshi-bold.woff2',
     ],
   },
-  
+
   // Critical CSS
   criticalCSS: {
     inline: true,
@@ -272,7 +272,7 @@ export const analyticsConfig = {
   googleAnalytics: process.env.NEXT_PUBLIC_GA_ID,
   googleTagManager: process.env.NEXT_PUBLIC_GTM_ID,
   facebookPixel: process.env.NEXT_PUBLIC_FB_PIXEL_ID,
-  
+
   // Events to track
   events: {
     pageView: 'page_view',

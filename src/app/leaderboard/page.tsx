@@ -92,18 +92,20 @@ export default function DynamicLeaderboardPage() {
     const fetchData = useCallback(async () => {
         try {
             setLoading(true);
-            const [teamsRes, candidatesRes, programmesRes, resultsRes] = await Promise.all([
+            const [teamsRes, candidatesRes, programmesRes, resultsRes, grandMarksRes] = await Promise.all([
                 fetch('/api/teams'),
                 fetch('/api/candidates'),
                 fetch('/api/programmes'),
-                fetch('/api/results?teamView=true')
+                fetch('/api/results?teamView=true'),
+                fetch('/api/grand-marks?category=all')
             ]);
 
-            const [teamsData, candidatesData, programmesData, resultsData] = await Promise.all([
+            const [teamsData, candidatesData, programmesData, resultsData, grandMarksData] = await Promise.all([
                 teamsRes.json(),
                 candidatesRes.json(),
                 programmesRes.json(),
-                resultsRes.json()
+                resultsRes.json(),
+                grandMarksRes.json()
             ]);
 
             setTeams(teamsData || []);

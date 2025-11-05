@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Programme, ProgrammeParticipant, Team, Candidate, Result } from '@/types';
+import { BackButton } from '@/components/ui/BackButton';
 
 export default function ProgrammesPage() {
   const [programmes, setProgrammes] = useState<Programme[]>([]);
@@ -157,6 +158,13 @@ export default function ProgrammesPage() {
       {/* Hero Header Section */}
       <div className="bg-gradient-to-r from-blue-600 to-indigo-600 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <div className="flex justify-between items-start mb-8">
+            <BackButton 
+              href="/" 
+              label="Back to Home" 
+              className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"
+            />
+          </div>
           <div className="text-center">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-white bg-opacity-20 rounded-full mb-6">
               <span className="text-white text-2xl">🎭</span>

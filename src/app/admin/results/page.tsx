@@ -40,9 +40,9 @@ export default function ResultsPage() {
     secondPlace: [] as { chestNumber: string; grade?: 'A' | 'B' | 'C' }[],
     thirdPlace: [] as { chestNumber: string; grade?: 'A' | 'B' | 'C' }[],
     // For general programmes (team-based) with grades
-    firstPlaceTeams: [] as { teamCode: string; grade?: 'A' | 'B' | 'C' }[],
-    secondPlaceTeams: [] as { teamCode: string; grade?: 'A' | 'B' | 'C' }[],
-    thirdPlaceTeams: [] as { teamCode: string; grade?: 'A' | 'B' | 'C' }[],
+    firstPlaceTeams: [] as { teamCode: string; instanceId?: number; grade?: 'A' | 'B' | 'C' }[],
+    secondPlaceTeams: [] as { teamCode: string; instanceId?: number; grade?: 'A' | 'B' | 'C' }[],
+    thirdPlaceTeams: [] as { teamCode: string; instanceId?: number; grade?: 'A' | 'B' | 'C' }[],
     // Participation grades for all participants/teams
     participationGrades: [] as { chestNumber: string; grade: 'A' | 'B' | 'C'; points: number }[],
     participationTeamGrades: [] as { teamCode: string; grade: 'A' | 'B' | 'C'; points: number }[],
@@ -217,15 +217,33 @@ export default function ResultsPage() {
     setFormData(prev => ({ ...prev, section: section as any }));
 
     if (selectedProgramme && section) {
-      // Determine display mode based on programme position type
-      const isGroupProgramme = selectedProgramme.positionType === 'group' || section === 'general';
-      
-      if (isGroupProgramme) {
-        // For group programmes or general section, show teams (marks go to teams)
-        const programmeParticipants = participants.filter(p =>
-          p.programmeId === selectedProgramme._id?.toString()
-        );
+      const programmeParticipants = participants.filter(p =>
+        p.programmeId === selectedProgramme._id?.toString()
+      );
 
+      if (selectedProgramme.positionType === 'group') {
+        // For GROUP programs in ALL sections (junior, senior, sub-junior), show team instances (marks go to teams)
+        const registeredTeams = programmeParticipants.flatMap(pp => {
+          const team = teams.find(t => t.code === pp.teamCode);
+          const baseTeamEntry = {
+            teamCode: pp.teamCode,
+            team,
+            programmeName: pp.programmeName,
+            programmeCode: pp.programmeCode,
+            participantCount: pp.participants.length
+          };
+          
+          // Always create two instances for GROUP programs in all sections
+          return [
+            { ...baseTeamEntry, instanceId: 1, instanceLabel: `${team?.name || pp.teamCode} - Entry 1` },
+            { ...baseTeamEntry, instanceId: 2, instanceLabel: `${team?.name || pp.teamCode} - Entry 2` }
+          ];
+        });
+
+        setFilteredTeams(registeredTeams);
+        setFilteredParticipants([]);
+      } else if (selectedProgramme.positionType === 'general') {
+        // For GENERAL programs, show single team entries (marks go to teams)
         const registeredTeams = programmeParticipants.map(pp => {
           const team = teams.find(t => t.code === pp.teamCode);
           return {
@@ -233,18 +251,16 @@ export default function ResultsPage() {
             team,
             programmeName: pp.programmeName,
             programmeCode: pp.programmeCode,
-            participantCount: pp.participants.length
+            participantCount: pp.participants.length,
+            instanceId: 1,
+            instanceLabel: team?.name || pp.teamCode
           };
         });
 
         setFilteredTeams(registeredTeams);
         setFilteredParticipants([]);
       } else {
-        // For individual programmes, show individual participants (marks go to individuals)
-        const programmeParticipants = participants.filter(p =>
-          p.programmeId === selectedProgramme._id?.toString()
-        );
-
+        // For INDIVIDUAL programs (including general individual), show individual participants
         const detailedParticipants = programmeParticipants.flatMap(pp =>
           pp.participants.map(chestNumber => {
             const candidate = candidates.find(c => c.chestNumber === chestNumber);
@@ -256,10 +272,10 @@ export default function ResultsPage() {
               programmeCode: pp.programmeCode
             };
           })
-        ).filter(p => p.candidate && p.candidate.section === section);
+        ).filter(p => p.candidate && (p.candidate.section === section || section === 'general'));
 
         setFilteredParticipants(detailedParticipants);
-        setFilteredTeams([]);
+        setFilteredTeams([]); // No team instances for individual programs
       }
 
       setShowParticipants(true);
@@ -288,12 +304,12 @@ export default function ResultsPage() {
   };
 
   // Check if team is assigned (position or grade)
-  const isTeamAssigned = (teamCode: string) => {
+  const isTeamAssigned = (teamCode: string, instanceId?: number) => {
     const hasPosition = [
-      ...formData.firstPlaceTeams.map(p => p.teamCode),
-      ...formData.secondPlaceTeams.map(p => p.teamCode),
-      ...formData.thirdPlaceTeams.map(p => p.teamCode)
-    ].includes(teamCode);
+      ...formData.firstPlaceTeams.filter(p => p.teamCode === teamCode && (instanceId ? p.instanceId === instanceId : true)),
+      ...formData.secondPlaceTeams.filter(p => p.teamCode === teamCode && (instanceId ? p.instanceId === instanceId : true)),
+      ...formData.thirdPlaceTeams.filter(p => p.teamCode === teamCode && (instanceId ? p.instanceId === instanceId : true))
+    ].length > 0;
 
     const hasGrade = formData.participationTeamGrades.some(pg => pg.teamCode === teamCode);
 
@@ -343,34 +359,23 @@ export default function ResultsPage() {
   };
 
   // Add/remove team from position
-  const toggleTeamPosition = (position: 'firstPlaceTeams' | 'secondPlaceTeams' | 'thirdPlaceTeams', teamCode: string) => {
+  const toggleTeamPosition = (position: 'firstPlaceTeams' | 'secondPlaceTeams' | 'thirdPlaceTeams', teamCode: string, instanceId?: number) => {
     setFormData(prev => {
       const currentPosition = prev[position];
-      const existingIndex = currentPosition.findIndex(p => p.teamCode === teamCode);
+      const existingIndex = currentPosition.findIndex(p => p.teamCode === teamCode && p.instanceId === instanceId);
 
       if (existingIndex >= 0) {
         // Remove from position
         return {
           ...prev,
-          [position]: currentPosition.filter(p => p.teamCode !== teamCode)
+          [position]: currentPosition.filter(p => !(p.teamCode === teamCode && p.instanceId === instanceId))
         };
       } else {
-        // Check if team is already in another position
-        const isInFirstPlace = prev.firstPlaceTeams.some(p => p.teamCode === teamCode);
-        const isInSecondPlace = prev.secondPlaceTeams.some(p => p.teamCode === teamCode);
-        const isInThirdPlace = prev.thirdPlaceTeams.some(p => p.teamCode === teamCode);
-
-        if (isInFirstPlace || isInSecondPlace || isInThirdPlace) {
-          alert(`Team ${teamCode} is already assigned to another position. Please remove them from the other position first.`);
-          return prev; // Don't make any changes
-        }
-
-        // Add to position (remove from other positions first, then add to new position)
+        // For instances, allow same team in multiple positions
+        // Add to position
         return {
           ...prev,
-          firstPlaceTeams: position === 'firstPlaceTeams' ? [...currentPosition, { teamCode }] : prev.firstPlaceTeams.filter(p => p.teamCode !== teamCode),
-          secondPlaceTeams: position === 'secondPlaceTeams' ? [...currentPosition, { teamCode }] : prev.secondPlaceTeams.filter(p => p.teamCode !== teamCode),
-          thirdPlaceTeams: position === 'thirdPlaceTeams' ? [...currentPosition, { teamCode }] : prev.thirdPlaceTeams.filter(p => p.teamCode !== teamCode)
+          [position]: [...currentPosition, { teamCode, instanceId }]
         };
       }
     });
@@ -404,10 +409,10 @@ export default function ResultsPage() {
   };
 
   // Update grade for team
-  const updateTeamGrade = (position: 'firstPlaceTeams' | 'secondPlaceTeams' | 'thirdPlaceTeams', teamCode: string, grade: string) => {
+  const updateTeamGrade = (position: 'firstPlaceTeams' | 'secondPlaceTeams' | 'thirdPlaceTeams', teamCode: string, instanceId: number | undefined, grade: string) => {
     setFormData(prev => {
       const currentPosition = [...prev[position]];
-      const existingIndex = currentPosition.findIndex(p => p.teamCode === teamCode);
+      const existingIndex = currentPosition.findIndex(p => p.teamCode === teamCode && p.instanceId === instanceId);
 
       if (existingIndex >= 0) {
         currentPosition[existingIndex] = {
@@ -426,9 +431,9 @@ export default function ResultsPage() {
     return participant?.grade || '';
   };
 
-  // Get grade for team
-  const getTeamGrade = (position: 'firstPlaceTeams' | 'secondPlaceTeams' | 'thirdPlaceTeams', teamCode: string) => {
-    const team = formData[position].find(p => p.teamCode === teamCode);
+  // Get grade for team instance
+  const getTeamGrade = (position: 'firstPlaceTeams' | 'secondPlaceTeams' | 'thirdPlaceTeams', teamCode: string, instanceId?: number) => {
+    const team = formData[position].find(p => p.teamCode === teamCode && p.instanceId === instanceId);
     return team?.grade || '';
   };
 
@@ -1015,20 +1020,20 @@ export default function ResultsPage() {
               </div>
             )}
 
-            {/* Registered Teams Display (for group programmes or general section) */}
-            {showParticipants && (selectedProgramme?.positionType === 'group' || selectedSection === 'general') && filteredTeams.length > 0 && (
+            {/* Registered Teams Display (for group programmes and general programmes) */}
+            {showParticipants && (selectedProgramme?.positionType === 'group' || selectedProgramme?.positionType === 'general') && filteredTeams.length > 0 && (
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                   <span className="mr-2">🏆</span>
-                  Registered Teams - {selectedProgramme?.positionType === 'group' ? 'Group Programme' : 'General Section'} ({filteredTeams.length})
+                  Team Entries - {selectedProgramme?.positionType === 'group' ? 'Group Programme' : 'General Programme'} ({filteredTeams.length})
                 </h3>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                   {filteredTeams.map((teamEntry, index) => {
-                    const isAssigned = isTeamAssigned(teamEntry.teamCode);
-                    const isFirst = formData.firstPlaceTeams.some(p => p.teamCode === teamEntry.teamCode);
-                    const isSecond = formData.secondPlaceTeams.some(p => p.teamCode === teamEntry.teamCode);
-                    const isThird = formData.thirdPlaceTeams.some(p => p.teamCode === teamEntry.teamCode);
+                    const isAssigned = isTeamAssigned(teamEntry.teamCode, teamEntry.instanceId);
+                    const isFirst = formData.firstPlaceTeams.some(p => p.teamCode === teamEntry.teamCode && p.instanceId === teamEntry.instanceId);
+                    const isSecond = formData.secondPlaceTeams.some(p => p.teamCode === teamEntry.teamCode && p.instanceId === teamEntry.instanceId);
+                    const isThird = formData.thirdPlaceTeams.some(p => p.teamCode === teamEntry.teamCode && p.instanceId === teamEntry.instanceId);
 
 
                     return (
@@ -1048,7 +1053,7 @@ export default function ResultsPage() {
                               {teamEntry.teamCode}
                             </div>
                             <div className="font-bold text-gray-900">
-                              {teamEntry.team?.name || teamEntry.teamCode}
+                              {teamEntry.instanceLabel}
                             </div>
                             <div className="text-sm text-gray-700">
                               {teamEntry.participantCount} participants
@@ -1065,7 +1070,7 @@ export default function ResultsPage() {
                         <div className="flex flex-wrap gap-1 mb-2">
                           <button
                             type="button"
-                            onClick={() => toggleTeamPosition('firstPlaceTeams', teamEntry.teamCode)}
+                            onClick={() => toggleTeamPosition('firstPlaceTeams', teamEntry.teamCode, teamEntry.instanceId)}
                             className={`px-2 py-1 text-xs rounded ${isFirst ? 'bg-yellow-500 text-white' : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
                               }`}
                           >
@@ -1073,7 +1078,7 @@ export default function ResultsPage() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => toggleTeamPosition('secondPlaceTeams', teamEntry.teamCode)}
+                            onClick={() => toggleTeamPosition('secondPlaceTeams', teamEntry.teamCode, teamEntry.instanceId)}
                             className={`px-2 py-1 text-xs rounded ${isSecond ? 'bg-gray-500 text-white' : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
                               }`}
                           >
@@ -1081,7 +1086,7 @@ export default function ResultsPage() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => toggleTeamPosition('thirdPlaceTeams', teamEntry.teamCode)}
+                            onClick={() => toggleTeamPosition('thirdPlaceTeams', teamEntry.teamCode, teamEntry.instanceId)}
                             className={`px-2 py-1 text-xs rounded ${isThird ? 'bg-orange-500 text-white' : 'bg-orange-100 text-orange-800 hover:bg-orange-200'
                               }`}
                           >
@@ -1097,18 +1102,18 @@ export default function ResultsPage() {
                             </label>
                             <select
                               value={
-                                isFirst ? getTeamGrade('firstPlaceTeams', teamEntry.teamCode) :
-                                  isSecond ? getTeamGrade('secondPlaceTeams', teamEntry.teamCode) :
-                                    isThird ? getTeamGrade('thirdPlaceTeams', teamEntry.teamCode) :
+                                isFirst ? getTeamGrade('firstPlaceTeams', teamEntry.teamCode, teamEntry.instanceId) :
+                                  isSecond ? getTeamGrade('secondPlaceTeams', teamEntry.teamCode, teamEntry.instanceId) :
+                                    isThird ? getTeamGrade('thirdPlaceTeams', teamEntry.teamCode, teamEntry.instanceId) :
                                       getParticipationTeamGrade(teamEntry.teamCode)
                               }
                               onChange={(e) => {
                                 if (isFirst) {
-                                  updateTeamGrade('firstPlaceTeams', teamEntry.teamCode, e.target.value);
+                                  updateTeamGrade('firstPlaceTeams', teamEntry.teamCode, teamEntry.instanceId, e.target.value);
                                 } else if (isSecond) {
-                                  updateTeamGrade('secondPlaceTeams', teamEntry.teamCode, e.target.value);
+                                  updateTeamGrade('secondPlaceTeams', teamEntry.teamCode, teamEntry.instanceId, e.target.value);
                                 } else if (isThird) {
-                                  updateTeamGrade('thirdPlaceTeams', teamEntry.teamCode, e.target.value);
+                                  updateTeamGrade('thirdPlaceTeams', teamEntry.teamCode, teamEntry.instanceId, e.target.value);
                                 } else {
                                   updateParticipationTeamGrade(teamEntry.teamCode, e.target.value);
                                 }
@@ -1129,13 +1134,13 @@ export default function ResultsPage() {
                           let positionPoints = 0;
 
                           if (isFirst) {
-                            currentGrade = selectedProgramme?.category === 'sports' ? '' : getTeamGrade('firstPlaceTeams', teamEntry.teamCode);
+                            currentGrade = selectedProgramme?.category === 'sports' ? '' : getTeamGrade('firstPlaceTeams', teamEntry.teamCode, teamEntry.instanceId);
                             positionPoints = formData.firstPoints;
                           } else if (isSecond) {
-                            currentGrade = selectedProgramme?.category === 'sports' ? '' : getTeamGrade('secondPlaceTeams', teamEntry.teamCode);
+                            currentGrade = selectedProgramme?.category === 'sports' ? '' : getTeamGrade('secondPlaceTeams', teamEntry.teamCode, teamEntry.instanceId);
                             positionPoints = formData.secondPoints;
                           } else if (isThird) {
-                            currentGrade = selectedProgramme?.category === 'sports' ? '' : getTeamGrade('thirdPlaceTeams', teamEntry.teamCode);
+                            currentGrade = selectedProgramme?.category === 'sports' ? '' : getTeamGrade('thirdPlaceTeams', teamEntry.teamCode, teamEntry.instanceId);
                             positionPoints = formData.thirdPoints;
                           } else {
                             currentGrade = selectedProgramme?.category === 'sports' ? '' : getParticipationTeamGrade(teamEntry.teamCode);
@@ -1175,13 +1180,23 @@ export default function ResultsPage() {
               </div>
             )}
 
-            {/* Registered Participants Display (for individual programmes) */}
+            {/* Registered Participants Display (for individual programmes including general individual) */}
             {showParticipants && selectedProgramme?.positionType === 'individual' && filteredParticipants.length > 0 && (
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                   <span className="mr-2">👥</span>
-                  Registered Participants - Individual Programme ({filteredParticipants.length})
+                  Registered Participants - {selectedSection === 'general' ? 'General Individual' : 'Individual'} Programme ({filteredParticipants.length})
                 </h3>
+
+                {/* Special note for general individual programs */}
+                {selectedSection === 'general' && (
+                  <div className="mb-4 p-3 bg-blue-100 border border-blue-300 rounded-lg">
+                    <p className="text-sm text-blue-800">
+                      <strong>💡 General Individual Programme:</strong> While you assign positions to individual participants, 
+                      the marks will be awarded to their respective teams and calculated at the team level.
+                    </p>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                   {filteredParticipants.map((participant, index) => {
@@ -1332,12 +1347,12 @@ export default function ResultsPage() {
               </div>
             )}
 
-            {showParticipants && (selectedProgramme?.positionType === 'group' || selectedSection === 'general') && filteredTeams.length === 0 && (
+            {showParticipants && (selectedProgramme?.positionType === 'group' || selectedProgramme?.positionType === 'general') && filteredTeams.length === 0 && (
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
                 <div className="text-yellow-600 text-4xl mb-2">⚠️</div>
                 <h3 className="text-lg font-semibold text-yellow-800 mb-2">No Teams Found</h3>
                 <p className="text-yellow-700">
-                  No teams have registered for this {selectedProgramme?.positionType === 'group' ? 'group programme' : 'programme in the general section'}.
+                  No teams have registered for this {selectedProgramme?.positionType === 'group' ? 'group programme' : 'general programme'}.
                 </p>
               </div>
             )}
@@ -1347,7 +1362,7 @@ export default function ResultsPage() {
                 <div className="text-yellow-600 text-4xl mb-2">⚠️</div>
                 <h3 className="text-lg font-semibold text-yellow-800 mb-2">No Participants Found</h3>
                 <p className="text-yellow-700">
-                  No participants have registered for this individual programme in the selected section.
+                  No participants have registered for this {selectedSection === 'general' ? 'general individual' : 'individual'} programme in the selected section.
                 </p>
               </div>
             )}
