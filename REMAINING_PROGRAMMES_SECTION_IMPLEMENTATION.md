@@ -1,194 +1,221 @@
-# Remaining Programmes Section Implementation
+# 📅 Remaining Programmes Section Implementation
 
-## 🎯 Overview
-Added a comprehensive "Remaining Programmes" section to the admin results page that displays programmes without results, helping administrators track completion progress and efficiently manage their workflow.
+## Overview
+Added a comprehensive "Remaining Programmes" section to the public results page (`http://localhost:3000/results`) that displays all programmes that haven't been completed yet, organized by category and section for easy navigation.
 
-## 📍 Location
-- **URL**: `https://wattaqa2k25.vercel.app/admin/results`
-- **Position**: Below the "Results List" section
-- **Component**: New ShowcaseSection titled "Remaining Programmes"
+## ✅ Features Implemented
 
-## ✨ Key Features
+### 1. 📊 Summary Statistics
+- **Total Remaining Count**: Shows total number of programmes pending results
+- **Category Breakdown**: Separate counts for Arts and Sports programmes
+- **Color-coded Cards**: Visual indicators with category-specific themes
+- **Real-time Updates**: Automatically updates as results are published
 
-### 📊 Progress Tracking
-- **Completion Percentage**: Visual progress bar showing overall completion
-- **Remaining Count**: Clear display of programmes still needing results
-- **Real-time Updates**: Automatically updates as results are added
-- **Visual Progress**: Orange-themed progress indicators
+### 2. 📋 Programme Organization
+- **Category Grouping**: Programmes organized by Arts and Sports
+- **Section Sub-grouping**: Further organized by Senior, Junior, and Sub-Junior
+- **Detailed Programme Cards**: Each programme shows comprehensive information
+- **Position Type Indicators**: Individual, Group, or General programme types
+- **Subcategory Badges**: Stage and Non-stage for Arts programmes
 
-### 📈 Category Breakdown
-- **Arts Programmes**: Count of remaining arts programmes
-- **Sports Programmes**: Count of remaining sports programmes  
-- **Section Analysis**: Breakdown by Senior/Junior/Sub-Junior/General
-- **Color-coded Cards**: Purple for Arts, Green for Sports, Blue for Sections
+### 3. 🎨 Visual Design
+- **Category Color Themes**: 
+  - Arts: Purple theme (`bg-purple-50`, `text-purple-700`)
+  - Sports: Green theme (`bg-green-50`, `text-green-700`)
+  - Other: Gray theme (`bg-gray-50`, `text-gray-700`)
+- **Section Icons**: 
+  - Senior: 🎓 (graduation cap)
+  - Junior: 🎒 (school bag)
+  - Sub-Junior: 🧸 (teddy bear)
+  - General: 👥 (people)
+- **Interactive Elements**: Hover effects and smooth animations
+- **Responsive Grid**: Adapts to different screen sizes
 
-### 📋 Programme List
-- **Sortable Display**: Programmes sorted by category, section, then name
-- **Detailed Information**: Programme name, code, category, section, type
-- **Visual Badges**: Color-coded badges for easy identification
-- **Hover Effects**: Interactive hover states for better UX
-
-### 🎯 Interactive Actions
-- **Add Result Button**: Direct link to add results for each programme
-- **Auto-form Population**: Automatically selects programme in form
-- **Smooth Scrolling**: Scrolls to form for immediate action
-- **Quick Actions**: Category-specific quick selection buttons
-
-## 🎨 Design Elements
-
-### Color Scheme
-- **Primary**: Orange theme for "pending" status
-- **Arts**: Purple accents (#8B5CF6)
-- **Sports**: Green accents (#10B981)
-- **Sections**: Blue accents (#3B82F6)
-- **Progress**: Orange gradient (#F97316)
-
-### Layout Components
-- **Summary Card**: Progress overview with statistics
-- **Category Grid**: 3-column responsive grid for breakdowns
-- **Programme List**: Scrollable list with detailed information
-- **Action Bar**: Quick action buttons for efficient workflow
-
-### Visual Hierarchy
-1. **Summary Statistics**: Prominent progress display
-2. **Category Breakdown**: Visual distribution of remaining work
-3. **Detailed List**: Comprehensive programme information
-4. **Quick Actions**: Easy access to common tasks
+### 4. 📈 Progress Tracking
+- **Festival Progress Bar**: Visual indicator of overall completion
+- **Completion Percentage**: Shows exact percentage of completed programmes
+- **Progress Labels**: Clear labeling of current progress status
+- **Gradient Progress Bar**: Attractive blue-to-green gradient
 
 ## 🔧 Technical Implementation
 
-### Data Processing
+### Data Processing Logic
 ```javascript
-// Get programmes without results
-const programmeIds = results.map(result => result.programmeId);
+// Calculate remaining programmes
+const publishedResultIds = results
+  .filter(result => result.status === 'published')
+  .map(result => result.programmeId);
+
 const remainingProgrammes = programmes.filter(programme => 
-  !programmeIds.includes(programme._id?.toString())
+  !publishedResultIds.includes(programme._id?.toString())
 );
+
+// Group by category and section
+const groupedProgrammes = remainingProgrammes.reduce((acc, programme) => {
+  const category = programme.category || 'other';
+  const section = programme.section || 'general';
+  
+  if (!acc[category]) acc[category] = {};
+  if (!acc[category][section]) acc[category][section] = [];
+  
+  acc[category][section].push(programme);
+  return acc;
+}, {});
 ```
 
-### Progress Calculation
-```javascript
-// Calculate completion percentage
-const completionRate = Math.round((results.length / programmes.length) * 100);
-```
+### Component Structure
+- **Main Container**: White background with shadow and border
+- **Header Section**: Title, description, and status indicator
+- **Summary Cards**: Three-column grid showing statistics
+- **Category Sections**: Expandable sections for each category
+- **Programme Cards**: Individual cards for each programme
+- **Progress Indicator**: Bottom section with progress bar
 
-### Category Filtering
-```javascript
-// Filter by category and section
-const artsRemaining = remainingProgrammes.filter(p => p.category === 'arts').length;
-const sportsRemaining = remainingProgrammes.filter(p => p.category === 'sports').length;
-const seniorRemaining = remainingProgrammes.filter(p => p.section === 'senior').length;
-```
+## 📊 Data Sources
 
-### Form Integration
-```javascript
-// Auto-populate form when programme is selected
-const selectProgramme = (programme) => {
-  setSelectedProgramme(programme);
-  setFormData(prev => ({
-    ...prev,
-    programme: programme._id?.toString() || '',
-    section: programme.section,
-    positionType: programme.positionType
-  }));
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-};
-```
+### Programme Information
+- **API Endpoint**: `/api/programmes`
+- **Fields Used**:
+  - `_id`: Unique programme identifier
+  - `name`: Programme name
+  - `code`: Programme code
+  - `category`: Arts or Sports
+  - `section`: Senior, Junior, or Sub-Junior
+  - `positionType`: Individual, Group, or General
+  - `subcategory`: Stage or Non-stage (for Arts)
 
-## 📱 Responsive Design
-
-### Desktop (1024px+)
-- 3-column category grid
-- Full programme details visible
-- Side-by-side action buttons
-
-### Tablet (768px-1023px)
-- 2-column category grid
-- Condensed programme information
-- Stacked action buttons
-
-### Mobile (320px-767px)
-- Single column layout
-- Compact programme cards
-- Full-width action buttons
+### Results Information
+- **API Endpoint**: `/api/results`
+- **Filter**: Only published results (`status === 'published'`)
+- **Purpose**: Determine which programmes are completed
 
 ## 🎯 User Experience Benefits
 
-### For Administrators
-- **Clear Overview**: Immediate understanding of remaining work
-- **Efficient Workflow**: Quick programme selection and form population
-- **Progress Tracking**: Visual feedback on completion status
-- **Easy Navigation**: Smooth scrolling and intuitive actions
+### For Public Users
+- **Clear Visibility**: Easy to see what competitions are still pending
+- **Organized View**: Logical grouping by category and section
+- **Progress Tracking**: Understand overall festival completion status
+- **Anticipation**: Know what results to expect next
 
-### For Competition Management
-- **Completion Monitoring**: Track overall progress in real-time
-- **Category Balance**: Ensure even progress across Arts and Sports
-- **Section Management**: Monitor progress across age groups
-- **Quality Control**: Systematic approach to result entry
+### For Organizers
+- **Quick Overview**: Immediate view of remaining work
+- **Category Progress**: Track completion by Arts and Sports
+- **Section Management**: Organize work by participant sections
+- **Visual Indicators**: Easy-to-understand progress metrics
 
-## 🚀 Workflow Integration
+### For Participants
+- **Upcoming Competitions**: See which programmes they're still waiting for
+- **Schedule Awareness**: Understand what's left in the festival
+- **Progress Context**: See their competitions in the bigger picture
+- **Result Anticipation**: Know when to expect their results
 
-### Result Entry Process
-1. **View Progress**: Check completion status in summary
-2. **Select Category**: Use quick actions or browse list
-3. **Choose Programme**: Click "Add Result" for specific programme
-4. **Auto-populate Form**: Form automatically filled with programme details
-5. **Enter Results**: Complete result entry in pre-filled form
-6. **Track Progress**: See updated progress after submission
+## 📱 Responsive Design
 
-### Quick Actions
-- **Next Arts Programme**: Automatically selects next arts programme
-- **Next Sports Programme**: Automatically selects next sports programme  
-- **Next Senior Programme**: Automatically selects next senior programme
-- **Custom Selection**: Browse and select any specific programme
+### Desktop View
+- **Three-column grid** for summary statistics
+- **Multi-column layout** for programme cards
+- **Full-width progress bar** with detailed labels
+- **Expanded category sections** with clear organization
 
-## 📊 Statistics Display
+### Mobile View
+- **Single-column layout** for summary cards
+- **Stacked programme cards** for easy scrolling
+- **Collapsible sections** to save space
+- **Touch-friendly cards** with adequate spacing
 
-### Summary Information
-- Total programmes remaining
-- Completion percentage
-- Progress bar visualization
-- Category distribution
+## 🔄 Dynamic Features
 
-### Detailed Breakdown
-- Arts vs Sports remaining
-- Section-wise distribution
-- Programme type analysis
-- Priority indicators
+### Real-time Updates
+- **Automatic Refresh**: Updates when new results are published
+- **Live Statistics**: Recalculates counts and percentages
+- **Progress Animation**: Smooth transitions for progress changes
+- **Content Updates**: Removes completed programmes automatically
 
-## 🎉 Impact and Benefits
+### Interactive Elements
+- **Hover Effects**: Programme cards respond to mouse interaction
+- **Loading Animations**: Smooth fade-in effects for content
+- **Color Transitions**: Smooth color changes on interaction
+- **Progress Animation**: Animated progress bar updates
 
-### Efficiency Improvements
-- **Faster Programme Selection**: Direct access to remaining programmes
-- **Reduced Errors**: Auto-populated forms prevent mistakes
-- **Better Organization**: Systematic approach to result entry
-- **Progress Visibility**: Clear understanding of completion status
+## 🎨 Visual Hierarchy
 
-### Administrative Benefits
-- **Workflow Optimization**: Streamlined result entry process
-- **Progress Monitoring**: Real-time completion tracking
-- **Quality Assurance**: Systematic coverage of all programmes
-- **Time Management**: Efficient allocation of resources
+### Color Coding System
+```css
+/* Arts Category */
+.arts-theme {
+  background: bg-purple-50;
+  text: text-purple-700;
+  border: border-purple-200;
+}
 
-### User Experience
-- **Intuitive Interface**: Clear visual hierarchy and navigation
-- **Responsive Design**: Works perfectly on all devices
-- **Interactive Elements**: Engaging hover effects and transitions
-- **Accessibility**: Keyboard navigation and screen reader support
+/* Sports Category */
+.sports-theme {
+  background: bg-green-50;
+  text: text-green-700;
+  border: border-green-200;
+}
 
-## 📝 Future Enhancements
+/* Position Types */
+.individual { background: bg-blue-100; color: text-blue-700; }
+.group { background: bg-indigo-100; color: text-indigo-700; }
+.general { background: bg-gray-100; color: text-gray-700; }
+```
 
-### Potential Additions
-- **Priority Sorting**: Mark urgent programmes for priority handling
-- **Bulk Actions**: Select multiple programmes for batch processing
-- **Export Options**: Export remaining programmes list
-- **Notifications**: Alerts for approaching deadlines
-- **Assignment**: Assign programmes to specific administrators
+### Typography Hierarchy
+- **Section Title**: `text-xl font-semibold` (20px, 600 weight)
+- **Category Headers**: `font-semibold` with category colors
+- **Programme Names**: `font-medium text-sm` (14px, 500 weight)
+- **Metadata**: `text-xs text-gray-500` (12px, gray)
 
-### Integration Opportunities
-- **Calendar Integration**: Schedule result entry sessions
-- **Team Collaboration**: Multi-admin workflow management
-- **Reporting**: Detailed progress reports and analytics
-- **Mobile App**: Dedicated mobile interface for on-the-go management
+## 📈 Performance Optimizations
 
-The Remaining Programmes section provides administrators with a comprehensive tool for tracking and managing programme completion, significantly improving the efficiency and organization of the result entry process.
+### Efficient Data Processing
+- **Single API Calls**: Fetch all data in one request cycle
+- **Client-side Filtering**: Process data locally for better performance
+- **Memoized Calculations**: Avoid recalculating on every render
+- **Lazy Loading**: Load programme details only when needed
+
+### Rendering Optimizations
+- **Conditional Rendering**: Only render sections with content
+- **Key Props**: Proper React keys for efficient updates
+- **Animation Delays**: Staggered animations for smooth loading
+- **Responsive Images**: Optimized icons and graphics
+
+## 🔍 Edge Cases Handled
+
+### Empty States
+- **All Programmes Completed**: Celebration message with confetti emoji
+- **No Programmes**: Graceful handling of empty programme list
+- **No Results**: Proper handling when no results are available
+- **Loading States**: Skeleton loading during data fetch
+
+### Data Validation
+- **Missing Fields**: Fallback values for undefined programme properties
+- **Invalid IDs**: Safe comparison of programme and result IDs
+- **Category Validation**: Default to 'other' for unknown categories
+- **Section Validation**: Default to 'general' for unknown sections
+
+## ✅ Success Metrics
+
+The implementation provides:
+- ✅ Complete visibility of remaining programmes
+- ✅ Organized, user-friendly interface
+- ✅ Real-time progress tracking
+- ✅ Responsive design for all devices
+- ✅ Professional visual design
+- ✅ Efficient data processing
+- ✅ Smooth user interactions
+
+## 🔄 Future Enhancements
+
+Potential improvements:
+- **Search and Filter**: Add search functionality for programmes
+- **Sorting Options**: Allow sorting by name, code, or section
+- **Detailed View**: Modal with complete programme information
+- **Notifications**: Alert users when new results are published
+- **Export Options**: Download remaining programmes list
+- **Calendar Integration**: Show programme schedules and dates
+
+---
+
+**The Remaining Programmes section provides public users with comprehensive visibility into pending competitions, organized in an intuitive and visually appealing interface that updates in real-time as the festival progresses.**

@@ -39,7 +39,7 @@ const googleProvider = new GoogleAuthProvider();
 googleProvider.addScope('email');
 googleProvider.addScope('profile');
 
-// Sign in with Google (with popup fallback to redirect)
+// Sign in with Google (with automatic fallback to redirect)
 export const signInWithGoogle = async (useRedirect = false) => {
   try {
     if (!auth) {
@@ -50,6 +50,7 @@ export const signInWithGoogle = async (useRedirect = false) => {
     
     if (useRedirect) {
       // Use redirect method (more reliable, avoids popup blockers)
+      console.log('Using redirect method to avoid popup blockers...');
       await signInWithRedirect(auth, googleProvider);
       // Note: This will redirect the page, so we won't reach the return statement
       return null;
@@ -62,15 +63,25 @@ export const signInWithGoogle = async (useRedirect = false) => {
   } catch (error: any) {
     console.error('Error signing in with Google:', error);
     
-    // Provide more specific error messages and suggest redirect method for popup issues
+    // Auto-retry with redirect method for popup-related errors
+    if (error.code === 'auth/popup-blocked' || error.code === 'auth/popup-closed-by-user') {
+      console.log('Popup failed, automatically trying redirect method...');
+      try {
+        await signInWithRedirect(auth, googleProvider);
+        return null; // Redirect will handle the rest
+      } catch (redirectError) {
+        console.error('Redirect method also failed:', redirectError);
+        throw new Error('Both popup and redirect sign-in methods failed. Please check your browser settings.');
+      }
+    }
+    
+    // Provide more specific error messages
     if (error.code === 'auth/configuration-not-found') {
       throw new Error('Firebase configuration error. Please check your project settings.');
-    } else if (error.code === 'auth/popup-blocked') {
-      throw new Error('Popup was blocked by browser. Trying redirect method...');
-    } else if (error.code === 'auth/popup-closed-by-user') {
-      throw new Error('Sign-in was cancelled. Trying redirect method...');
     } else if (error.code === 'auth/unauthorized-domain') {
-      throw new Error('This domain is not authorized for OAuth operations.');
+      throw new Error('This domain is not authorized for OAuth operations. Please check Firebase Console.');
+    } else if (error.code === 'auth/network-request-failed') {
+      throw new Error('Network error. Please check your internet connection.');
     }
     
     throw error;

@@ -230,8 +230,8 @@ export function Hero() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 2 }}
             >
-              <h3 className="text-lg font-bold mb-1 drop-shadow-lg">Team Sumud</h3>
-              <p className="text-sm opacity-90 drop-shadow-md">Arts & Sports Excellence</p>
+              {/* <h3 className="text-lg font-bold mb-1 drop-shadow-lg">Team Sumud</h3>
+              <p className="text-sm opacity-90 drop-shadow-md">Arts & Sports Excellence</p> */}
             </motion.div>
 
             {/* Animated border */}
@@ -297,8 +297,8 @@ export function Hero() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 2.2 }}
             >
-              <h3 className="text-lg font-bold mb-1 drop-shadow-lg">Team Aqsa</h3>
-              <p className="text-sm opacity-90 drop-shadow-md">Creative & Athletic Champions</p>
+              {/* <h3 className="text-lg font-bold mb-1 drop-shadow-lg">Team Aqsa</h3>
+              <p className="text-sm opacity-90 drop-shadow-md">Creative & Athletic Champions</p> */}
             </motion.div>
 
             {/* Animated border */}
@@ -364,8 +364,8 @@ export function Hero() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 2.4 }}
             >
-              <h3 className="text-lg font-bold mb-1 drop-shadow-lg">Team Inthifada</h3>
-              <p className="text-sm opacity-90 drop-shadow-md">Innovation & Competition</p>
+              {/* <h3 className="text-lg font-bold mb-1 drop-shadow-lg">Team Inthifada</h3>
+              <p className="text-sm opacity-90 drop-shadow-md">Innovation & Competition</p> */}
             </motion.div>
 
             {/* Animated border */}

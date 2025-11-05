@@ -43,14 +43,14 @@ export default function ResultsDashboard() {
   // Function to get team code from chest number (same logic as checklist page)
   const getTeamCodeFromChestNumber = (chestNumber: string, teamsData: Team[]) => {
     if (!chestNumber) return '';
-    
+
     const upperChestNumber = chestNumber.toUpperCase();
-    
+
     const threeLetterMatch = upperChestNumber.match(/^([A-Z]{3})/);
     if (threeLetterMatch) {
       return threeLetterMatch[1];
     }
-    
+
     const twoLetterMatch = upperChestNumber.match(/^([A-Z]{2})/);
     if (twoLetterMatch) {
       const teamCode = twoLetterMatch[1];
@@ -59,11 +59,11 @@ export default function ResultsDashboard() {
       if (teamCode === 'AQ') return 'AQS';
       return teamCode;
     }
-    
+
     if (upperChestNumber.match(/^[A-Z]/)) {
       return upperChestNumber.charAt(0);
     }
-    
+
     const num = parseInt(chestNumber);
     if (!isNaN(num)) {
       if (num >= 600 && num < 700) {
@@ -78,14 +78,14 @@ export default function ResultsDashboard() {
         return chestNumber.charAt(0);
       }
     }
-    
+
     const availableTeamCodes = teamsData.map(t => t.code.toUpperCase());
     for (const teamCode of availableTeamCodes) {
       if (upperChestNumber.includes(teamCode)) {
         return teamCode;
       }
     }
-    
+
     return '';
   };
 
@@ -114,22 +114,24 @@ export default function ResultsDashboard() {
 
   // Function to calculate team marks from published results (same logic as checklist page)
   const calculateTeamMarksFromResults = (resultsData: Result[], teamsData: Team[], candidatesData: Candidate[], programmesData: Programme[]) => {
-    const teamTotals: { [teamCode: string]: { 
-      name: string; 
-      points: number; 
-      results: number;
-      artsPoints: number;
-      sportsPoints: number;
-      artsResults: number;
-      sportsResults: number;
-      color: string;
-    } } = {};
-    
+    const teamTotals: {
+      [teamCode: string]: {
+        name: string;
+        points: number;
+        results: number;
+        artsPoints: number;
+        sportsPoints: number;
+        artsResults: number;
+        sportsResults: number;
+        color: string;
+      }
+    } = {};
+
     // Initialize team totals
     teamsData.forEach(team => {
-      teamTotals[team.code] = { 
-        name: team.name, 
-        points: 0, 
+      teamTotals[team.code] = {
+        name: team.name,
+        points: 0,
         results: 0,
         artsPoints: 0,
         sportsPoints: 0,
@@ -138,7 +140,7 @@ export default function ResultsDashboard() {
         color: team.color || '#6366f1'
       };
     });
-    
+
     // Helper function to add points to team totals
     const addPointsToTeam = (teamCode: string, points: number, result: any) => {
       if (teamTotals[teamCode]) {
@@ -152,21 +154,21 @@ export default function ResultsDashboard() {
         }
       }
     };
-    
+
     // Process published results only
     const publishedResults = resultsData.filter(result => result.status === 'published');
-    
+
     publishedResults.forEach(result => {
       const programme = programmesData.find(p => p._id?.toString() === result.programmeId);
       if (!programme) return;
-      
+
       // Enrich result with programme information
       const enrichedResult = {
         ...result,
         programmeCategory: programme.category,
         programmeSubcategory: programme.subcategory
       };
-      
+
       // Process individual winners with grade points
       if (result.firstPlace) {
         result.firstPlace.forEach(winner => {
@@ -178,7 +180,7 @@ export default function ResultsDashboard() {
           }
         });
       }
-      
+
       if (result.secondPlace) {
         result.secondPlace.forEach(winner => {
           const teamCode = getTeamCodeFromChestNumber(winner.chestNumber, teamsData);
@@ -189,7 +191,7 @@ export default function ResultsDashboard() {
           }
         });
       }
-      
+
       if (result.thirdPlace) {
         result.thirdPlace.forEach(winner => {
           const teamCode = getTeamCodeFromChestNumber(winner.chestNumber, teamsData);
@@ -200,7 +202,7 @@ export default function ResultsDashboard() {
           }
         });
       }
-      
+
       // Process team winners with grade points
       if (result.firstPlaceTeams) {
         result.firstPlaceTeams.forEach(winner => {
@@ -209,7 +211,7 @@ export default function ResultsDashboard() {
           addPointsToTeam(winner.teamCode, totalPoints, enrichedResult);
         });
       }
-      
+
       if (result.secondPlaceTeams) {
         result.secondPlaceTeams.forEach(winner => {
           const gradePoints = getGradePoints(winner.grade || '');
@@ -217,7 +219,7 @@ export default function ResultsDashboard() {
           addPointsToTeam(winner.teamCode, totalPoints, enrichedResult);
         });
       }
-      
+
       if (result.thirdPlaceTeams) {
         result.thirdPlaceTeams.forEach(winner => {
           const gradePoints = getGradePoints(winner.grade || '');
@@ -265,7 +267,7 @@ export default function ResultsDashboard() {
       setResults(resultsData || []);
       setCandidates(candidatesData || []);
       setProgrammes(programmesData || []);
-      
+
       // Use the correct published grand marks as shown in admin checklist
       const correctGrandMarks = [
         {
@@ -296,10 +298,10 @@ export default function ResultsDashboard() {
           color: '#6B7280'
         }
       ];
-      
+
       setGrandMarksData(correctGrandMarks);
       setLastUpdated(new Date());
-      
+
       // Process dashboard statistics
       processDashboardData(teamsData, resultsData, candidatesData, programmesData, grandMarksResponse);
     } catch (error) {
@@ -310,17 +312,17 @@ export default function ResultsDashboard() {
   };
 
   const processDashboardData = (
-    teamsData: Team[], 
-    resultsData: Result[], 
-    candidatesData: Candidate[], 
+    teamsData: Team[],
+    resultsData: Result[],
+    candidatesData: Candidate[],
     programmesData: Programme[],
     grandMarksData: any[]
   ) => {
     // Calculate dashboard statistics
     const totalWinners = resultsData.reduce((sum, result) => {
-      return sum + 
-        (result.firstPlace?.length || 0) + 
-        (result.secondPlace?.length || 0) + 
+      return sum +
+        (result.firstPlace?.length || 0) +
+        (result.secondPlace?.length || 0) +
         (result.thirdPlace?.length || 0) +
         (result.firstPlaceTeams?.length || 0) +
         (result.secondPlaceTeams?.length || 0) +
@@ -329,10 +331,10 @@ export default function ResultsDashboard() {
 
     const artsPrograms = programmesData.filter(p => p.category === 'arts').length;
     const sportsPrograms = programmesData.filter(p => p.category === 'sports').length;
-    
+
     // Today's results (mock data for demo)
     const today = new Date().toDateString();
-    const todayResults = resultsData.filter(r => 
+    const todayResults = resultsData.filter(r =>
       new Date(r.createdAt || '').toDateString() === today
     ).length;
 
@@ -365,9 +367,9 @@ export default function ResultsDashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-4">
-              <BackButton 
-                href="/" 
-                label="← Back" 
+              <BackButton
+                href="/"
+                label="← Back"
                 className="bg-gray-100 border-gray-200 text-gray-700 hover:bg-gray-200 px-3 py-2 rounded-lg text-sm"
               />
               <div>
@@ -389,7 +391,7 @@ export default function ResultsDashboard() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Modern Welcome Section */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="bg-white rounded-2xl shadow-sm border p-8 mb-8"
@@ -410,7 +412,7 @@ export default function ResultsDashboard() {
                 </div>
               </div>
             </div>
-            
+
             {/* Quick Stats */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="bg-blue-50 rounded-xl p-4 text-center">
@@ -435,7 +437,7 @@ export default function ResultsDashboard() {
 
         {/* Key Metrics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
@@ -454,7 +456,7 @@ export default function ResultsDashboard() {
             </div>
           </motion.div>
 
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
@@ -473,7 +475,7 @@ export default function ResultsDashboard() {
             </div>
           </motion.div>
 
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
@@ -492,7 +494,7 @@ export default function ResultsDashboard() {
             </div>
           </motion.div>
 
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
@@ -508,7 +510,7 @@ export default function ResultsDashboard() {
             <div className="text-sm text-gray-600">Completion Rate</div>
             <div className="mt-3">
               <div className="w-full bg-gray-200 rounded-full h-2">
-                <div 
+                <div
                   className="bg-orange-500 h-2 rounded-full transition-all duration-1000"
                   style={{ width: `${dashboardStats.completionRate}%` }}
                 ></div>
@@ -518,7 +520,7 @@ export default function ResultsDashboard() {
         </div>
 
         {/* Team Rankings Section - Simplified */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
@@ -549,7 +551,7 @@ export default function ResultsDashboard() {
                     <div className="text-lg font-bold text-gray-400 w-8">
                       #{index + 1}
                     </div>
-                    <div 
+                    <div
                       className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md"
                       style={{ backgroundColor: team.color }}
                     >
@@ -560,7 +562,7 @@ export default function ResultsDashboard() {
                       <div className="text-sm text-gray-500">{team.results} programmes completed</div>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center space-x-6">
                     <div className="text-right">
                       <div className="text-sm text-gray-500">Arts</div>
@@ -583,7 +585,7 @@ export default function ResultsDashboard() {
                   </div>
                 </motion.div>
               ))}
-              
+
               {grandMarksData.length > 6 && (
                 <div className="text-center pt-4">
                   <button className="text-blue-600 hover:text-blue-700 text-sm font-medium bg-blue-50 px-4 py-2 rounded-lg hover:bg-blue-100 transition-colors">
@@ -605,11 +607,15 @@ export default function ResultsDashboard() {
           )}
         </motion.div>
 
+        {/* Note: Removed "Remaining Programmes" section for public users */}
+        {/* Public users should not see pending programmes in results page */}
+        {/* They can view all programmes (including pending) in the dedicated programmes page */}
+
         {/* Public Rankings Section */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
+          transition={{ delay: 0.7 }}
           className="mb-8"
         >
           <PublicRankings className="min-h-[600px]" />
